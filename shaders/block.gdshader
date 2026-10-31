@@ -5,7 +5,8 @@
 // jitter) into vertex colour at half scale, with per-type data in its alpha
 // (the open-top flag for grass). UV is face-planar world position. On top of
 // the shared clay lighting: hand-pressed colour mottling, shallow thumb
-// dents, wood planks, a grass cap and the accent pulse.
+// dents, wood planks, a grass (or autumn grass or snow) cap, ice and the
+// accent pulse.
 shader_type spatial;
 render_mode diffuse_burley, specular_schlick_ggx;
 
@@ -13,8 +14,8 @@ render_mode diffuse_burley, specular_schlick_ggx;
 
 uniform vec4 albedo : source_color = vec4(0.725, 0.706, 0.667, 1.0);
 // 0 = plain, 1 = wood planks, 2 = grass top over side_color,
-// 3 = conveyor belt with side_color chevrons.
-uniform int pattern : hint_range(0, 3) = 0;
+// 3 = conveyor belt with side_color chevrons, 4 = ice.
+uniform int pattern : hint_range(0, 4) = 0;
 uniform vec4 side_color : source_color = vec4(0.647, 0.490, 0.353, 1.0);
 // Belt direction (world x, z) and chevron speed in cells per second.
 uniform vec2 belt_dir = vec2(1.0, 0.0);
@@ -24,6 +25,8 @@ uniform float pulse_strength : hint_range(0.0, 1.0) = 0.0;
 uniform float pulse_period = 1.6;
 // Depth of the thumb dents in metres.
 uniform float dent_depth = 0.02;
+uniform float roughness : hint_range(0.0, 1.0) = 0.6;
+uniform float specular : hint_range(0.0, 1.0) = 0.3;
 
 varying vec3 world_pos;
 varying vec3 world_normal;
@@ -62,6 +65,17 @@ vec3 belt(vec3 base, vec3 chevron_color, float time) {
 	return mix(base, chevron_color, chevron * smoothstep(0.6, 0.9, world_normal.y));
 }
 
+// Frosted streaks and a few white cracks across the top of ice.
+vec3 ice(vec3 base) {
+	vec2 p = world_pos.xz;
+	float streak = 0.5 + 0.5 * sin((p.x * 0.8 + p.y * 1.3) * 5.0 + sin(p.y * 2.7) * 1.6);
+	float c = p.x * 1.6 - p.y * 0.9 + 0.25 * sin(p.y * 4.1 + p.x * 1.3);
+	float crack = 1.0 - smoothstep(0.0, 0.02 + fwidth(c) * 1.5, abs(fract(c) - 0.5));
+	float top = smoothstep(0.6, 0.9, world_normal.y);
+	vec3 col = mix(base, vec3(1.0), (0.1 + 0.12 * streak) * top);
+	return mix(col, vec3(1.0), 0.55 * crack * top);
+}
+
 void vertex() {
 	world_pos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
 	world_normal = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz);
@@ -75,6 +89,8 @@ void fragment() {
 		base = grass(base, side_color.rgb, COLOR.a);
 	} else if (pattern == 3) {
 		base = belt(base, side_color.rgb, TIME);
+	} else if (pattern == 4) {
+		base = ice(base);
 	}
 	float mottle = surface_noise(world_pos * 2.1 + 3.7, world_normal);
 	base *= 0.94 + 0.12 * mottle;
@@ -84,8 +100,8 @@ void fragment() {
 	vec3 dents = surface_noise_grad(world_pos, world_normal, 3.3)
 		+ 0.5 * surface_noise_grad(world_pos + 11.0, world_normal, 7.9);
 	NORMAL = bumped_view_normal(world_normal, dents, dent_depth, VIEW_MATRIX);
-	ROUGHNESS = 0.6;
-	SPECULAR = 0.3;
+	ROUGHNESS = roughness;
+	SPECULAR = specular;
 	float pulse = pulse_strength * (0.5 - 0.5 * cos(TIME * TAU / pulse_period));
 	EMISSION = sky_rim(NORMAL, VIEW) + albedo.rgb * pulse;
 }

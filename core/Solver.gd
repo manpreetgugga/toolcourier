@@ -10,7 +10,8 @@ extends RefCounted
 ##   {"action": Action.SLIDE, "id": String, "to": int}
 ##   {"action": Action.TURN, "id": String}
 ## plus, describing what it did, "events" (it changed more than where the
-## courier stands), "key" and "moves" (the state after it).
+## courier stands and the boards behind it), "key" and "moves" (the state
+## after it).
 
 enum Action { STEP, SLIDE, TURN }
 
@@ -24,7 +25,7 @@ var explored: int = 0
 var gave_up: bool = false
 
 var _state: LevelState
-## Mechanism values key -> Pathfinder for the grid in that configuration.
+## Mechanism values and dropped boards -> Pathfinder for the grid then.
 var _paths: Dictionary = {}
 var _sliders: Array[String] = []
 var _rotators: Array[String] = []
@@ -76,7 +77,7 @@ func solve(start: Dictionary) -> Array[Dictionary]:
 				return plan
 			for action: Dictionary in _actions(snapshots[key]):
 				_state.restore(snapshots[key])
-				action["events"] = not apply_to(_state, action, true).is_empty()
+				action["events"] = apply_to(_state, action, true).any(_not_fall)
 				var next_key: String = key_of(_state)
 				var next_cost: int = depth + _state.moves - (snapshots[key]["moves"] as int)
 				if cost.has(next_key) and cost[next_key] <= next_cost:
@@ -133,6 +134,7 @@ static func key_of(state: LevelState) -> String:
 	parts.append(",".join(cells))
 	for mechanism: Mechanism in state.data.mechanisms:
 		parts.append(str(state.values[mechanism.id]))
+	parts.append(_ground_key(state))
 	parts.append("1" if state.completed else "0")
 	return "|".join(parts)
 
@@ -143,6 +145,7 @@ func paths_for(state: LevelState) -> Pathfinder:
 	var key := PackedStringArray()
 	for mechanism: Mechanism in data.mechanisms:
 		key.append(str(state.values[mechanism.id]))
+	key.append(_ground_key(state))
 	var joined: String = ",".join(key)
 	if not _paths.has(joined):
 		_paths[joined] = Pathfinder.new(state.build_grid())
@@ -169,6 +172,21 @@ func _actions(snapshot: Dictionary) -> Array[Dictionary]:
 		if _state.can_move(id, (_state.values[id] + 1) % 4):
 			actions.append({"action": Action.TURN, "id": id})
 	return actions
+
+
+static func _not_fall(event: Dictionary) -> bool:
+	return event["event"] != LevelState.Event.FELL
+
+
+## The dry boards that have dropped away, sorted.
+static func _ground_key(state: LevelState) -> String:
+	if state.fallen.is_empty():
+		return ""
+	var cells := PackedStringArray()
+	for cell: Vector3i in state.fallen:
+		cells.append(_cell_text(cell))
+	cells.sort()
+	return ";".join(cells)
 
 
 static func _cell_text(cell: Vector3i) -> String:

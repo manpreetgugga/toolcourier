@@ -104,6 +104,10 @@ static func _check_layout(data: LevelData) -> void:
 		var label: String = spot[0]
 		if moving.has(cell - Vector3i.UP) and label != "start" and not label.begins_with("packages"):
 			data.errors.append("%s: %s stands on mechanism \"%s\", which moves" % [label, cell, moving[cell - Vector3i.UP]])
+		# Only the courier crosses ice and dry boards (it may start on ice).
+		var ground: StringName = data.cells.get(cell - Vector3i.UP, &"")
+		if ground == Grid.BOARDS or (ground == Grid.ICE and label != "start"):
+			data.errors.append("%s: %s is on %s, which only the courier may cross" % [label, cell, ground])
 
 	# Every parcel needs exactly one pad of its colour.
 	var parcels: Dictionary = {}

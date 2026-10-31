@@ -20,7 +20,7 @@ func _ready() -> void:
 	_material.shader = BLOCK_SHADER
 	_material.set_shader_parameter(&"albedo", BELT_COLOR)
 	_material.set_shader_parameter(&"side_color", Palette.ACCENT)
-	_material.set_shader_parameter(&"pattern", 3)
+	_material.set_shader_parameter(&"pattern", BlockMaterials.Pattern.BELT)
 	_material.set_shader_parameter(&"belt_dir", Vector2(mechanism.axis.x, mechanism.axis.z))
 	var belt := MeshInstance3D.new()
 	belt.name = "Belt"

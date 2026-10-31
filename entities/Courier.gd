@@ -2,17 +2,22 @@ class_name Courier
 extends Node3D
 ## The walking mailbox. Walks cell to cell along paths from a Pathfinder and
 ## animates procedurally: breathing while idle, a waddling walk with swinging
-## legs, a squash on landings, a puzzled tilt, a happy hop-and-spin and the
-## odd blink.
+## legs, a wobbly glide over ice, a squash on landings, a puzzled tilt, a
+## happy hop-and-spin and the odd blink.
 ##
 ## Faces -Z in local space; the root sits on the floor of its current cell.
 
 signal step_finished(cell: Vector3i)
 signal arrived(cell: Vector3i)
 
-## Seconds per cell walked, and per cell carried by a belt.
+## Seconds per cell walked, per cell carried by a belt and per cell slid
+## over ice.
 const STEP_TIME: float = 0.28
 const RIDE_TIME: float = 0.22
+const SLIDE_TIME: float = 0.17
+## Side-to-side wobble while sliding (radians) and its rate.
+const SLIDE_WOBBLE: float = 0.08
+const SLIDE_WOBBLE_RATE: float = 11.0
 const TURN_RATE: float = 16.0
 const BOB_HEIGHT: float = 0.04
 const LEAN: float = 0.13
@@ -31,6 +36,11 @@ var _queue: Array[Vector3i] = []
 var _stepping: bool = false
 ## The current step is a belt carrying it, not a walk.
 var _riding: bool = false
+## The current step is a slide over ice (onto it, along it or off it).
+var _sliding: bool = false
+var _slide_blend: float = 0.0
+## The heading of the last step (to tell a slide carrying on from a turn).
+var _heading: Vector3i
 var _step_target: Vector3i
 var _step_tween: Tween
 var _facing_yaw: float = PI
@@ -60,6 +70,8 @@ func place(at: Vector3i, facing: Vector3i = Vector3i(0, 0, 1)) -> void:
 		_step_tween.kill()
 	_stepping = false
 	_riding = false
+	_sliding = false
+	_heading = Vector3i.ZERO
 	cell = at
 	position = pathfinder.floor_position(at)
 	_face(Vector3(facing))
@@ -169,19 +181,24 @@ func _next_step() -> void:
 	if _queue.is_empty():
 		_stepping = false
 		_riding = false
+		_sliding = false
+		_heading = Vector3i.ZERO
 		_land(0.5)
 		arrived.emit(cell)
 		return
 	var next: Vector3i = _queue.pop_front()
 	_stepping = true
 	_riding = pathfinder.is_belt(cell)
+	var heading: Vector3i = Pathfinder.heading(cell, next)
+	_sliding = not _riding and (pathfinder.is_ice(next) or (pathfinder.is_ice(cell) and heading == _heading))
+	_heading = heading
 	_step_target = next
 	var from: Vector3 = position
 	var to: Vector3 = pathfinder.floor_position(next)
 	if not _riding:
 		_face(to - from)
 	_step_tween = create_tween()
-	_step_tween.tween_property(self, "position", to, RIDE_TIME if _riding else STEP_TIME)
+	_step_tween.tween_property(self, "position", to, RIDE_TIME if _riding else SLIDE_TIME if _sliding else STEP_TIME)
 	_step_tween.tween_callback(_finish_step.bind(next, to.y - from.y))
 
 
@@ -216,8 +233,9 @@ func _set_happy_eyes(happy: bool) -> void:
 
 func _process(delta: float) -> void:
 	_time += delta
-	var walking: bool = _stepping and not _riding
+	var walking: bool = _stepping and not _riding and not _sliding
 	_walk_blend = move_toward(_walk_blend, 1.0 if walking else 0.0, delta * 7.0)
+	_slide_blend = move_toward(_slide_blend, 1.0 if _stepping and _sliding else 0.0, delta * 6.0)
 	if walking:
 		_phase += delta / STEP_TIME * PI
 	elif _walk_blend == 0.0:
@@ -233,7 +251,8 @@ func _process(delta: float) -> void:
 	var body: Node3D = _rig.body
 	var breath: float = sin(_time * TAU / BREATH_PERIOD) * BREATH * (1.0 - _walk_blend)
 	body.position.y = absf(sin(_phase)) * BOB_HEIGHT * _walk_blend
-	body.rotation = Vector3(-LEAN * _walk_blend, 0.0, swing * SWAY + _tilt)
+	var wobble: float = sin(_time * SLIDE_WOBBLE_RATE) * SLIDE_WOBBLE * _slide_blend
+	body.rotation = Vector3(-LEAN * _walk_blend + LEAN * 0.5 * _slide_blend, 0.0, swing * SWAY + _tilt + wobble)
 	body.scale = Vector3(1.0 - breath * 0.5, 1.0 + breath, 1.0 - breath * 0.5) * _squash
 
 	_blink_in -= delta

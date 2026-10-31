@@ -6,8 +6,9 @@ extends Node3D
 ## hints from the Solver, records finishes in Progress and saves a game in
 ## progress when the app is paused or closed.
 ##
-## Drag to orbit, pinch or scroll to zoom, tap a spot to walk there. Drag a
-## slider along its axis; tap a crank to turn its rotator. A white ripple
+## Drag to orbit, pinch or scroll to zoom, tap a spot to walk there (a slide
+## over ice runs to its end before the courier can turn). Drag a slider
+## along its axis; tap a crank to turn its rotator. A white ripple
 ## marks the destination; a red ripple and a puzzled tilt mean there is no
 ## way. A double tap on empty space resets the view. Input waits while
 ## mechanisms move.
@@ -49,6 +50,10 @@ var _mechanism_nodes: Dictionary = {}
 var _busy: int = 0
 ## Where the courier stood before its current step (a step from a belt is a ride).
 var _last_cell: Vector3i
+## The way the courier came onto the ice it is on (zero off ice or once it
+## has stopped): carrying on that way is a ride.
+var _glide: Vector3i
+var _boards: DryBoards
 ## The slider being dragged: id, start, range, axis_px, press, riders.
 var _grab: Dictionary = {}
 ## The state at the start, and snapshots taken before each player action
@@ -87,9 +92,12 @@ func _ready() -> void:
 	pathfinder = Pathfinder.new(grid)
 	_add_mesh("Blocks", BlockMesher.build(data.cells))
 	_add_mesh("Stairs", PropFactory.build_stairs(grid))
-	_add_mesh("Props", PropFactory.build_props(data.props))
+	_add_mesh("Props", PropFactory.build_props(data.props, Palette.season(data.palette)))
 	for mechanism: Mechanism in data.mechanisms:
 		_add_mechanism(mechanism)
+	_boards = DryBoards.new(data.cells)
+	add_child(_boards)
+	_boards.set_fallen(state.fallen)
 
 	for cell: Vector3i in state.pads:
 		var pad := Pad.create(state.pads[cell])
@@ -119,6 +127,9 @@ func _ready() -> void:
 	add_child(camera)
 	camera.make_current()
 	var bounds: AABB = _view_bounds()
+	var weather: CPUParticles3D = Weather.create(Palette.season(data.palette), bounds)
+	if weather:
+		add_child(weather)
 	camera.distance_changed.connect(func(distance: float) -> void: _stage.fit_to_bounds(bounds, distance))
 	camera.tapped.connect(_on_tapped)
 	camera.double_tapped.connect(_on_double_tapped)
@@ -288,7 +299,9 @@ func _on_tapped(screen_position: Vector2) -> void:
 			_turn(mechanism.id)
 			return
 	var target: Vector3i = pathfinder.target_for_block(block)
-	var path: Array[Vector3i] = pathfinder.find_path(courier.path_origin(), target)
+	# A slide can't be steered: plan from where it ends.
+	var lead: Array[Vector3i] = _slide_rest()
+	var path: Array[Vector3i] = pathfinder.find_path(lead[-1] if not lead.is_empty() else courier.path_origin(), target)
 	if path.is_empty():
 		var normal: Vector3i = hit["normal"]
 		var center: Vector3 = Vector3(block) + Vector3(0.5, 0.5, 0.5) + Vector3(normal) * 0.5
@@ -303,7 +316,7 @@ func _on_tapped(screen_position: Vector2) -> void:
 		_record()
 	TapRipple.spawn(self, pathfinder.floor_position(target), Vector3.UP)
 	path.remove_at(0)
-	courier.walk(path)
+	courier.walk(lead + path)
 
 
 func _on_double_tapped(screen_position: Vector2) -> void:
@@ -311,11 +324,12 @@ func _on_double_tapped(screen_position: Vector2) -> void:
 		camera.reset_view()
 
 
-## Turns a rotator a quarter (one move), once the courier has stopped.
+## Turns a rotator a quarter (one move), once the courier has stopped (at
+## the end of a slide it is on).
 func _turn(id: String) -> void:
 	_clear_hint()
 	if courier.is_moving():
-		courier.stop()
+		courier.walk(_slide_rest())
 		_busy += 1
 		await courier.arrived
 		_busy -= 1
@@ -333,7 +347,9 @@ func _turn(id: String) -> void:
 
 
 func _on_courier_step(cell: Vector3i) -> void:
-	var ride: bool = pathfinder.is_belt(_last_cell)
+	var heading: Vector3i = Pathfinder.heading(_last_cell, cell)
+	var ride: bool = pathfinder.is_ride_step(_last_cell, cell, _glide)
+	_glide = heading if pathfinder.is_ice(cell) else Vector3i.ZERO
 	_last_cell = cell
 	var events: Array[Dictionary] = state.enter(cell, ride)
 	# Moving parts change the ground; let the player re-plan from here.
@@ -344,7 +360,21 @@ func _on_courier_step(cell: Vector3i) -> void:
 
 
 func _on_courier_arrived(_cell: Vector3i) -> void:
+	_glide = Vector3i.ZERO
 	_continue_ride()
+
+
+## The cells the courier still has to slide through after the one it is
+## stepping into (empty unless it is sliding on from there).
+func _slide_rest() -> Array[Vector3i]:
+	var rest: Array[Vector3i] = []
+	var origin: Vector3i = courier.path_origin()
+	var came: Vector3i = Pathfinder.heading(courier.cell, origin)
+	var onward: Vector3i = origin + came
+	if courier.is_moving() and pathfinder.is_ice(origin) and pathfinder.is_walkable(onward) \
+			and pathfinder.is_ride_step(origin, onward, came):
+		rest = pathfinder.glide(onward, came)
+	return rest
 
 
 ## A courier left standing on a running belt is carried on.
@@ -392,6 +422,8 @@ func _play(events: Array[Dictionary]) -> void:
 					longest = maxf(longest, (_mechanism_nodes[event["id"]] as MechanismNode).show_value(event["to"]))
 			LevelState.Event.CARRIED:
 				_mover(movers, event["id"])["riders"].append({"node": courier, "to": event["to"]})
+			LevelState.Event.FELL:
+				_boards.fall(event["cell"])
 			LevelState.Event.PARCEL_MOVED:
 				var package: Package = _packages[event["from"]]
 				_packages.erase(event["from"])
@@ -427,6 +459,7 @@ func _play(events: Array[Dictionary]) -> void:
 func _set_down(rider: Node3D, cell: Vector3i, mechanism: Mechanism, turned: int) -> void:
 	rider.reparent(self)
 	if rider == courier:
+		_glide = Vector3i.ZERO
 		var facing: Vector3i = courier.facing()
 		if mechanism.kind == Mechanism.Kind.ROTATOR:
 			facing = Mechanism.turn(facing, turned)
@@ -564,6 +597,8 @@ func _sync() -> void:
 	courier.reset_pose()
 	courier.set_carried(state.carried)
 	_last_cell = state.courier
+	_glide = Vector3i.ZERO
+	_boards.set_fallen(state.fallen)
 	_rebuild_parcels()
 	_exit.set_open(state.all_delivered(), false)
 	for id: String in _mechanism_nodes:
@@ -631,7 +666,9 @@ func _hint_route(plan: Array[Dictionary]) -> Array[Vector3i]:
 		trial.restore(state.snapshot())
 		var on_the_way: bool = false
 		for i in range(1, path.size()):
-			if not trial.enter(path[i], pathfinder.is_belt(path[i - 1])).is_empty() and i < path.size() - 1:
+			var events: Array[Dictionary] = trial.enter(path[i], pathfinder.is_ride(path, i))
+			# Boards dropping behind is no reason to stop.
+			if events.any(Solver._not_fall) and i < path.size() - 1:
 				on_the_way = true
 				break
 		if on_the_way:

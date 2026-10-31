@@ -1,0 +1,50 @@
+{
+	"name": "Cider Press",
+	"world": 4,
+	"palette": "orchard",
+	"blocks": [
+		[5, -2, 1, "dark_stone"],
+		[5, -2, 2, "dark_stone"],
+		[5, -2, 3, "dark_stone"],
+
+		[1, -1, 0, "dark_stone"], [2, -1, 0, "water"], [3, -1, 0, "water"], [4, -1, 0, "dark_stone"], [5, -1, 0, "dark_stone"],
+		[0, -1, 1, "dark_stone"], [1, -1, 1, "dark_stone"], [4, -1, 1, "dark_stone"], [5, -1, 1, "dark_stone"], [6, -1, 1, "dark_stone"],
+		[0, -1, 2, "dark_stone"], [1, -1, 2, "dark_stone"], [2, -1, 2, "water"], [3, -1, 2, "water"], [4, -1, 2, "dark_stone"], [5, -1, 2, "dark_stone"], [6, -1, 2, "dark_stone"],
+		[0, -1, 3, "dark_stone"], [1, -1, 3, "dark_stone"], [4, -1, 3, "dark_stone"], [5, -1, 3, "dark_stone"], [6, -1, 3, "dark_stone"],
+		[1, -1, 4, "dark_stone"], [2, -1, 4, "water"], [3, -1, 4, "water"], [4, -1, 4, "dark_stone"], [5, -1, 4, "dark_stone"],
+
+		[0, 0, 0, "autumn_grass"], [1, 0, 0, "autumn_grass"], [4, 0, 0, "autumn_grass"], [5, 0, 0, "autumn_grass"], [6, 0, 0, "dirt"],
+		[0, 0, 1, "autumn_grass"], [1, 0, 1, "autumn_grass"], [2, 0, 1, "boards"], [3, 0, 1, "boards"], [4, 0, 1, "autumn_grass"], [5, 0, 1, "autumn_grass"], [6, 0, 1, "dirt"],
+		[0, 0, 2, "autumn_grass"], [1, 0, 2, "autumn_grass"], [4, 0, 2, "autumn_grass"], [5, 0, 2, "autumn_grass"], [6, 0, 2, "autumn_grass"],
+		[0, 0, 3, "autumn_grass"], [1, 0, 3, "autumn_grass"], [2, 0, 3, "boards"], [3, 0, 3, "boards"], [4, 0, 3, "autumn_grass"], [5, 0, 3, "autumn_grass"], [6, 0, 3, "autumn_grass"],
+		[0, 0, 4, "autumn_grass"], [1, 0, 4, "autumn_grass"], [4, 0, 4, "autumn_grass"], [5, 0, 4, "autumn_grass"], [6, 0, 4, "autumn_grass"],
+
+		[6, 1, 0, "autumn_grass"],
+		[6, 1, 1, "autumn_grass"]
+	],
+	"props": [
+		[6, 2, 0, "tree_tall", 42, true],
+		[6, 2, 1, "tree_small", 13, true],
+		[1, 1, 2, "bush", 69, true],
+		[4, 1, 2, "tree_small", 0, true],
+		[6, 1, 2, "bush", 74, true]
+	],
+	"mechanisms": [
+		{ "id": "press", "type": "conveyor", "cells": [[2, 0, 4], [3, 0, 4]], "dir": "+x" }
+	],
+	"packages": [
+		{ "pos": [5, 1, 0], "color": "blue" },
+		{ "pos": [5, 1, 2], "color": "green" },
+		{ "pos": [6, 1, 3], "color": "green" },
+		{ "pos": [1, 1, 4], "color": "red" }
+	],
+	"pads": [
+		{ "pos": [0, 1, 0], "color": "blue" },
+		{ "pos": [5, 1, 1], "color": "red" },
+		{ "pos": [0, 1, 2], "color": "green" },
+		{ "pos": [0, 1, 3], "color": "green" }
+	],
+	"start": [0, 1, 1],
+	"exit": [6, 1, 4],
+	"stars": [37, 46, 59]
+}

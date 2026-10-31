@@ -1,0 +1,16 @@
+{
+	"name": "Boards test",
+	"world": 4,
+	"palette": "orchard",
+	"blocks": [
+		[0, -1, 0, "dark_stone"], [1, -1, 0, "dark_stone"], [3, -1, 0, "dark_stone"], [4, -1, 0, "dark_stone"],
+		[0, -1, 1, "dark_stone"], [1, -1, 1, "dark_stone"], [3, -1, 1, "dark_stone"], [4, -1, 1, "dark_stone"],
+		[0, 0, 0, "autumn_grass"], [1, 0, 0, "autumn_grass"], [3, 0, 0, "autumn_grass"], [4, 0, 0, "autumn_grass"],
+		[0, 0, 1, "autumn_grass"], [1, 0, 1, "autumn_grass"], [3, 0, 1, "autumn_grass"], [4, 0, 1, "autumn_grass"],
+		[2, 0, 0, "boards"]
+	],
+	"props": [[0, 1, 1, "pumpkin", 30, true], [3, 1, 1, "leaf_pile", 0, false]],
+	"start": [0, 1, 0],
+	"exit": [4, 1, 1],
+	"stars": [5, 7, 9]
+}

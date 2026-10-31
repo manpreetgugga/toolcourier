@@ -2,8 +2,8 @@ extends SceneTree
 ## Scripted check of every mechanism, each on its own small test level in
 ## dev/mechanisms/: a slider dragged into place, an elevator ridden up, a
 ## button calling an elevator down, a belt carrying the courier one way, a
-## crank turning a bridge, and a gate opened by two buttons. Input goes
-## through the real touch path. Prints PASS/FAIL per check, saves a
+## crank turning a bridge, a gate opened by two buttons, a slide over ice
+## and dry boards dropping away. Input goes through the real touch path. Prints PASS/FAIL per check, saves a
 ## screenshot per mechanism, and exits with status 1 on any failure. Needs a
 ## renderer.
 ##
@@ -35,7 +35,7 @@ func _initialize() -> void:
 
 
 func _check_loader() -> void:
-	for name: String in ["slider", "elevator", "button", "conveyor", "rotator", "gate"]:
+	for name: String in ["slider", "elevator", "button", "conveyor", "rotator", "gate", "ice", "boards"]:
 		var level: LevelData = LevelLoader.load_file("res://dev/mechanisms/%s.json" % name)
 		_check(level.is_valid(), "the %s test level loads %s" % [name, level.errors])
 	var broken: LevelData = LevelLoader.parse(JSON.stringify({
@@ -49,6 +49,16 @@ func _check_loader() -> void:
 	var report: String = "\n".join(broken.errors)
 	_check(report.contains("no mechanism \"nowhere\""), "a button aimed at a missing mechanism is reported")
 	_check(report.contains("overlaps a level block"), "a mechanism block inside a level block is reported")
+	var slippery: LevelData = LevelLoader.parse(JSON.stringify({
+		"name": "Slippery", "blocks": [[0, 0, 0, "ice"], [1, 0, 0, "boards"], [2, 0, 0, "stone"]],
+		"packages": [{"pos": [1, 1, 0], "color": "red"}], "pads": [{"pos": [2, 1, 0], "color": "red"}],
+		"start": [0, 1, 0], "exit": [0, 1, 0], "stars": [1, 2, 3],
+	}))
+	report = "
+".join(slippery.errors)
+	_check(report.contains("exit: (0, 1, 0) is on ice") and report.contains("is on boards"),
+		"an exit on ice and a parcel on dry boards are reported %s" % [slippery.errors])
+	_check(not report.contains("start:"), "the courier may start on ice")
 
 
 func _run() -> void:
@@ -58,6 +68,8 @@ func _run() -> void:
 	await _conveyor()
 	await _rotator()
 	await _gate()
+	await _ice()
+	await _boards()
 	print("%d check(s) failed" % _failures if _failures > 0 else "All checks passed")
 	quit(1 if _failures > 0 else 0)
 
@@ -154,6 +166,71 @@ func _gate() -> void:
 	_capture("step6_gate.png")
 	await _walk_to_exit(Vector3i(6, 0, 1))
 	_check(_level.state.completed and _level.state.moves == 7, "through the open gate to the exit in 7 moves (%d)" % _level.state.moves)
+
+
+func _ice() -> void:
+	await _open("ice")
+	var solver := Solver.new(_level.data)
+	var plan: Array[Dictionary] = solver.solve(_level.state.snapshot())
+	_check(not plan.is_empty() and plan[-1]["moves"] == 3, "the solver counts a slide as one move (best %d)"
+		% (plan[-1]["moves"] if not plan.is_empty() else -1))
+	var passed: Array[Vector3i] = []
+	_level.courier.step_finished.connect(func(cell: Vector3i) -> void: passed.append(cell))
+	_tap_top(Vector3i(4, 0, 1))
+	var shot: bool = false
+	var started: int = Time.get_ticks_msec()
+	while not shot and Time.get_ticks_msec() - started < 4000:
+		await process_frame
+		if _level.courier.global_position.x > 2.4:
+			shot = true
+			_capture("seasons_ice.png")
+	await _settle()
+	_check(_level.courier.cell == Vector3i(4, 1, 1) and _level.state.moves == 1,
+		"stepping onto the ice slides the courier on to the rock, for one move (at %s, %d)" % [_level.courier.cell, _level.state.moves])
+	_check(_level.pathfinder.find_path(_level.courier.cell, Vector3i(2, 1, 1)).is_empty(), "the middle of the ice is no place to stop")
+
+	# Turn mid-slide: the slide runs on to the ground first.
+	passed.clear()
+	_tap_top(Vector3i(0, 0, 1))
+	started = Time.get_ticks_msec()
+	while _level.courier.cell != Vector3i(2, 1, 1) and Time.get_ticks_msec() - started < 4000:
+		await process_frame
+	_tap_top(Vector3i(0, 0, 2))
+	await _settle()
+	_check(_level.courier.cell == Vector3i(0, 1, 2) and passed.has(Vector3i(0, 1, 1)) and _level.state.moves == 3,
+		"a tap mid-slide waits for the slide to end on the ground, then walks on (moves %d)" % _level.state.moves)
+	await _walk_to_exit(Vector3i(5, 0, 2))
+	_check(_level.state.completed and _level.state.moves == 8, "then along the snow to the exit in 8 moves (%d)" % _level.state.moves)
+
+
+func _boards() -> void:
+	await _open("boards")
+	var board := Vector3i(2, 0, 0)
+	_tap_top(Vector3i(3, 0, 0))
+	var shot: bool = false
+	var started: int = Time.get_ticks_msec()
+	while not shot and Time.get_ticks_msec() - started < 4000:
+		await process_frame
+		var node: Node3D = _level.get_node("DryBoards").get_child(0)
+		if node.visible and node.position.y < -0.4:
+			shot = true
+			_capture("seasons_boards.png")
+	await _settle()
+	_check(_level.state.fallen.has(board) and not _level.pathfinder.is_walkable(board + Vector3i.UP),
+		"the dry boards drop away once the courier steps off them")
+	_check(_level.pathfinder.find_path(_level.courier.cell, Vector3i(0, 1, 0)).is_empty(), "so there is no way back")
+	var saved: Dictionary = _level.state.snapshot_from_json(JSON.parse_string(JSON.stringify(
+		LevelState.snapshot_to_json(_level.state.snapshot()))))
+	_check(saved.get("fallen", {}).has(board), "a saved game keeps the dropped boards")
+	_level.undo()
+	await _settle()
+	var shown: Node3D = _level.get_node("DryBoards").get_child(0)
+	_check(_level.state.fallen.is_empty() and shown.visible and is_equal_approx(shown.position.y, 0.0)
+		and _level.pathfinder.is_walkable(board + Vector3i.UP), "undo puts the boards back")
+	_tap_top(Vector3i(3, 0, 0))
+	await _settle()
+	await _walk_to_exit(Vector3i(4, 0, 1))
+	_check(_level.state.completed and _level.state.moves == 5, "over the boards to the exit in 5 moves (%d)" % _level.state.moves)
 
 
 func _open(name: String) -> void:

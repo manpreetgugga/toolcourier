@@ -9,8 +9,8 @@ the orange mechanisms to open a path.
 > clay block meshing, orbit camera with tap picking, the courier with
 > pathfinding, playable levels from JSON with parcels, pads and an exit,
 > mechanisms (sliders, elevators, buttons, conveyors, rotators and gates),
-> undo, restart, hints, stars and saved progress, and 30 solver-checked
-> levels in three worlds).
+> undo, restart, hints, stars and saved progress, and 50 solver-checked
+> levels in five worlds, the last two seasonal).
 
 <img src="docs/screenshots/step7_hud.png" width="320" alt="World 1, level 1 with the HUD"> <img src="docs/screenshots/step7_hint_slider.png" width="320" alt="A hint: drag the slider to the outline">
 
@@ -18,7 +18,7 @@ the orange mechanisms to open a path.
 
 Each level is a floating clay diorama. The courier walks to wherever you
 tap, picks up a parcel by walking onto it (one at a time in worlds 1–2, two
-in world 3), and drops it automatically on the pad of the same colour. Once
+from world 3), and drops it automatically on the pad of the same colour. Once
 every pad is filled the exit's pennant runs up its post; walking onto the
 exit finishes the level. Every cell walked is a move, and each level sets
 three move limits for three, two and one star.
@@ -27,6 +27,16 @@ The orange parts move (see [Mechanisms](#mechanisms)): drag a slider, tap a
 crank to turn a bridge, step on an elevator to ride it or on a button to
 switch something. Dragging a slider or turning a crank costs one move;
 riding a belt or an elevator costs nothing.
+
+Worlds 4 and 5 bring in the seasons, each with a ground of its own:
+
+- **Dry boards** (autumn): plank decks on beams that shake, tip and drop
+  away once the courier steps off them, so each plank bridge can be crossed
+  once. Plan the trips before setting out.
+- **Ice** (winter): a step onto ice slides the courier on in the same
+  direction until the next cell is not open ground at its level (a rock, a
+  snowman, an edge, a closed gate, stairs) or it slides off onto snow, where
+  it stops. A whole slide is one move, and a belt stops it.
 
 The rules live in `core/LevelState.gd`, with no visuals, so the solver and
 undo can reuse them; `game/Level.gd` builds the scene and animates them:
@@ -73,7 +83,9 @@ Movement rules (`core/Pathfinder.gd`, an AStar3D graph over the grid):
 - it steps one cell at a time to a horizontal neighbour at the same height,
   never jumping gaps or dropping down;
 - the only way up or down is stairs: a stairs block links the cell at its
-  foot with the cell past its top, one level higher.
+  foot with the cell past its top, one level higher;
+- a step onto ice links straight to where the slide ends, so routes over ice
+  are found the same way (the courier wobbles as it glides).
 
 Tapping a block walks to the cell on top of it (or onto stairs). A white
 ripple marks the destination; a red ripple and a puzzled tilt mean there is
@@ -154,8 +166,10 @@ godot --path . --resolution 405x720 -s res://tools/test_level.gd -- --out=docs/s
 one small level per mechanism from `dev/mechanisms/` through the real touch
 path: dragging a slider into a gap, riding an elevator up, calling it down
 with a button, a one-way belt whose ridden cells cost nothing, turning a
-bridge with a crank, and a gate that needs both of its buttons. It saves a
-`step6_*.png` screenshot of each:
+bridge with a crank, a gate that needs both of its buttons, a slide over ice
+that stops at a rock, and dry boards that drop away once crossed. It saves a
+`step6_*.png` screenshot of each mechanism and `seasons_ice.png` and
+`seasons_boards.png`:
 
 ```bash
 godot --path . --resolution 405x720 -s res://tools/test_mechanisms.gd -- --out=docs/screenshots
@@ -173,7 +187,7 @@ It saves `step7_*.png` screenshots:
 godot --path . --resolution 405x720 -s res://tools/test_progress.gd -- --out=docs/screenshots
 ```
 
-`tools/test_levels.gd` plays the whole catalogue: for each of the 30 levels
+`tools/test_levels.gd` plays the whole catalogue: for each of the 50 levels
 it checks that the solver's fewest moves is the three-star limit, that a
 hint from the start stays within the search budget and that the plan
 finishes the level by the rules; then it opens the level and follows the
@@ -218,7 +232,10 @@ one mesh with a surface per material:
 Block types: `stone`, `dark_stone`, `sand`, `grass` (dirt sides with a grass
 lip), `dirt`, `wood` (plank lines), `brick`, `water`, `accent` for interactive parts
 (pulsing orange), and `stairs`, which has its own clay mesh and a facing (the
-direction it climbs). Colours live in `render/Palette.gd`, materials in
+direction it climbs). The seasons add `autumn_grass` (an amber lip), `snow`
+(a snow cap over slate), `slate`, `ice` (a pale glaze with frost streaks) and
+`boards`, dry boards drawn by `entities/DryBoards.gd` as a plank deck on
+beams that drops onto whatever is below when it falls. Colours live in `render/Palette.gd`, materials in
 `render/BlockMaterials.gd`, the clay surface in `shaders/block.gdshader` with
 the shared clay lighting in `shaders/clay_common.gdshaderinc`.
 
@@ -247,10 +264,10 @@ block it stands on.
 
 | Key | Meaning |
 | --- | --- |
-| `name`, `world` | Title, and the world (1–3) it belongs to. |
-| `palette` | Sky and light theme: `meadow`, `harbor` or `old_town`. |
-| `blocks` | `[x, y, z, type]`. Types: `stone`, `dark_stone`, `sand`, `grass`, `dirt`, `wood`, `brick`, `water`, `accent`. Stairs are `[x, y, z, "stairs", facing]`, climbing towards `facing` (`+x`, `-x`, `+z`, `-z`); `stairs_wood` and `stairs_brick` change the material. |
-| `props` | Decor, `[x, y, z, type, rotation?, solid?]`: `tree_small`, `tree_tall`, `bush`, `lamp_post`, `flag`, `crate`, `fence`, `rock`. Rotation is in degrees about up; fences run along the cell's −z edge before rotation. Props are walk-through unless `solid` is `true`. |
+| `name`, `world` | Title, and the world (1–5) it belongs to. |
+| `palette` | Sky and light theme: `meadow`, `harbor`, `old_town`, `orchard` (autumn) or `frost_peaks` (winter). A seasonal palette recolours trees and bushes (amber leaves, snowy boughs) and adds falling leaves or snow (`render/Weather.gd`). |
+| `blocks` | `[x, y, z, type]`. Types: `stone`, `dark_stone`, `sand`, `grass`, `dirt`, `wood`, `brick`, `water`, `accent`, `autumn_grass`, `snow`, `slate`, `ice`, `boards`. Stairs are `[x, y, z, "stairs", facing]`, climbing towards `facing` (`+x`, `-x`, `+z`, `-z`); `stairs_stone`, `stairs_wood` and `stairs_brick` change the material. Parcels, pads, the exit and buttons may not stand on ice or boards (the start may be on ice). |
+| `props` | Decor, `[x, y, z, type, rotation?, solid?]`: `tree_small`, `tree_tall`, `bush`, `lamp_post`, `flag`, `crate`, `fence`, `rock`, `pumpkin`, `leaf_pile`, `snowman`. Rotation is in degrees about up; fences run along the cell's −z edge before rotation. Props are walk-through unless `solid` is `true`. |
 | `mechanisms` | Optional moving parts; see [Mechanisms](#mechanisms). |
 | `packages`, `pads` | `{ "pos": [x, y, z], "color": ... }` with colours `red`, `green`, `blue`, `yellow`. Each parcel needs exactly one pad of its colour. |
 | `start`, `exit` | Where the courier begins and where it finishes. |
@@ -263,7 +280,7 @@ every problem with where it is (for example `packages[0]: (2, 0, 3) is not
 a cell the courier can stand in`), and the level will not start until they
 are fixed. `dev/sandbox_level.json` is a small test level used by the tests.
 
-### The 30 levels
+### The 50 levels
 
 `core/LevelCatalog.gd` finds the levels by their file names, worlds by
 number and then levels by number (gaps are allowed, other files are
@@ -275,8 +292,15 @@ finish card follows this order. Each world brings in something new:
 | 1 | `meadow` | 1 | Walking, stairs and water, then sliders: a sliding bridge, a raft, two rafts on one channel and two crossing sliders. |
 | 2 | `harbor` | 1 | Elevators, a button that calls a lift, gates opened by one button or two, belts, belts switched on and off, and all of them together. |
 | 3 | `old_town` | 2 | Two parcels at once, turntables (one carrying a parcel across, one shaped like a cross, two that get in each other's way), a button that turns a bridge, a two-button gate, then turntables, lifts, rafts and belts together. |
+| 4 | `orchard` | 2 | Dry boards: planks that hold for one crossing, a hay loft on stilts, then boards with a raft, a two-button gate, a lattice barn floor, a belt, a windmill turntable and lifts, ending in two trips through the loft. |
+| 5 | `frost_peaks` | 2 | Ice rinks: rocks and snowmen to stop on, snow patches, two frozen terraces, then a stone slider to slide against, a two-button gate, a lift, belts across the rink, a turning floe and a summit that needs both the stone and the lift. |
 
-<img src="docs/screenshots/step8_levels.png" width="640" alt="All 30 levels as they start">
+Worlds 4 and 5 stand on tall rock bases that taper downwards, so each
+diorama reads as a floating crag.
+
+<img src="docs/screenshots/step8_levels.png" width="640" alt="All 50 levels as they start">
+
+<img src="docs/screenshots/seasons_boards.png" width="320" alt="Dry boards in the orchard"> <img src="docs/screenshots/seasons_ice.png" width="320" alt="Sliding over ice in the frost peaks">
 
 `tools/check_levels.gd` checks levels without a window. It loads every
 level in catalogue order (or the paths given), solves each with the hint
@@ -284,7 +308,7 @@ solver, and fails if a level is broken, cannot be finished, or has a
 three-star limit other than its fewest moves. It warns when a world folder
 does not match the level's `world`, and when a hint from the start looks at
 more than 5,000 states, the budget for answering quickly on a phone (the
-largest level, 1-10 Crossroads, looks at about 1,600). `--plan` prints each
+largest level, 4-7 Cider Press, looks at about 3,800). `--plan` prints each
 level's shortest solution and `--fix-stars` rewrites each level's `stars`
 from it: the best, then best + max(2, 25%), then best + max(4, 60%).
 
@@ -353,8 +377,8 @@ while a mechanism is moving and is off once the level is finished.
 was finished.
 
 **Hints** come from `core/Solver.gd`, a breadth-first search over
-`LevelState` in which walked steps, slider drags and crank turns cost a move
-and belt rides cost nothing (0-1 BFS), so it finds the fewest moves to
+`LevelState` in which walked steps, ice slides, slider drags and crank
+turns cost a move and belt rides cost nothing (0-1 BFS), so it finds the fewest moves to
 finish from wherever the player is. A hint shows the first step of that
 plan: a glowing arrow over where one tap should walk (as far as the plan goes
 before something happens, with a trail of dots), or over the slider or crank
@@ -385,14 +409,14 @@ still fits the level.
 ```
 core/       grid, pathfinding, level loading and rules, solver, saved progress
 game/       the level scene that plays a level
-render/     palette, stage lighting, procedural meshes and props
+render/     palette, stage lighting, weather, procedural meshes and props
 shaders/    block, clay, water, cloth, sky and effect shaders
-entities/   courier, parcels, pads, exit, mechanisms
+entities/   courier, parcels, pads, exit, mechanisms, dry boards
 camera/     orbit camera
 ui/         HUD, buttons and the finish card
-levels/     the 30 levels, levels/world_<n>/level_<n>.json
+levels/     the 50 levels, levels/world_<n>/level_<n>.json
 tools/      capture, tests and validation scripts
-dev/        sandbox level and one test level per mechanism
+dev/        sandbox level, one test level per mechanism, ice and boards
 ```
 
 All art is generated procedurally in code; there are no external model or

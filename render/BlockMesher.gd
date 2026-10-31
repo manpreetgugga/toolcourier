@@ -29,7 +29,6 @@ const WATER_LEVEL: float = 0.88
 const SHADE_ENCODE: float = 0.5
 
 const WATER: StringName = &"water"
-const GRASS: StringName = &"grass"
 
 ## Face order: +x, -x, +y, -y, +z, -z (axis = face / 2).
 const DIRS: Array[Vector3i] = [
@@ -64,6 +63,7 @@ class _Block:
 	var cell: Vector3i
 	var origin: Vector3
 	var water: bool
+	## A capped type (grass, autumn grass, snow).
 	var grass: bool
 	var exposed: Array[bool] = [false, false, false, false, false, false]
 	## Inner box of the rounded cube; a side without bevel extends to 0.5.
@@ -138,7 +138,7 @@ func _mesh_block(cell: Vector3i, block_type: StringName) -> void:
 	b.cell = cell
 	b.origin = Vector3(cell) + Vector3(0.5, 0.5, 0.5)
 	b.water = block_type == WATER
-	b.grass = block_type == GRASS
+	b.grass = BlockMaterials.CAPPED.has(block_type)
 	b.jitter = 1.0 if b.water else 1.0 + JITTER * _hash_signed(cell)
 	for face in 6:
 		b.exposed[face] = not _occludes(cell + DIRS[face], b.water)
@@ -201,7 +201,8 @@ func _grid_vertex(s: _Surface, b: _Block, n: Vector3, u: Vector3, v: Vector3,
 		brightness *= lerpf(1.0, TOP_TINT, normal.y)
 	else:
 		brightness *= lerpf(1.0, BOTTOM_TINT, -normal.y)
-	# Alpha carries per-type data: the grass cap flag, or the shore AO for water.
+	# Alpha carries per-type data: the cap flag of grass, autumn grass and
+	# snow, or the shore AO for water.
 	var aux: float = 1.0
 	if b.water:
 		aux = ao
@@ -294,11 +295,11 @@ func _occludes(cell: Vector3i, water: bool) -> bool:
 	return water or block_type != WATER
 
 
-## Whether the block at [param cell] casts ambient occlusion (water and
-## cranks do not).
+## Whether the block at [param cell] casts ambient occlusion (water, cranks
+## and dry boards do not).
 func _shades(cell: Vector3i) -> bool:
 	var block_type: StringName = _cells.get(cell, &"")
-	return block_type != &"" and block_type != WATER and block_type != &"crank"
+	return block_type != &"" and block_type != WATER and block_type != &"crank" and block_type != Grid.BOARDS
 
 
 ## Deterministic value in [-1, 1] per cell.

@@ -7,16 +7,19 @@ extends RefCounted
 ##
 ## The courier acts in two ways. [method enter] moves it into a cell (the
 ## caller has checked the step is allowed) and applies the rules there, in
-## order: a parcel matching an empty pad is dropped, a parcel lying there is
-## picked up if there is room, a button is toggled, an elevator underfoot
-## sets off, and reaching the open exit completes the level. [method slide]
+## order: dry boards it steps off drop away, a parcel matching an empty pad
+## is dropped, a parcel lying there is picked up if there is room, a button
+## is toggled, an elevator underfoot sets off, and reaching the open exit
+## completes the level. A slide over ice is one [method enter] at its end
+## (the Pathfinder links the cell before the ice to it). [method slide]
 ## and [method rotate] are the player working a mechanism. Every change is
 ## reported as events, in order, for the scene to animate:
 ## {"event": Event, "cell": Vector3i, "color": StringName} for parcels and
 ## the exit, {"event": Event, "id": String, "from": ..., "to": ...} for
-## mechanisms and what they carry.
+## mechanisms and what they carry. Boards dropping away are
+## {"event": Event.FELL, "cell": the board's block cell}.
 
-enum Event { PICKUP, DROP, EXIT_OPENED, COMPLETED, MECHANISM, CARRIED, PARCEL_MOVED }
+enum Event { PICKUP, DROP, EXIT_OPENED, COMPLETED, MECHANISM, CARRIED, PARCEL_MOVED, FELL }
 
 const CONVEYOR_BLOCK: StringName = &"conveyor"
 
@@ -37,6 +40,8 @@ var completed: bool = false
 ## id -> Mechanism, and id -> its state (see Mechanism).
 var mechanisms: Dictionary = {}
 var values: Dictionary = {}
+## Dry boards that have dropped away: block cell -> true.
+var fallen: Dictionary = {}
 ## Cells no moving block may enter, whatever the state: level blocks, solid
 ## props and the fixtures (pads, the exit, buttons).
 var _fixed: Dictionary = {}
@@ -75,10 +80,13 @@ func all_delivered() -> bool:
 	return filled.size() == pads.size()
 
 
-## The grid as it stands now: level blocks plus mechanism blocks where they
-## are, solid props and closed gates as obstacles, running belts.
+## The grid as it stands now: level blocks (less dry boards that have
+## dropped) plus mechanism blocks where they are, solid props and closed
+## gates as obstacles, running belts.
 func build_grid() -> Grid:
 	var cells: Dictionary = data.cells.duplicate()
+	for cell: Vector3i in fallen:
+		cells.erase(cell)
 	for mechanism: Mechanism in mechanisms.values():
 		if mechanism.has_blocks():
 			var block_type: StringName = CONVEYOR_BLOCK if mechanism.kind == Mechanism.Kind.CONVEYOR else BlockMaterials.ACCENT
@@ -104,6 +112,10 @@ func enter(cell: Vector3i, ride: bool = false) -> Array[Dictionary]:
 	var events: Array[Dictionary] = []
 	if completed:
 		return events
+	var left: Vector3i = courier - Vector3i.UP
+	if cell != courier and data.cells.get(left) == Grid.BOARDS and not fallen.has(left):
+		fallen[left] = true
+		events.append({"event": Event.FELL, "cell": left, "color": &""})
 	courier = cell
 	if not ride:
 		moves += 1
@@ -222,6 +234,7 @@ func snapshot() -> Dictionary:
 	return {
 		"courier": courier, "moves": moves, "waiting": waiting.duplicate(), "filled": filled.duplicate(),
 		"carried": carried.duplicate(), "completed": completed, "values": values.duplicate(),
+		"fallen": fallen.duplicate(),
 	}
 
 
@@ -233,6 +246,7 @@ func restore(saved: Dictionary) -> void:
 	carried.assign(saved["carried"])
 	completed = saved["completed"]
 	values = saved["values"].duplicate()
+	fallen = saved.get("fallen", {}).duplicate()
 
 
 ## [param saved] (a snapshot) as plain JSON values, for the save file.
@@ -246,11 +260,14 @@ static func snapshot_to_json(saved: Dictionary) -> Dictionary:
 	var colors: Array = []
 	for color: StringName in saved["carried"]:
 		colors.append(String(color))
+	var boards: Array = []
+	for cell: Vector3i in saved.get("fallen", {}):
+		boards.append([cell.x, cell.y, cell.z])
 	var courier_cell: Vector3i = saved["courier"]
 	return {
 		"courier": [courier_cell.x, courier_cell.y, courier_cell.z], "moves": saved["moves"],
 		"waiting": parcels, "filled": pads_filled, "carried": colors,
-		"completed": saved["completed"], "values": saved["values"].duplicate(),
+		"completed": saved["completed"], "values": saved["values"].duplicate(), "fallen": boards,
 	}
 
 
@@ -279,6 +296,12 @@ func snapshot_from_json(json: Variant) -> Dictionary:
 	var colors: Array[StringName] = []
 	for color: Variant in _json_list(json, "carried"):
 		colors.append(StringName(str(color)))
+	var boards: Dictionary = {}
+	for entry: Variant in _json_list(json, "fallen"):
+		var cell: Variant = _json_cell(entry)
+		if cell == null or data.cells.get(cell) != Grid.BOARDS:
+			return {}
+		boards[cell] = true
 	var mechanism_values: Dictionary = {}
 	var saved_values: Variant = json.get("values")
 	if typeof(saved_values) != TYPE_DICTIONARY:
@@ -294,6 +317,7 @@ func snapshot_from_json(json: Variant) -> Dictionary:
 	saved["filled"] = pads_filled
 	saved["carried"] = colors
 	saved["values"] = mechanism_values
+	saved["fallen"] = boards
 	return saved
 
 

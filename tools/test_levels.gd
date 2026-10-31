@@ -47,7 +47,7 @@ func _initialize() -> void:
 		paths = LevelCatalog.all()
 	# Keep the player's own save out of it.
 	Progress.use_file(SAVE)
-	_check(not sheet or paths.size() == 30, "the catalog has 30 levels (%d)" % paths.size())
+	_check(not sheet or paths.size() == 50, "the catalog has 50 levels (%d)" % paths.size())
 	for path: String in paths:
 		_check_solution(path)
 	_viewport = SubViewport.new()

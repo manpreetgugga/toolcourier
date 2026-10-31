@@ -16,6 +16,13 @@ const BLOCK: Dictionary = {
 	&"wood": Color("#DDA066"),
 	&"brick": Color("#E8845E"),
 	&"water": Color("#6EC6EA"),
+	# The seasons: autumn grass, winter snow, slate and ice, and autumn's dry
+	# boards.
+	&"autumn_grass": Color("#DDA24A"),
+	&"snow": Color("#F1F4F9"),
+	&"slate": Color("#8E98B0"),
+	&"ice": Color("#B9E1F0"),
+	&"boards": Color("#A9764E"),
 }
 
 ## The single accent used by every interactive part.
@@ -32,7 +39,9 @@ const PACKAGE: Dictionary = {
 ## Per-world look: background gradient, cloud sea, key light and ambient fill.
 ## "sky_top" is the top of the screen, "sky_horizon" the bottom of the screen;
 ## "sky_ground" is only used for the lower hemisphere of the ambient/radiance
-## map. "clouds" is the coverage of the cloud sea below the diorama.
+## map. "clouds" is the coverage of the cloud sea below the diorama. An
+## optional "season" (autumn or winter; summer when missing) recolours the
+## trees and bushes and adds falling leaves or snow.
 const THEMES: Dictionary = {
 	&"meadow": {
 		"sky_top": Color("#C9B8E8"),
@@ -70,6 +79,32 @@ const THEMES: Dictionary = {
 		"ambient_energy": 0.42,
 		"shadow_blur": 3.0,
 	},
+	&"orchard": {
+		"season": &"autumn",
+		"sky_top": Color("#E9A27C"),
+		"sky_horizon": Color("#FBE6BE"),
+		"sky_ground": Color("#E8C49E"),
+		"clouds": 0.5,
+		"cloud_color": Color("#FFEFD9"),
+		"sun_color": Color("#FFCB91"),
+		"sun_energy": 1.6,
+		"ambient_color": Color("#C7A3C4"),
+		"ambient_energy": 0.42,
+		"shadow_blur": 3.0,
+	},
+	&"frost_peaks": {
+		"season": &"winter",
+		"sky_top": Color("#A7B0E0"),
+		"sky_horizon": Color("#EEF2F9"),
+		"sky_ground": Color("#CDD5E6"),
+		"clouds": 0.65,
+		"cloud_color": Color("#FFFFFF"),
+		"sun_color": Color("#FFF2E6"),
+		"sun_energy": 1.4,
+		"ambient_color": Color("#A9B8E6"),
+		"ambient_energy": 0.5,
+		"shadow_blur": 3.0,
+	},
 }
 
 const DEFAULT_THEME: StringName = &"meadow"
@@ -81,3 +116,8 @@ static func block_color(block_type: StringName) -> Color:
 
 static func theme(theme_name: StringName) -> Dictionary:
 	return THEMES.get(theme_name, THEMES[DEFAULT_THEME])
+
+
+## summer, autumn or winter.
+static func season(theme_name: StringName) -> StringName:
+	return theme(theme_name).get("season", &"summer")

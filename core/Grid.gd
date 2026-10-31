@@ -5,6 +5,11 @@ extends RefCounted
 ## Cell (x, y, z) spans [x, x+1] x [y, y+1] x [z, z+1], so its centre is
 ## cell + (0.5, 0.5, 0.5).
 
+## Winter ice: the courier slides over it until something stops it.
+const ICE: StringName = &"ice"
+## Autumn dry boards: they drop away once the courier steps off them.
+const BOARDS: StringName = &"boards"
+
 ## Vector3i -> block type (StringName).
 var cells: Dictionary
 ## Vector3i -> Vector3i: the horizontal direction an oriented block faces.
@@ -36,9 +41,9 @@ static func has_walkable_top(block_type: StringName) -> bool:
 
 
 ## Whether this type is a whole cube (meshed by BlockMesher and hiding the
-## faces it touches); stairs and cranks have their own meshes.
+## faces it touches); stairs, cranks and dry boards have their own meshes.
 static func is_full_block(block_type: StringName) -> bool:
-	return block_type != &"crank" and not is_stairs(block_type)
+	return block_type != &"crank" and block_type != BOARDS and not is_stairs(block_type)
 
 
 func get_block(cell: Vector3i) -> StringName:
