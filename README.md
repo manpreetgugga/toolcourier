@@ -5,11 +5,26 @@ A little walking mailbox delivers parcels across small floating clay
 dioramas: drag to rotate the diorama, tap a spot to walk there, and operate
 the orange mechanisms to open a path.
 
-> **Status:** early development (build steps 1–4 of 10 done: lighting and sky,
+> **Status:** early development (build steps 1–5 of 10 done: lighting and sky,
 > clay block meshing, orbit camera with tap picking, the courier with
-> pathfinding and tap-to-move).
+> pathfinding, and playable levels from JSON with parcels, pads and an exit).
 
-![Test diorama](docs/screenshots/clay_closeup.png)
+<img src="docs/screenshots/step5_level.png" width="320" alt="World 1, level 1"> <img src="docs/screenshots/step5_delivery.png" width="320" alt="A parcel delivered">
+
+## How a level plays
+
+Each level is a floating clay diorama. The courier walks to wherever you
+tap, picks up a parcel by walking onto it (one at a time in worlds 1–2, two
+in world 3), and drops it automatically on the pad of the same colour. Once
+every pad is filled the exit's pennant runs up its post; walking onto the
+exit finishes the level. Every cell walked is a move, and each level sets
+three move limits for three, two and one star.
+
+The rules live in `core/LevelState.gd`, with no visuals, so the solver and
+undo can reuse them; `game/Level.gd` builds the scene and animates them:
+the mailbox flaps its door to swallow a parcel and raises its flag in the
+parcel's colour, flaps it again to pop the parcel out onto the pad, and the
+pad lights up with a burst of sparkles.
 
 ## Art direction
 
@@ -63,6 +78,9 @@ Open the folder in Godot and press **Play**, or from a terminal:
 godot --path .
 ```
 
+The main scene, `game/Level.tscn`, plays world 1 level 1 until the menus
+exist; set its `level_path` to play another level.
+
 ## Controls
 
 | Gesture | Action |
@@ -78,9 +96,13 @@ raycast against the grid (`core/Grid.gd`), so no physics bodies are needed.
 
 ## Tests
 
-`tools/test_orbit_camera.gd` drives the test diorama with synthetic touch
-events and checks tap vs drag, inertia, pitch limits, pinch zoom, double-tap
-reset, picking and the fit (needs a renderer, exits non-zero on failure):
+The test scripts need a renderer (not `--headless`), print PASS/FAIL per
+check and exit non-zero on any failure. The camera and courier tests play
+`dev/sandbox_level.json`.
+
+`tools/test_orbit_camera.gd` drives the sandbox with synthetic touch events
+and checks tap vs drag, inertia, pitch limits, pinch zoom, double-tap reset,
+picking and the fit:
 
 ```bash
 godot --path . --resolution 405x720 -s res://tools/test_orbit_camera.gd -- --out=docs/screenshots
@@ -95,12 +117,20 @@ portraits of the courier:
 godot --path . --resolution 405x720 -s res://tools/test_courier.gd -- --out=docs/screenshots
 ```
 
+`tools/test_level.gd` checks the loader's error reports and the delivery
+rules (including undo snapshots), then plays world 1 level 1 by tapping and
+expects the minimum of 11 moves for three stars:
+
+```bash
+godot --path . --resolution 405x720 -s res://tools/test_level.gd -- --out=docs/screenshots
+```
+
 ## Screenshots from the command line
 
 `tools/capture.gd` renders a scene for a number of frames and saves a PNG:
 
 ```bash
-godot --path . --resolution 720x1280 -s res://tools/capture.gd -- --scene=res://dev/test_diorama.tscn --out=docs/screenshots/step1.png --frames=90
+godot --path . --resolution 720x1280 -s res://tools/capture.gd -- --scene=res://game/Level.tscn --out=docs/screenshots/level.png --frames=90
 ```
 
 Add `--size=720x1280` to render offscreen at an exact size (useful when the
@@ -127,21 +157,63 @@ lip), `wood` (plank lines), `brick`, `water`, `accent` for interactive parts
 (pulsing orange), and `stairs`, which has its own clay mesh and a facing (the
 direction it climbs). Colours live in `render/Palette.gd`, materials in
 `render/BlockMaterials.gd`, the clay surface in `shaders/block.gdshader` with
-shared helpers in `shaders/block_common.gdshaderinc`.
+the shared clay lighting in `shaders/clay_common.gdshaderinc`.
+
+## Levels
+
+Levels are JSON files in `levels/world_<n>/level_<n>.json`. Coordinates are
+whole cells; `y` is up. `start`, `exit` and the positions of parcels and pads
+are *standing* cells: the empty cell the courier occupies, directly above the
+block it stands on.
+
+```json
+{
+	"name": "First Delivery",
+	"world": 1,
+	"palette": "meadow",
+	"blocks": [[0, 0, 0, "grass"], [1, 0, 0, "sand"], [2, 1, 1, "stairs", "+x"]],
+	"props": [[0, 1, 0, "tree_small", 0, true], [3, 1, 3, "fence", 90]],
+	"mechanisms": [],
+	"packages": [{ "pos": [2, 1, 3], "color": "red" }],
+	"pads": [{ "pos": [5, 2, 1], "color": "red" }],
+	"start": [0, 1, 3],
+	"exit": [4, 2, 0],
+	"stars": [11, 14, 18]
+}
+```
+
+| Key | Meaning |
+| --- | --- |
+| `name`, `world` | Title, and the world (1–3) it belongs to. |
+| `palette` | Sky and light theme: `meadow`, `harbor` or `old_town`. |
+| `blocks` | `[x, y, z, type]`. Types: `stone`, `dark_stone`, `sand`, `grass`, `wood`, `brick`, `water`, `accent`. Stairs are `[x, y, z, "stairs", facing]`, climbing towards `facing` (`+x`, `-x`, `+z`, `-z`); `stairs_wood` and `stairs_brick` change the material. |
+| `props` | Decor, `[x, y, z, type, rotation?, solid?]`: `tree_small`, `tree_tall`, `bush`, `lamp_post`, `flag`, `crate`, `fence`, `rock`. Rotation is in degrees about up; fences run along the cell's −z edge before rotation. Props are walk-through unless `solid` is `true`. |
+| `mechanisms` | Moving parts (build step 6). |
+| `packages`, `pads` | `{ "pos": [x, y, z], "color": ... }` with colours `red`, `green`, `blue`, `yellow`. Each parcel needs exactly one pad of its colour. |
+| `start`, `exit` | Where the courier begins and where it finishes. |
+| `stars` | Move limits for three, two and one star, not decreasing. |
+| `carry` | Optional: parcels carried at once (default 1, or 2 from world 3). |
+
+To add a level, write the file, set `game/Level.tscn`'s `level_path` to it
+and press F6. `core/LevelLoader.gd` checks the level as it loads and prints
+every problem with where it is (for example `packages[0]: (2, 0, 3) is not
+a cell the courier can stand in`), and the level will not start until they
+are fixed. `dev/sandbox_level.json` is a small test level used by the tests.
 
 ## Project layout
 
 ```
 autoload/   global singletons (game state, audio, saving)
-core/       grid, pathfinding, level loading, undo
-render/     palette, stage lighting, procedural meshes
-shaders/    block, water, sky and effect shaders
-entities/   courier, packages, mechanisms
+core/       grid, pathfinding, level loading and rules, undo
+game/       the level scene that plays a level
+render/     palette, stage lighting, procedural meshes and props
+shaders/    block, clay, water, cloth, sky and effect shaders
+entities/   courier, parcels, pads, exit, mechanisms
 camera/     orbit camera
 ui/         menus and HUD
 levels/     level JSON, one folder per world
-tools/      dev and validation scripts
-dev/        test scenes used during development
+tools/      capture, tests and validation scripts
+dev/        sandbox level used during development
 ```
 
 All art is generated procedurally in code; there are no external model or

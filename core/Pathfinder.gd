@@ -37,7 +37,8 @@ func rebuild() -> void:
 			if not _grid.has_block(block + Vector3i.UP):
 				_add_node(block)
 				stairs.append(block)
-		elif block_type != BlockMesher.WATER and not _grid.has_block(block + Vector3i.UP):
+		elif block_type != BlockMesher.WATER and not _grid.has_block(block + Vector3i.UP) \
+				and not _grid.obstacles.has(block + Vector3i.UP):
 			_add_node(block + Vector3i.UP)
 
 	for id: int in _cells_by_id:

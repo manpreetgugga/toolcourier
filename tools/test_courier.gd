@@ -1,5 +1,5 @@
 extends SceneTree
-## Scripted check of pathfinding and tap-to-move on the test diorama: which
+## Scripted check of pathfinding and tap-to-move on the sandbox level: which
 ## cells are walkable, climbing via stairs, unreachable taps, re-targeting
 ## mid-walk, and the courier's poses. Taps go through the real input path.
 ## Prints PASS/FAIL per check, saves screenshots (including close-up
@@ -29,7 +29,8 @@ func _initialize() -> void:
 	_viewport.msaa_3d = root.msaa_3d
 	_viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	root.add_child(_viewport)
-	_scene = (load("res://dev/test_diorama.tscn") as PackedScene).instantiate()
+	_scene = (load("res://game/Level.tscn") as PackedScene).instantiate()
+	_scene.level_path = "res://dev/sandbox_level.json"
 	_viewport.add_child(_scene)
 	_run()
 
@@ -94,7 +95,7 @@ func _run() -> void:
 		"walking back down the stairs to the sand corner (now at %s)" % [courier.cell])
 
 	courier.place(SAND_CORNER)
-	courier.set_carrying(true)
+	courier.set_carried([&"red"])
 	courier.celebrate()
 	await _wait(0.62)
 	await _portrait("step4_happy.png", courier, _front_right(courier))

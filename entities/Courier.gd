@@ -103,15 +103,37 @@ func celebrate() -> void:
 	_happy_tween.chain().tween_callback(_set_happy_eyes.bind(false))
 
 
-## Raises the flag while carrying a parcel.
-func set_carrying(carrying: bool) -> void:
+## Drops the rest of the current path; the step in progress still finishes.
+func stop() -> void:
+	_queue.clear()
+
+
+## Shows what is carried: the flag goes up in the colour of the next parcel
+## to deliver, and down again when there is nothing left.
+func set_carried(colors: Array[StringName]) -> void:
+	var carrying: bool = not colors.is_empty()
+	if carrying:
+		_rig.flag.material_override = ClayShapes.material(Palette.PACKAGE[colors[0]])
 	var tween: Tween = create_tween().set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	tween.tween_property(_rig.flag_pivot, "rotation:x", 0.0 if carrying else CourierBuilder.FLAG_LOWERED, 0.3)
+	if not carrying:
+		tween.tween_callback(func() -> void: _rig.flag.material_override = ClayShapes.material(CourierBuilder.FLAG_COLOR))
 
 
 func set_door_open(open: bool) -> void:
 	var tween: Tween = create_tween().set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	tween.tween_property(_rig.door_hinge, "rotation:x", DOOR_OPEN if open else 0.0, 0.25)
+
+
+## Flaps the door open and shut, for parcels going in or out.
+func flap_door(open_time: float = 0.35) -> void:
+	set_door_open(true)
+	get_tree().create_timer(open_time).timeout.connect(set_door_open.bind(false))
+
+
+## World point just in front of the door, where parcels go in and come out.
+func door_anchor() -> Vector3:
+	return _rig.door_hinge.global_transform * Vector3(0.0, 0.14, -0.06)
 
 
 func _next_step() -> void:

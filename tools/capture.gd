@@ -4,7 +4,7 @@ extends SceneTree
 ##
 ## Usage (from the project root, under Xvfb on a server):
 ##   godot --path . --resolution 720x1280 -s res://tools/capture.gd -- \
-##       --scene=res://dev/test_diorama.tscn --out=docs/screenshots/step1.png --frames=90
+##       --scene=res://game/Level.tscn --out=docs/screenshots/level.png --frames=90
 ##
 ## --size=WxH renders into an offscreen viewport of exactly that size, for
 ## captures larger than the desktop allows. --crop=X,Y,W,H saves only that

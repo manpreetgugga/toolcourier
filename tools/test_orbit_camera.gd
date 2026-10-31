@@ -1,5 +1,5 @@
 ﻿extends SceneTree
-## Scripted check of the orbit camera and tap handling on the test diorama:
+## Scripted check of the orbit camera and tap handling on the sandbox level:
 ## tap vs drag, inertia, pitch clamp, pinch and wheel zoom, double-tap reset,
 ## grid picking and the auto-fit. Feeds synthetic touch events into a 720x1280
 ## offscreen viewport, prints PASS/FAIL per check, saves screenshots, and exits
@@ -31,7 +31,8 @@ func _initialize() -> void:
 	_viewport.msaa_3d = root.msaa_3d
 	_viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	root.add_child(_viewport)
-	_scene = (load("res://dev/test_diorama.tscn") as PackedScene).instantiate()
+	_scene = (load("res://game/Level.tscn") as PackedScene).instantiate()
+	_scene.level_path = "res://dev/sandbox_level.json"
 	_viewport.add_child(_scene)
 	_run()
 

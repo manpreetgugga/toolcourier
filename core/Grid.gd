@@ -10,6 +10,8 @@ var cells: Dictionary
 ## Vector3i -> Vector3i: the horizontal direction an oriented block faces.
 ## Stairs climb towards their facing.
 var facing: Dictionary
+## Cells the courier cannot enter although no block fills them (solid props).
+var obstacles: Dictionary = {}
 ## Bounding box of all blocks, in world units.
 var bounds: AABB
 

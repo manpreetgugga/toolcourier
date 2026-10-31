@@ -10,7 +10,8 @@ extends RefCounted
 const BODY_COLOR := Color("#4C62D0")
 const DOOR_COLOR := Color("#FFF1DC")
 const INK_COLOR := Color("#2B2D42")
-const FLAG_COLOR := Color("#E4572E")
+## Flag colour while lowered; raised, it takes the carried parcel's colour.
+const FLAG_COLOR := Color("#D8CEC0")
 const LEG_COLOR := Color("#3A3550")
 const GLINT_COLOR := Color("#FFFFFF")
 
@@ -22,9 +23,6 @@ const BOX_HEIGHT: float = 0.18
 const HIP_HEIGHT: float = 0.17
 ## Flag pivot angle when lowered (pole lying back along the body).
 const FLAG_LOWERED: float = PI * 0.5
-
-const BLOB_SHADER: Shader = preload("res://shaders/blob_shadow.gdshader")
-
 
 ## Handles to the parts the Courier animates.
 class Rig:
@@ -41,23 +39,12 @@ class Rig:
 	var open_eyes: Array[Node3D] = []
 	var happy_eyes: Array[Node3D] = []
 	var flag_pivot: Node3D
+	var flag: MeshInstance3D
 
 
 static func build(owner: Node3D) -> Rig:
 	var rig := Rig.new()
-
-	var blob := MeshInstance3D.new()
-	blob.name = "BlobShadow"
-	var quad := QuadMesh.new()
-	quad.size = Vector2(0.72, 0.72)
-	quad.orientation = PlaneMesh.FACE_Y
-	blob.mesh = quad
-	var blob_material := ShaderMaterial.new()
-	blob_material.shader = BLOB_SHADER
-	blob.material_override = blob_material
-	blob.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	blob.position.y = 0.012
-	owner.add_child(blob)
+	owner.add_child(PropFactory.blob_shadow(0.72))
 
 	rig.root = _node(owner, "Rig", Vector3.ZERO)
 	rig.leg_left = _leg(rig.root, "LegLeft", -0.095)
@@ -80,8 +67,8 @@ static func build(owner: Node3D) -> Rig:
 	rig.flag_pivot = _node(rig.body, "FlagPivot", Vector3(WIDTH * 0.5 + 0.012, HIP_HEIGHT + 0.13, 0.1))
 	var pole := _mesh(rig.flag_pivot, "Pole", ClayShapes.rounded_box(Vector3(0.022, 0.2, 0.022), 0.009), LEG_COLOR)
 	pole.position.y = 0.1
-	var flag := _mesh(rig.flag_pivot, "Flag", ClayShapes.rounded_box(Vector3(0.014, 0.075, 0.11), 0.006), FLAG_COLOR)
-	flag.position = Vector3(0.0, 0.16, 0.055)
+	rig.flag = _mesh(rig.flag_pivot, "Flag", ClayShapes.rounded_box(Vector3(0.014, 0.075, 0.11), 0.006), FLAG_COLOR)
+	rig.flag.position = Vector3(0.0, 0.16, 0.055)
 	rig.flag_pivot.rotation.x = FLAG_LOWERED
 	return rig
 
