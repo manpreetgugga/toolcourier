@@ -9,6 +9,9 @@
 // colours so reflections stay coherent.
 //
 // No TIME: an animated sky would force the radiance map to update every frame.
+// The clouds are worked out for every pixel: the quarter-resolution sky pass
+// (QUARTER_RES_COLOR) would be cheaper, but the Mobile renderer does not run
+// it and the sky comes out blank.
 shader_type sky;
 
 uniform vec3 top_color : source_color = vec3(0.561, 0.722, 0.871);

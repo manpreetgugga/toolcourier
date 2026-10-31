@@ -81,6 +81,19 @@ func _check_settings() -> void:
 	_check(root.msaa_3d == Viewport.MSAA_DISABLED, "low quality turns multisampling off")
 	Settings.set_value(&"quality", Settings.Quality.HIGH)
 	_check(root.msaa_3d == Viewport.MSAA_4X, "high quality turns it back up")
+	var phone := SubViewport.new()
+	phone.size = Vector2i(1080, 2400)
+	var scales: Array[float] = []
+	for quality: int in [Settings.Quality.LOW, Settings.Quality.MEDIUM, Settings.Quality.HIGH]:
+		Settings.set_value(&"quality", quality, false)
+		scales.append(Settings.render_scale(phone))
+	phone.size = Vector2i(720, 1280)
+	scales.append(Settings.render_scale(phone))
+	phone.free()
+	_check(absf(scales[0] - 0.56) < 0.01 and absf(scales[1] - 0.71) < 0.01 and scales[2] == 1.0 and scales[3] == 1.0,
+		"on a 1080 x 2400 phone the 3D view is drawn at %.2f, %.2f and %.2f of full size, and a smaller screen in full"
+		% [scales[0], scales[1], scales[2]])
+	Settings.set_value(&"quality", Settings.Quality.HIGH)
 
 	Settings.set_value(&"haptics", false)
 	Haptics.tap()
@@ -170,6 +183,12 @@ func _check_menu() -> void:
 	await _press(quality, Vector2(quality.size.x * 0.1, quality.size.y * 0.5))
 	_check(Settings.quality == Settings.Quality.LOW, "the quality picker sets low quality")
 	await _press(quality, Vector2(quality.size.x * 0.9, quality.size.y * 0.5))
+	for i in 5:
+		await _press(card.get_node("Card/Version"))
+	_check(PerfOverlay.is_shown(), "five taps on the version number bring up the performance readout")
+	for i in 5:
+		await _press(card.get_node("Card/Version"))
+	_check(not PerfOverlay.is_shown(), "and five more take it away")
 	var slider: Control = card.get_node("Card/Music")
 	await _drag(slider, Vector2(slider.size.x * 0.8, 30.0), Vector2(slider.size.x * 0.3, 30.0))
 	var saved: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(SETTINGS))

@@ -1,10 +1,10 @@
 class_name SettingsCard
 extends Control
 ## The settings, as a card over a shaded screen: music and sound volumes,
-## haptics, the tilt-shift blur and the graphics quality. Each change goes
-## to Settings at once (a volume slider saves when let go), so the sound and
-## picture follow while the card is up. Sizes are in the 720 x 1280 base
-## viewport.
+## haptics, the tilt-shift blur and the graphics quality, with the version
+## number at the foot. Each change goes to Settings at once (a volume slider
+## saves when let go), so the sound and picture follow while the card is up.
+## Sizes are in the 720 x 1280 base viewport.
 
 signal closed
 
@@ -16,6 +16,8 @@ var _card: Control
 var _sliders: Dictionary = {}
 var _toggles: Dictionary = {}
 var _quality: _Segmented
+var _taps: int = 0
+var _last_tap: int = 0
 
 
 func _init() -> void:
@@ -64,6 +66,14 @@ func _ready() -> void:
 	done.position = Vector2((SIZE.x - 260.0) * 0.5, SIZE.y - 130.0)
 	done.pressed.connect(close)
 	_card.add_child(done)
+
+	var version: Label = _label("Version %s" % ProjectSettings.get_setting("application/config/version"), 20,
+		HORIZONTAL_ALIGNMENT_CENTER, Rect2(SIZE.x * 0.5 - 120.0, SIZE.y - 32.0, 240.0, 28.0))
+	version.name = "Version"
+	version.label_settings.font_color = Ui.MUTED
+	version.mouse_filter = Control.MOUSE_FILTER_STOP
+	version.gui_input.connect(_on_version_input)
+	_card.add_child(version)
 
 
 ## Shows the card with the current settings.
@@ -118,6 +128,20 @@ func _add_toggle(row: int, text: String, key: StringName) -> void:
 			Haptics.snap())
 	_card.add_child(toggle)
 	_toggles[key] = toggle
+
+
+## Five quick taps on the version number turn the performance readout on or
+## off (see PerfOverlay).
+func _on_version_input(event: InputEvent) -> void:
+	if not (event is InputEventScreenTouch and event.is_pressed()):
+		return
+	var now: int = Time.get_ticks_msec()
+	_taps = _taps + 1 if now - _last_tap < 600 else 1
+	_last_tap = now
+	if _taps == 5:
+		_taps = 0
+		PerfOverlay.toggle()
+		Haptics.snap()
 
 
 func _row_label(row: int, text: String) -> Label:

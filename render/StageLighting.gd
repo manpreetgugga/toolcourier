@@ -27,6 +27,8 @@ var _sky_material: ShaderMaterial
 func _ready() -> void:
 	_build()
 	apply_theme(theme_name)
+	_apply_quality()
+	Settings.events.changed.connect(_on_setting_changed)
 
 
 func apply_theme(new_theme: StringName) -> void:
@@ -73,6 +75,20 @@ func set_tilt_shift(enabled: bool, focus_distance: float, radius: float) -> void
 	camera_attributes.dof_blur_far_transition = radius * 1.5
 	camera_attributes.dof_blur_near_transition = radius * 0.8
 	camera_attributes.dof_blur_near_distance = maxf(focus_distance - radius * 1.8, 0.1)
+
+
+## The part of the graphics quality that lives on the light and environment
+## (Settings.apply_quality does the rest): Low gives the sun a single shadow
+## split and turns glow off.
+func _apply_quality() -> void:
+	var low: bool = Settings.quality == Settings.Quality.LOW
+	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_ORTHOGONAL if low else DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
+	environment.glow_enabled = not low
+
+
+func _on_setting_changed(key: StringName) -> void:
+	if key == &"quality":
+		_apply_quality()
 
 
 func _build() -> void:

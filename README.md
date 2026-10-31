@@ -5,14 +5,16 @@ A little walking mailbox delivers parcels across small floating clay
 dioramas: drag to rotate the diorama, tap a spot to walk there, and operate
 the orange mechanisms to open a path.
 
-> **Status:** early development (build steps 1–9 of 10 done: lighting and sky,
+> **Status:** version 1.0.0, all ten build steps done: lighting and sky,
 > clay block meshing, orbit camera with tap picking, the courier with
 > pathfinding, playable levels from JSON with parcels, pads and an exit,
 > mechanisms (sliders, elevators, buttons, conveyors, rotators and gates),
 > undo, restart, hints, stars and saved progress, 50 solver-checked levels
-> in five worlds (the last two seasonal), and the menus, settings, generated
-> sound and music, haptics and the build-up animations). Step 10, a
-> performance pass and the Android export, is next.
+> in five worlds (the last two seasonal), the menus, settings, generated
+> sound and music, haptics and the build-up animations, and the graphics
+> quality presets and the Android build. The APK has been run on an
+> emulator; frame rate and memory still need checking on real phones (see
+> [Performance and quality](#performance-and-quality)).
 
 <img src="docs/screenshots/step9_menu.png" width="320" alt="The main menu over a turning diorama"> <img src="docs/screenshots/step7_hud.png" width="320" alt="World 1, level 1 with the HUD">
 
@@ -116,18 +118,75 @@ press **F6**.
 ## Building
 
 Everything the game needs is in the project: no downloads, no network and
-no permissions at run time other than vibration. To make a build, install
-the export templates for your Godot version (**Editor → Manage Export
-Templates**), add a preset under **Project → Export** and export, or from a
-terminal once the preset exists:
+no permissions at run time other than vibration.
+
+### Android
+
+The Android preset is checked in (`export_presets.cfg`): package
+`com.manpreetgugga.tinycourier`, version 1.0.0 (code 1), 64-bit ARM only,
+full screen, portrait, and VIBRATE as its only permission. It builds the APK
+straight from Godot's template, without Gradle. Once per machine:
+
+1. Install the export templates for your Godot version (**Editor → Manage
+   Export Templates**).
+2. Install the Android SDK (with build-tools and platform-tools; Android
+   Studio does this) and a JDK 17 or newer (Android Studio's own, in its
+   `jbr` folder, will do).
+3. In **Editor → Editor Settings → Export → Android**, set **Java SDK Path**
+   and **Android SDK Path**. Godot reads them from there only, not from
+   `JAVA_HOME`. It makes a debug keystore by itself.
+
+Then build a debug APK (about 32 MB) and install it on a phone with USB
+debugging on:
+
+```bash
+godot --headless --path . --export-debug "Android" export/TinyCourier-debug.apk
+adb install -r export/TinyCourier-debug.apk
+```
+
+A release build must be signed with your own key. Make one with `keytool`
+(it comes with the JDK) and keep it, and its passwords, out of the
+repository; then point Godot at it through the environment rather than the
+preset, so nothing secret is committed:
+
+```bash
+keytool -genkeypair -v -keystore ~/keys/tinycourier.jks -alias tinycourier -keyalg RSA -keysize 2048 -validity 10000
+export GODOT_ANDROID_KEYSTORE_RELEASE_PATH=~/keys/tinycourier.jks
+export GODOT_ANDROID_KEYSTORE_RELEASE_USER=tinycourier
+export GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD=...
+godot --headless --path . --export-release "Android" export/TinyCourier.apk
+```
+
+Google Play wants an Android App Bundle (`.aab`) rather than an APK: for
+that, install the Android build template (**Project → Install Android Build
+Template**), turn on **Gradle Build → Use Gradle Build** and set the export
+format to AAB. Play also lists the game only for phones with Vulkan; the
+game itself falls back to OpenGL where Vulkan is missing.
+
+### Other platforms
+
+Add a preset under **Project → Export** and export, for example:
 
 ```bash
 godot --headless --path . --export-release "Windows Desktop" export/TinyCourier.exe
 ```
 
-The levels are plain `.json` files, so a preset must include them: set
-**Resources → Filters to export non-resource files** to `*.json`. The Android
-preset (with the VIBRATE permission) comes with step 10.
+The levels are plain `.json` files, so every preset must include them: set
+**Resources → Filters to export non-resource files** to `*.json` (the
+Android preset does). It also leaves out `dev/`, `tools/` and the icon
+layers that only the Android launcher uses.
+
+### Icons and sounds
+
+The app icon is rendered from the game: `tools/make_icon.gd` stands the
+courier, flag up, on a small grass island (`dev/icon_level.json`) and writes
+`icons/icon.png` plus the layers of Android's adaptive icon (a foreground
+kept inside the part every launcher shows, the sky behind it, and a white
+silhouette for Android 13's themed icons). It needs a renderer:
+
+```bash
+godot --path . -s res://tools/make_icon.gd
+```
 
 The sounds are generated, not recorded. They are checked in, so building
 needs nothing extra. After changing `tools/make_audio.gd`, render them again:
@@ -237,7 +296,8 @@ godot --path . --resolution 405x720 -s res://tools/test_levels.gd -- res://level
 broken file, every setting surviving a reload), haptic ticks and their
 switch, then drives the menus through the touch path: splash, main menu,
 world select, a locked world and level, the level grid, back navigation and
-the settings card (sliders, toggles, quality). It plays a level through the
+the settings card (sliders, toggles, quality, the render size each quality
+gives a phone, and the performance readout). It plays a level through the
 same path: the build-up, the sounds and haptics of a walk and a delivery,
 pausing and resuming, the confetti, the
 tear-down and back to the level grid, with a simulated notch to check the
@@ -246,6 +306,9 @@ safe area. It saves `step9_*.png` screenshots:
 ```bash
 godot --audio-driver Dummy --path . --resolution 405x720 -s res://tools/test_ui.gd -- --out=docs/screenshots
 ```
+
+`tools/benchmark.gd` measures the quality presets; see
+[Performance and quality](#performance-and-quality).
 
 ## Screenshots from the command line
 
@@ -493,7 +556,73 @@ graphics quality (Low, Medium, High). `core/Settings.gd` keeps them in
 `user://settings.json`, written to a temporary file and then moved into
 place, and every change takes effect at once.
 
+The version number at the foot of the card has a hidden use: tap it five
+times quickly to bring up the performance readout (see below), and five
+more to put it away.
+
 <img src="docs/screenshots/step9_settings.png" width="240" alt="The settings card">
+
+## Performance and quality
+
+The game is drawn with Godot's Mobile renderer and costs little to draw: a
+level is 27–46 draw calls and 20–44 thousand triangles (the world select,
+with five small dioramas turning, is the busiest screen at 142 draw calls).
+Nearly all of a frame's cost is per pixel instead: the tilt-shift blur,
+multisampling, shadows and the cloud sea. So the quality presets mostly
+decide how many pixels the 3D view is drawn with (`Settings.apply_quality`
+and `StageLighting`):
+
+| | Low | Medium | High |
+| --- | --- | --- | --- |
+| Most pixels in the 3D view | 0.8 million | 1.3 million | 2.6 million |
+| 3D view on a 1080 × 2400 phone | 600 × 1333 | 764 × 1699 | 1080 × 2400 |
+| Multisampling | off | 2× | 4× |
+| Sun shadows | 1024 px map, one split, hard | 2048 px, two splits, soft | 4096 px, two splits, softer |
+| Tilt-shift blur | box, few samples | box, few samples | hexagon, more samples |
+| Glow | off | on | on |
+| GPU time, level 1-1 | 0.8 ms | 1.9 ms | 4.3 ms |
+| Video memory, level 1-1 | 93 MB | 134 MB | 247 MB |
+
+The 3D view is scaled up to the screen; the interface is always drawn at
+the screen's own resolution, so text stays sharp, and a screen smaller than
+the budget (or a desktop window) is drawn in full. Phones start on Medium
+and are held at 60 frames per second, which saves battery on 90 and 120 Hz
+screens; desktops start on High. Before this, every quality drew the 3D at
+full size, and Medium took 3.5 ms and 183 MB.
+
+The times above are from a desktop GTX 1650 rendering offscreen at
+1080 × 2400, so they are far below a phone's; compare them with each other.
+Draw calls, render sizes and video memory carry over to phones as they are.
+To measure, run (it needs a renderer; `--size` defaults to 1080x2400):
+
+```bash
+godot --path . -s res://tools/benchmark.gd -- --size=1080x2400 --out=docs/screenshots
+```
+
+It prints GPU and frame time, draw calls and triangles (all, and for the
+shadow maps), the 3D size and memory for the main menu, the world select
+and three levels at each quality, and saves `step10_quality.png`, level 1-1
+at Low, Medium and High side by side:
+
+<img src="docs/screenshots/step10_quality.png" width="720" alt="Level 1-1 at Low, Medium and High quality">
+
+**On a phone**, five taps on the version number in Settings bring up a
+readout under the pause button: frames per second, the CPU and GPU time of
+a frame, draw calls, the 3D size and quality, and memory (what the engine
+has allocated, plus video memory). It stays up across screens until put
+away. A phone's own count of the game's memory, which also takes in the
+engine's code and the graphics driver, comes from adb (look at **TOTAL
+PSS**):
+
+```bash
+adb shell dumpsys meminfo com.manpreetgugga.tinycourier
+```
+
+On the Android emulator, which translates ARM code and emulates the GPU,
+that count is several times too high, and the frame rate means little, so
+only a real phone gives the true figures. The engine itself holds 70–100
+MB; most of the rest is video memory, which Low cuts the most if a phone
+runs short.
 
 ## Sound and haptics
 
@@ -552,10 +681,14 @@ ui/         menus, scene changes, HUD, pause, settings and finish cards, buttons
 audio/      the sound player, generated sound effects and world loops
 fonts/      Nunito and its licence
 levels/     the 50 levels, levels/world_<n>/level_<n>.json
-tools/      capture, sound generation, tests and validation scripts
-dev/        sandbox level, one test level per mechanism, ice and boards
+icons/      the app icon and its adaptive layers, rendered by tools/make_icon.gd
+tools/      capture, benchmark, icon and sound generation, tests and
+            validation scripts
+dev/        sandbox level, one test level per mechanism, ice and boards,
+            the icon's island
 ```
 
-All art is generated procedurally in code, and all sound by
-`tools/make_audio.gd`; there are no external model, texture or audio files.
+All art is generated procedurally in code (the app icon is rendered from
+the game), and all sound by `tools/make_audio.gd`; there are no external
+model, texture or audio files.
 The one outside asset is the Nunito font; see [CREDITS.md](CREDITS.md).

@@ -12,6 +12,9 @@ enum Quality { LOW, MEDIUM, HIGH }
 
 const DEFAULT_PATH: String = "user://settings.json"
 const QUALITY_NAMES: Array[String] = ["Low", "Medium", "High"]
+## Most pixels the 3D view is drawn with at each quality (a 1080 x 2400
+## phone has 2.6 million): see [method apply_quality].
+const PIXEL_BUDGET: Array[float] = [0.8e6, 1.3e6, 2.6e6]
 
 static var path: String = DEFAULT_PATH
 ## Emits changed(key: StringName) after each change.
@@ -99,20 +102,54 @@ static func volume_db(amount: float) -> float:
 	return -80.0 if amount <= 0.001 else linear_to_db(amount * amount)
 
 
-## Applies the graphics quality to [param viewport]: multisampling and the
-## shadow map size (the render scale stays 1 so the UI text stays sharp).
+## Applies the graphics quality to [param viewport]: the 3D render size,
+## multisampling, the shadow map size and softness, and the tilt-shift blur.
+## StageLighting does the rest (shadow splits, glow). On phones the frame
+## rate is held at 60 whatever the screen can do, to spare the battery.
+##
+## The 3D view is drawn at no more than [constant PIXEL_BUDGET] pixels and
+## scaled up to the screen; the interface is drawn at full size, so its text
+## stays sharp. Most of a frame's cost is per pixel (the blur, multisampling,
+## the sky), so this is what lets a large phone screen keep up.
 static func apply_quality(viewport: Viewport) -> void:
 	ensure_loaded()
 	match quality:
 		Quality.LOW:
 			viewport.msaa_3d = Viewport.MSAA_DISABLED
 			RenderingServer.directional_shadow_atlas_set_size(1024, true)
+			RenderingServer.directional_soft_shadow_filter_set_quality(RenderingServer.SHADOW_QUALITY_HARD)
 		Quality.MEDIUM:
 			viewport.msaa_3d = Viewport.MSAA_2X
 			RenderingServer.directional_shadow_atlas_set_size(2048, true)
+			RenderingServer.directional_soft_shadow_filter_set_quality(RenderingServer.SHADOW_QUALITY_SOFT_LOW)
 		Quality.HIGH:
 			viewport.msaa_3d = Viewport.MSAA_4X
 			RenderingServer.directional_shadow_atlas_set_size(4096, true)
+			RenderingServer.directional_soft_shadow_filter_set_quality(RenderingServer.SHADOW_QUALITY_SOFT_MEDIUM)
+	# Below High the tilt-shift blur takes fewer samples in a box, which
+	# looks much the same on a soft background at a fraction of the cost.
+	if quality == Quality.HIGH:
+		RenderingServer.camera_attributes_set_dof_blur_quality(RenderingServer.DOF_BLUR_QUALITY_LOW, false)
+		RenderingServer.camera_attributes_set_dof_blur_bokeh_shape(RenderingServer.DOF_BOKEH_HEXAGON)
+	else:
+		RenderingServer.camera_attributes_set_dof_blur_quality(RenderingServer.DOF_BLUR_QUALITY_VERY_LOW, false)
+		RenderingServer.camera_attributes_set_dof_blur_bokeh_shape(RenderingServer.DOF_BOKEH_BOX)
+	viewport.scaling_3d_mode = Viewport.SCALING_3D_MODE_BILINEAR
+	_fit_render_scale(viewport)
+	if not viewport.size_changed.is_connected(_fit_render_scale):
+		viewport.size_changed.connect(_fit_render_scale.bind(viewport))
+	if OS.has_feature("mobile"):
+		Engine.max_fps = 60
+
+
+## The share of [param viewport]'s width (and height) the 3D view is drawn at.
+static func render_scale(viewport: Viewport) -> float:
+	var pixels: Vector2 = Vector2((viewport as Window).size) if viewport is Window else Vector2((viewport as SubViewport).size)
+	return clampf(sqrt(PIXEL_BUDGET[quality] / maxf(pixels.x * pixels.y, 1.0)), 0.5, 1.0)
+
+
+static func _fit_render_scale(viewport: Viewport) -> void:
+	viewport.scaling_3d_scale = render_scale(viewport)
 
 
 static func save() -> void:
@@ -160,4 +197,5 @@ static func _defaults() -> void:
 	sfx = 0.9
 	tilt_shift = true
 	haptics = true
-	quality = Quality.HIGH
+	# Phones start on Medium, which a mid-range one runs at 60 fps.
+	quality = Quality.MEDIUM if OS.has_feature("mobile") else Quality.HIGH
