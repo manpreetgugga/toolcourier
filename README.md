@@ -5,8 +5,8 @@ A tiny courier robot delivers packages across small floating block dioramas:
 drag to rotate the diorama, tap a block to walk there, and operate the orange
 mechanisms to open a path.
 
-> **Status:** early development (build step 2 of 10: procedural block meshing
-> with bevels, face culling and baked ambient occlusion).
+> **Status:** early development (build step 3 of 10: orbit camera with
+> inertia, pinch zoom, auto-fit and tap picking).
 
 ![Test diorama](docs/screenshots/step2_closeup.png)
 
@@ -21,6 +21,29 @@ Open the folder in Godot and press **Play**, or from a terminal:
 
 ```bash
 godot --path .
+```
+
+## Controls
+
+| Gesture | Action |
+| --- | --- |
+| One-finger drag | Orbit the diorama (pitch 15°–70°), with inertia when flicked |
+| Pinch (mouse wheel on desktop) | Zoom, 0.7×–1.4× |
+| Tap | Pick the block face under the finger (moves of under 12 px still count as taps) |
+| Double-tap empty space | Ease back to the default view |
+
+The camera (`camera/OrbitCamera.gd`) fits its distance so the diorama fills
+75% of the shorter screen axis from every yaw. Taps are resolved with a voxel
+raycast against the grid (`core/Grid.gd`), so no physics bodies are needed.
+
+## Tests
+
+`tools/test_orbit_camera.gd` drives the test diorama with synthetic touch
+events and checks tap vs drag, inertia, pitch limits, pinch zoom, double-tap
+reset, picking and the fit (needs a renderer, exits non-zero on failure):
+
+```bash
+godot --path . --resolution 405x720 -s res://tools/test_orbit_camera.gd -- --out=docs/screenshots
 ```
 
 ## Screenshots from the command line

@@ -1,24 +1,19 @@
 extends Node3D
 ## Test scene: a hardcoded 5x5 floating diorama under the shared stage
-## lighting, meshed by BlockMesher (bevels, culling, baked AO).
+## lighting, meshed by BlockMesher and viewed through the OrbitCamera.
 ##
-## Cell convention used everywhere in the project: cell (x, y, z) occupies
-## [x, x+1] x [y, y+1] x [z, z+1], so its centre is cell + (0.5, 0.5, 0.5).
+## Drag to orbit, pinch or scroll to zoom. A tap ripples on the block face
+## under the finger (white on open tops, red elsewhere); a double tap on empty
+## space resets the view.
 
-const CAMERA_FOV: float = 30.0
-const CAMERA_YAW_DEG: float = 40.0
-const CAMERA_PITCH_DEG: float = 32.0
-## Fraction of the shorter screen axis the diorama should fill.
-const FILL_FRACTION: float = 0.75
+## Degrees per second of idle orbit; 0 keeps the camera still (deterministic
+## screenshots).
+@export var idle_orbit_speed: float = 0.0
 
-## Degrees per second; 0 keeps the camera still (deterministic screenshots).
-@export var auto_rotate_speed_deg: float = 0.0
+var grid: Grid
+var camera: OrbitCamera
 
 var _stage: StageLighting
-var _camera: Camera3D
-var _bounds: AABB
-var _yaw_deg: float = CAMERA_YAW_DEG
-var _distance: float = 20.0
 
 
 func _ready() -> void:
@@ -26,25 +21,46 @@ func _ready() -> void:
 	_stage.name = "Stage"
 	add_child(_stage)
 
-	var cells: Dictionary = _test_layout()
-	_bounds = _compute_bounds(cells)
-	_build_blocks(cells)
+	grid = Grid.new(_test_layout())
+	var blocks := MeshInstance3D.new()
+	blocks.name = "Blocks"
+	blocks.mesh = BlockMesher.build(grid.cells)
+	add_child(blocks)
 
-	_camera = Camera3D.new()
-	_camera.name = "Camera"
-	_camera.fov = CAMERA_FOV
-	_camera.attributes = _stage.camera_attributes
-	add_child(_camera)
-	_camera.make_current()
+	camera = OrbitCamera.new()
+	camera.name = "Camera"
+	camera.attributes = _stage.camera_attributes
+	camera.idle_orbit_speed = idle_orbit_speed
+	add_child(camera)
+	camera.make_current()
+	camera.distance_changed.connect(func(distance: float) -> void: _stage.fit_to_bounds(grid.bounds, distance))
+	camera.tapped.connect(_on_tapped)
+	camera.double_tapped.connect(_on_double_tapped)
+	camera.frame_bounds(grid.bounds)
 
-	get_viewport().size_changed.connect(_fit_camera)
-	_fit_camera()
+
+## Block under a screen position (see [method Grid.raycast]).
+func pick(screen_position: Vector2) -> Dictionary:
+	return grid.raycast(camera.project_ray_origin(screen_position), camera.project_ray_normal(screen_position))
 
 
-func _process(delta: float) -> void:
-	if auto_rotate_speed_deg != 0.0:
-		_yaw_deg = fposmod(_yaw_deg + auto_rotate_speed_deg * delta, 360.0)
-		_place_camera()
+func _on_tapped(screen_position: Vector2) -> void:
+	var hit: Dictionary = pick(screen_position)
+	if hit.is_empty():
+		return
+	var cell: Vector3i = hit["cell"]
+	var normal: Vector3i = hit["normal"]
+	var center: Vector3 = Vector3(cell) + Vector3(0.5, 0.5, 0.5) + Vector3(normal) * 0.5
+	var water: bool = grid.get_block(cell) == BlockMesher.WATER
+	if water and normal == Vector3i.UP:
+		center.y -= 1.0 - BlockMesher.WATER_LEVEL
+	# Until pathfinding exists, open land tops stand in for reachable targets.
+	TapRipple.spawn(self, center, Vector3(normal), normal == Vector3i.UP and not water)
+
+
+func _on_double_tapped(screen_position: Vector2) -> void:
+	if pick(screen_position).is_empty():
+		camera.reset_view()
 
 
 ## Hardcoded test layout: Vector3i -> block type.
@@ -79,55 +95,3 @@ func _test_layout() -> Dictionary:
 	# One interactive (accent) block.
 	cells[Vector3i(2, 1, 1)] = &"accent"
 	return cells
-
-
-func _build_blocks(cells: Dictionary) -> void:
-	var blocks := MeshInstance3D.new()
-	blocks.name = "Blocks"
-	blocks.mesh = BlockMesher.build(cells)
-	add_child(blocks)
-
-
-func _compute_bounds(cells: Dictionary) -> AABB:
-	var lo := Vector3i(1 << 20, 1 << 20, 1 << 20)
-	var hi := -lo
-	for cell: Vector3i in cells:
-		lo = lo.min(cell)
-		hi = hi.max(cell)
-	return AABB(Vector3(lo), Vector3(hi - lo + Vector3i.ONE))
-
-
-func _fit_camera() -> void:
-	var vp_size: Vector2 = get_viewport().get_visible_rect().size
-	var portrait: bool = vp_size.x < vp_size.y
-	# FOV applies to the shorter screen axis so the fit works in any orientation.
-	_camera.keep_aspect = Camera3D.KEEP_WIDTH if portrait else Camera3D.KEEP_HEIGHT
-	var aspect: float = maxf(vp_size.x, vp_size.y) / minf(vp_size.x, vp_size.y)
-	var tan_short: float = tan(deg_to_rad(CAMERA_FOV) * 0.5) * FILL_FRACTION
-	var tan_x: float = tan_short if portrait else tan_short * aspect
-	var tan_y: float = tan_short * aspect if portrait else tan_short
-	# Back off until every bounds corner fits inside the fill frame.
-	var view: Basis = _view_basis()
-	var center: Vector3 = _bounds.get_center()
-	_distance = 0.0
-	for i in 8:
-		var offset: Vector3 = _bounds.get_endpoint(i) - center
-		var needed: float = maxf(absf(offset.dot(view.x)) / tan_x, absf(offset.dot(view.y)) / tan_y)
-		_distance = maxf(_distance, needed + offset.dot(view.z))
-	_place_camera()
-	_stage.fit_to_bounds(_bounds, _distance)
-
-
-## Camera basis for the current yaw/pitch; z points from the target to the camera.
-func _view_basis() -> Basis:
-	var yaw: float = deg_to_rad(_yaw_deg)
-	var pitch: float = deg_to_rad(CAMERA_PITCH_DEG)
-	var back := Vector3(sin(yaw) * cos(pitch), sin(pitch), cos(yaw) * cos(pitch))
-	var right: Vector3 = Vector3.UP.cross(back).normalized()
-	return Basis(right, back.cross(right), back)
-
-
-func _place_camera() -> void:
-	var target: Vector3 = _bounds.get_center()
-	_camera.position = target + _view_basis().z * _distance
-	_camera.look_at(target, Vector3.UP)
