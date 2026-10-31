@@ -1,14 +1,29 @@
 # Tiny Courier
 
 A calm 3D diorama puzzle game for Android, built with Godot 4 (GDScript).
-A tiny courier robot delivers packages across small floating block dioramas:
-drag to rotate the diorama, tap a block to walk there, and operate the orange
-mechanisms to open a path.
+A little walking mailbox delivers parcels across small floating clay
+dioramas: drag to rotate the diorama, tap a spot to walk there, and operate
+the orange mechanisms to open a path.
 
-> **Status:** early development (build step 3 of 10: orbit camera with
-> inertia, pinch zoom, auto-fit and tap picking).
+> **Status:** early development (build steps 1–3 of 10 done: lighting and sky,
+> clay block meshing, orbit camera with tap picking).
 
-![Test diorama](docs/screenshots/step2_closeup.png)
+![Test diorama](docs/screenshots/clay_closeup.png)
+
+## Art direction
+
+The game should never be mistaken for an existing block-puzzle game, so it
+deliberately avoids the crisp bevelled-cube grid and a one-eyed robot hero:
+
+- **Soft clay diorama.** Neighbouring blocks merge into one sculpted lump with
+  big rounded outside edges, wrap lighting with a warm glow at the shadow
+  line, a soft sheen, hand-pressed colour mottling and shallow thumb dents.
+- **Dusk sky with a sea of clouds** below the diorama, turning with the camera.
+- **The courier is a walking mailbox**: its flag pops up when it carries a
+  parcel, and its door flap opens to drop it on the pad.
+
+Clay was picked over a storybook-ink look and a natural-rock look; see
+`docs/screenshots/look_comparison.png` (clay, storybook, isles).
 
 ## Requirements
 
@@ -63,18 +78,21 @@ region for close-ups. The tool also prints draw calls and triangle counts.
 `render/BlockMesher.gd` turns a level's cells (`Vector3i -> block type`) into
 one mesh with a surface per material:
 
-- every block is a cube with rounded edges (0.04 m, two segments);
-- faces touching another solid block are culled, while the bevels between
-  neighbours stay as a shallow groove so the grid reads clearly;
+- faces touching another solid block are culled and neighbours merge into
+  one smooth surface;
+- only the outside edges of the combined shape are rounded (0.17 m radius,
+  four segments per edge);
 - voxel ambient occlusion, a lighter top / darker bottom tint and a small
-  per-block colour jitter are baked into vertex colours;
-- water is lowered slightly, merges seamlessly with neighbouring water and
-  gets its own animated shader.
+  per-block colour jitter (which keeps cells faintly readable) are baked into
+  vertex colours;
+- water is lowered slightly, merges with neighbouring water and gets its own
+  animated shader.
 
 Block types: `stone`, `dark_stone`, `sand`, `grass` (dirt sides with a grass
 lip), `wood` (plank lines), `brick`, `water`, and `accent` for interactive
 parts (pulsing orange). Colours live in `render/Palette.gd`, materials in
-`render/BlockMaterials.gd`.
+`render/BlockMaterials.gd`, the clay surface in `shaders/block.gdshader` with
+shared helpers in `shaders/block_common.gdshaderinc`.
 
 ## Project layout
 

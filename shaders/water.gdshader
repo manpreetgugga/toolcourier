@@ -14,8 +14,8 @@ uniform vec4 water_color : source_color = vec4(0.373, 0.659, 0.788, 1.0);
 uniform vec4 deep_color : source_color = vec4(0.204, 0.455, 0.596, 1.0);
 uniform vec4 foam_color : source_color = vec4(0.945, 0.969, 0.976, 1.0);
 uniform float swell_height = 0.025;
-uniform float ripple_strength = 0.09;
-uniform float caustic_strength = 0.12;
+uniform float ripple_strength = 0.06;
+uniform float caustic_strength = 0.08;
 uniform float foam_strength = 0.6;
 
 varying vec3 world_pos;

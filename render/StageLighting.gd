@@ -35,6 +35,10 @@ func apply_theme(new_theme: StringName) -> void:
 	_sky_material.set_shader_parameter(&"top_color", t["sky_top"])
 	_sky_material.set_shader_parameter(&"horizon_color", t["sky_horizon"])
 	_sky_material.set_shader_parameter(&"ground_color", t["sky_ground"])
+	_sky_material.set_shader_parameter(&"cloud_amount", t["clouds"])
+	_sky_material.set_shader_parameter(&"cloud_color", t["cloud_color"])
+	# Soft penumbrae suit the clay look.
+	sun.shadow_blur = t["shadow_blur"]
 	# Block and water shaders tint their rim/fresnel with the sky.
 	var sky: Color = (t["sky_top"] as Color).srgb_to_linear()
 	RenderingServer.global_shader_parameter_set(&"sky_tint", Vector3(sky.r, sky.g, sky.b))
@@ -115,7 +119,6 @@ func _build() -> void:
 	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
 	sun.directional_shadow_blend_splits = true
 	sun.directional_shadow_fade_start = 0.9
-	sun.shadow_blur = 1.5
 	# Unit cubes: a small constant bias plus moderate normal bias removes acne
 	# on flat tops without detaching contact shadows (peter-panning).
 	sun.shadow_bias = 0.03

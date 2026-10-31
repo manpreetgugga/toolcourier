@@ -2,19 +2,20 @@ class_name Palette
 extends RefCounted
 ## Single source of truth for every colour in Tiny Courier.
 ##
-## All values are sRGB hex taken from the art bible. Block shaders, props,
-## packages and UI read from here so a palette tweak is a one-line change.
+## The game looks like a soft clay diorama: warm, slightly saturated pastels
+## under a dusk-tinted sky. Block shaders, props, packages and UI read from
+## here so a palette tweak is a one-line change. All values are sRGB.
 
 ## Base albedo per block type.
 const BLOCK: Dictionary = {
-	&"stone": Color("#B9B4AA"),
-	&"dark_stone": Color("#7E7A74"),
-	&"sand": Color("#E3CFA1"),
-	&"grass": Color("#8DB36B"),
-	&"dirt": Color("#A57D5A"),
-	&"wood": Color("#B9814F"),
-	&"brick": Color("#C86B4A"),
-	&"water": Color("#5FA8C9"),
+	&"stone": Color("#DCD3C6"),
+	&"dark_stone": Color("#A3968C"),
+	&"sand": Color("#F4DEAA"),
+	&"grass": Color("#8CCB6E"),
+	&"dirt": Color("#B98563"),
+	&"wood": Color("#DDA066"),
+	&"brick": Color("#E8845E"),
+	&"water": Color("#6EC6EA"),
 }
 
 ## The single accent used by every interactive part.
@@ -28,41 +29,46 @@ const PACKAGE: Dictionary = {
 	&"yellow": Color("#F3C623"),
 }
 
-## Courier robot colours.
-const COURIER_BODY: Color = Color("#F4EEDF")
-const COURIER_VISOR: Color = Color("#2B2D42")
-const COURIER_EYE: Color = Color("#5CE1E6")
-
-## Per-world look: background gradient, key light and ambient fill.
+## Per-world look: background gradient, cloud sea, key light and ambient fill.
 ## "sky_top" is the top of the screen, "sky_horizon" the bottom of the screen;
-## "sky_ground" is only used for the lower hemisphere of the ambient/radiance map.
+## "sky_ground" is only used for the lower hemisphere of the ambient/radiance
+## map. "clouds" is the coverage of the cloud sea below the diorama.
 const THEMES: Dictionary = {
 	&"meadow": {
-		"sky_top": Color("#8FB8DE"),
-		"sky_horizon": Color("#F5E6D3"),
-		"sky_ground": Color("#C9C2B4"),
-		"sun_color": Color("#FFF1DD"),
-		"sun_energy": 1.3,
-		"ambient_color": Color("#A9C3E0"),
-		"ambient_energy": 0.55,
+		"sky_top": Color("#C9B8E8"),
+		"sky_horizon": Color("#FDE3CF"),
+		"sky_ground": Color("#E8CDBE"),
+		"clouds": 0.55,
+		"cloud_color": Color("#FFF3EC"),
+		"sun_color": Color("#FFE1C2"),
+		"sun_energy": 1.55,
+		"ambient_color": Color("#B9AEE0"),
+		"ambient_energy": 0.42,
+		"shadow_blur": 3.0,
 	},
 	&"harbor": {
-		"sky_top": Color("#79B4D4"),
-		"sky_horizon": Color("#F2EEE2"),
-		"sky_ground": Color("#B8C7C9"),
-		"sun_color": Color("#FFF4E4"),
-		"sun_energy": 1.3,
-		"ambient_color": Color("#A4C8DE"),
-		"ambient_energy": 0.58,
+		"sky_top": Color("#9FC9E8"),
+		"sky_horizon": Color("#FBEFDF"),
+		"sky_ground": Color("#D3DDE0"),
+		"clouds": 0.6,
+		"cloud_color": Color("#FFFFFF"),
+		"sun_color": Color("#FFF0DC"),
+		"sun_energy": 1.5,
+		"ambient_color": Color("#A9C6E6"),
+		"ambient_energy": 0.45,
+		"shadow_blur": 3.0,
 	},
 	&"old_town": {
-		"sky_top": Color("#C3A3C4"),
-		"sky_horizon": Color("#F7D8B5"),
-		"sky_ground": Color("#CDB39E"),
-		"sun_color": Color("#FFE6C7"),
-		"sun_energy": 1.35,
-		"ambient_color": Color("#B7B4D6"),
-		"ambient_energy": 0.52,
+		"sky_top": Color("#E3A7B4"),
+		"sky_horizon": Color("#FCDDB8"),
+		"sky_ground": Color("#E5C3AE"),
+		"clouds": 0.5,
+		"cloud_color": Color("#FFE9DD"),
+		"sun_color": Color("#FFD8B0"),
+		"sun_energy": 1.55,
+		"ambient_color": Color("#C1AEDB"),
+		"ambient_energy": 0.42,
+		"shadow_blur": 3.0,
 	},
 }
 
