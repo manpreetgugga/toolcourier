@@ -8,14 +8,14 @@ var source_path: String = ""
 var name: String = ""
 var world: int = 1
 var palette: StringName = Palette.DEFAULT_THEME
-## Vector3i -> block type.
+## Vector3i -> block type, for blocks that never move (mechanisms' blocks are
+## kept in their Mechanism; rotator cranks are static "crank" cells here).
 var cells: Dictionary = {}
 ## Vector3i -> Vector3i facing of oriented blocks (stairs).
 var facing: Dictionary = {}
 ## {"cell": Vector3i, "type": StringName, "rotation": float (degrees), "solid": bool}
 var props: Array[Dictionary] = []
-## Raw mechanism entries, interpreted by the mechanisms (build step 6).
-var mechanisms: Array = []
+var mechanisms: Array[Mechanism] = []
 ## {"cell": Vector3i, "color": StringName}
 var packages: Array[Dictionary] = []
 var pads: Array[Dictionary] = []
@@ -39,12 +39,3 @@ func stars_for(moves: int) -> int:
 		if moves <= stars[i]:
 			return 3 - i
 	return 0
-
-
-## The grid, with solid props as obstacles.
-func make_grid() -> Grid:
-	var grid := Grid.new(cells, facing)
-	for prop: Dictionary in props:
-		if prop["solid"]:
-			grid.obstacles[prop["cell"]] = true
-	return grid

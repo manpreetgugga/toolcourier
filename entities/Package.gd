@@ -64,6 +64,14 @@ func drop_onto(from: Vector3, to: Vector3, size: float = 1.0) -> void:
 	tween.tween_callback(func() -> void: _blob.visible = true)
 
 
+## Glides along the floor to [param target] (pushed by a belt); returns how
+## long it takes.
+func slide_to(target: Vector3) -> float:
+	var duration: float = 0.1 + 0.25 * position.distance_to(target)
+	create_tween().tween_property(self, "position", target, duration).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	return duration
+
+
 func _fly_step(t: float, from: Vector3, target: Callable) -> void:
 	var to: Vector3 = target.call()
 	global_position = from.lerp(to, t) + Vector3.UP * sin(t * PI) * 0.45

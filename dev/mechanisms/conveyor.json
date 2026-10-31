@@ -1,0 +1,18 @@
+{
+	"name": "Conveyor test",
+	"world": 1,
+	"palette": "meadow",
+	"blocks": [
+		[0, -1, 0, "dark_stone"], [1, -1, 0, "dark_stone"], [0, -1, 1, "dark_stone"], [1, -1, 1, "dark_stone"],
+		[0, 0, 0, "grass"], [1, 0, 0, "grass"], [0, 0, 1, "grass"], [1, 0, 1, "grass"],
+		[5, -1, 0, "dark_stone"], [6, -1, 0, "dark_stone"], [5, -1, 1, "dark_stone"], [6, -1, 1, "dark_stone"],
+		[5, 0, 0, "grass"], [6, 0, 0, "grass"], [5, 0, 1, "grass"], [6, 0, 1, "grass"]
+	],
+	"props": [[0, 1, 0, "lamp_post", 0, true]],
+	"mechanisms": [
+		{ "id": "c1", "type": "conveyor", "cells": [[2, 0, 0], [3, 0, 0], [4, 0, 0]], "dir": "+x" }
+	],
+	"start": [0, 1, 1],
+	"exit": [6, 1, 0],
+	"stars": [4, 6, 8]
+}

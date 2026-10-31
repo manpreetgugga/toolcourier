@@ -1,0 +1,24 @@
+{
+	"name": "Button test",
+	"world": 1,
+	"palette": "meadow",
+	"blocks": [
+		[0, -1, 0, "dark_stone"], [1, -1, 0, "dark_stone"], [0, -1, 1, "dark_stone"], [1, -1, 1, "dark_stone"], [0, -1, 2, "dark_stone"], [1, -1, 2, "dark_stone"],
+		[0, 0, 0, "stone"], [1, 0, 0, "stone"], [0, 0, 1, "stone"], [1, 0, 1, "stone"], [0, 0, 2, "stone"], [1, 0, 2, "stone"],
+		[0, 1, 0, "stone"], [1, 1, 0, "stone"], [0, 1, 1, "stone"], [1, 1, 1, "stone"], [0, 1, 2, "stone"], [1, 1, 2, "stone"],
+		[0, 2, 0, "grass"], [1, 2, 0, "grass"], [0, 2, 1, "grass"], [1, 2, 1, "grass"], [0, 2, 2, "grass"], [1, 2, 2, "grass"],
+		[3, -1, 0, "dark_stone"], [4, -1, 0, "dark_stone"], [5, -1, 0, "dark_stone"],
+		[3, -1, 1, "dark_stone"], [4, -1, 1, "dark_stone"], [5, -1, 1, "dark_stone"],
+		[3, -1, 2, "dark_stone"], [4, -1, 2, "dark_stone"], [5, -1, 2, "dark_stone"],
+		[3, 0, 0, "grass"], [4, 0, 0, "grass"], [5, 0, 0, "grass"],
+		[3, 0, 1, "grass"], [4, 0, 1, "grass"], [5, 0, 1, "grass"],
+		[3, 0, 2, "grass"], [4, 0, 2, "grass"], [5, 0, 2, "sand"]
+	],
+	"mechanisms": [
+		{ "id": "e1", "type": "elevator", "cells": [[2, 0, 1]], "travel": 2, "start": "top" },
+		{ "id": "b1", "type": "button", "pos": [5, 1, 2], "targets": ["e1"] }
+	],
+	"start": [4, 1, 0],
+	"exit": [0, 3, 1],
+	"stars": [9, 11, 14]
+}

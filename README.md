@@ -5,9 +5,10 @@ A little walking mailbox delivers parcels across small floating clay
 dioramas: drag to rotate the diorama, tap a spot to walk there, and operate
 the orange mechanisms to open a path.
 
-> **Status:** early development (build steps 1–5 of 10 done: lighting and sky,
+> **Status:** early development (build steps 1–6 of 10 done: lighting and sky,
 > clay block meshing, orbit camera with tap picking, the courier with
-> pathfinding, and playable levels from JSON with parcels, pads and an exit).
+> pathfinding, playable levels from JSON with parcels, pads and an exit, and
+> mechanisms: sliders, elevators, buttons, conveyors, rotators and gates).
 
 <img src="docs/screenshots/step5_level.png" width="320" alt="World 1, level 1"> <img src="docs/screenshots/step5_delivery.png" width="320" alt="A parcel delivered">
 
@@ -19,6 +20,11 @@ in world 3), and drops it automatically on the pad of the same colour. Once
 every pad is filled the exit's pennant runs up its post; walking onto the
 exit finishes the level. Every cell walked is a move, and each level sets
 three move limits for three, two and one star.
+
+The orange parts move (see [Mechanisms](#mechanisms)): drag a slider, tap a
+crank to turn a bridge, step on an elevator to ride it or on a button to
+switch something. Dragging a slider or turning a crank costs one move;
+riding a belt or an elevator costs nothing.
 
 The rules live in `core/LevelState.gd`, with no visuals, so the solver and
 undo can reuse them; `game/Level.gd` builds the scene and animates them:
@@ -88,7 +94,12 @@ exist; set its `level_path` to play another level.
 | One-finger drag | Orbit the diorama (pitch 15°–70°), with inertia when flicked |
 | Pinch (mouse wheel on desktop) | Zoom, 0.7×–1.4× |
 | Tap | Walk to the spot under the finger (moves of under 12 px still count as taps) |
+| Drag a slider | Slide it along its track; it follows the finger, stops at anything in its way and snaps to the nearest cell when let go |
+| Tap a crank | Turn its rotator a quarter turn |
 | Double-tap empty space | Ease back to the default view |
+
+A drag that starts on a slider moves the slider instead of the camera, and
+input waits while mechanisms move.
 
 The camera (`camera/OrbitCamera.gd`) fits its distance so the diorama fills
 75% of the shorter screen axis from every yaw. Taps are resolved with a voxel
@@ -123,6 +134,17 @@ expects the minimum of 11 moves for three stars:
 
 ```bash
 godot --path . --resolution 405x720 -s res://tools/test_level.gd -- --out=docs/screenshots
+```
+
+`tools/test_mechanisms.gd` checks the loader's mechanism errors, then plays
+one small level per mechanism from `dev/mechanisms/` through the real touch
+path: dragging a slider into a gap, riding an elevator up, calling it down
+with a button, a one-way belt whose ridden cells cost nothing, turning a
+bridge with a crank, and a gate that needs both of its buttons. It saves a
+`step6_*.png` screenshot of each:
+
+```bash
+godot --path . --resolution 405x720 -s res://tools/test_mechanisms.gd -- --out=docs/screenshots
 ```
 
 ## Screenshots from the command line
@@ -188,7 +210,7 @@ block it stands on.
 | `palette` | Sky and light theme: `meadow`, `harbor` or `old_town`. |
 | `blocks` | `[x, y, z, type]`. Types: `stone`, `dark_stone`, `sand`, `grass`, `wood`, `brick`, `water`, `accent`. Stairs are `[x, y, z, "stairs", facing]`, climbing towards `facing` (`+x`, `-x`, `+z`, `-z`); `stairs_wood` and `stairs_brick` change the material. |
 | `props` | Decor, `[x, y, z, type, rotation?, solid?]`: `tree_small`, `tree_tall`, `bush`, `lamp_post`, `flag`, `crate`, `fence`, `rock`. Rotation is in degrees about up; fences run along the cell's −z edge before rotation. Props are walk-through unless `solid` is `true`. |
-| `mechanisms` | Moving parts (build step 6). |
+| `mechanisms` | Optional moving parts; see [Mechanisms](#mechanisms). |
 | `packages`, `pads` | `{ "pos": [x, y, z], "color": ... }` with colours `red`, `green`, `blue`, `yellow`. Each parcel needs exactly one pad of its colour. |
 | `start`, `exit` | Where the courier begins and where it finishes. |
 | `stars` | Move limits for three, two and one star, not decreasing. |
@@ -199,6 +221,53 @@ and press F6. `core/LevelLoader.gd` checks the level as it loads and prints
 every problem with where it is (for example `packages[0]: (2, 0, 3) is not
 a cell the courier can stand in`), and the level will not start until they
 are fixed. `dev/sandbox_level.json` is a small test level used by the tests.
+
+## Mechanisms
+
+Mechanisms are the orange moving parts of a level, listed under
+`mechanisms`. Each is an object with a unique `id` and a `type`. One of
+each, taken from the test levels in `dev/mechanisms/` (they would not all
+fit in one level):
+
+```json
+"mechanisms": [
+	{ "id": "s1", "type": "slider", "cells": [[2, 0, 0], [3, 0, 0]], "axis": "z", "min": 0, "max": 2 },
+	{ "id": "e1", "type": "elevator", "cells": [[2, 0, 1]], "travel": 2, "start": "top" },
+	{ "id": "r1", "type": "rotator", "cells": [[3, 0, 0], [3, 0, 1], [3, 0, 2]], "pivot": [3, 0, 1], "handle": [1, 1, 0] },
+	{ "id": "c1", "type": "conveyor", "cells": [[2, 0, 0], [3, 0, 0], [4, 0, 0]], "dir": "+x" },
+	{ "id": "b1", "type": "button", "pos": [5, 1, 2], "targets": ["e1"] },
+	{ "id": "g1", "type": "gate", "cells": [[4, 1, 0], [4, 1, 1]], "buttons": ["b1", "b2"] }
+]
+```
+
+| Type | Keys | What it does |
+| --- | --- | --- |
+| `slider` | `cells`, `axis` (`x`, `y` or `z`), `min`, `max`, `start` (default 0) | Blocks the player drags along `axis`, from offset `min` to `max` cells. One move per drag, however far. |
+| `elevator` | `cells`, `travel`, `start` (`"bottom"`, the default, or `"top"`) | A platform with two stops `travel` cells apart. Stepping onto it sends it to the other stop, carrying the courier. |
+| `rotator` | `cells`, `pivot`, `handle`, `start` (quarter turns, 0–3) | Blocks that turn a quarter about `pivot` (counter-clockwise seen from above) each time the crank standing in the `handle` cell is tapped. One move per turn. |
+| `conveyor` | `cells`, `dir` (`+x`, `-x`, `+z`, `-z`), `running` (default `true`) | A straight, unbroken belt. The courier can step on from any side but is carried off along `dir`, and ridden cells are not moves. Parcels on it are pushed to the far end. |
+| `button` | `pos`, `targets`, `on` (default `false`) | A plate the courier switches on or off each time it steps on it. Each switch also works every target: an elevator goes to its other stop, a rotator turns a quarter, a slider runs to its far end (or as far as it can), and a conveyor starts or stops. |
+| `gate` | `cells`, `buttons` | Bars that sink when all of its `buttons` are on and rise again when any is off, unless the courier or a parcel is standing in them. |
+
+Coordinates follow the rest of the level: a slider's, elevator's, rotator's
+or conveyor's `cells` (and the `pivot`) are *block* cells, given in state 0
+(offset 0, the bottom stop, no turn), and `start` moves them from there. A
+button's `pos`, a gate's `cells` and a rotator's `handle` are *standing*
+cells. A part that moves stops short of anything in its way (blocks, other
+mechanisms, solid props, closed gates, pads, the exit, buttons, and the
+courier or parcels not riding it); whatever stands on it rides along.
+Pads, the exit and buttons may not stand on a moving part. The loader also
+reports unknown types, repeated ids, overlapping blocks, buttons aimed at a
+missing mechanism (or at one a button cannot switch), gates without buttons,
+and bent or broken belts.
+
+`core/Mechanism.gd` holds a mechanism's geometry in each state and
+`core/LevelState.gd` applies the rules; `entities/Mechanism*.gd` animate
+them with an eased overshoot and a puff of dust (`render/Effects.gd`). When
+a part moves under a walking courier, the courier stops so the player can
+re-plan. `dev/mechanisms/` has one small test level per type.
+
+<img src="docs/screenshots/step6_elevator.png" width="320" alt="Riding an elevator"> <img src="docs/screenshots/step6_conveyor.png" width="320" alt="Riding a conveyor belt">
 
 ## Project layout
 
@@ -213,7 +282,7 @@ camera/     orbit camera
 ui/         menus and HUD
 levels/     level JSON, one folder per world
 tools/      capture, tests and validation scripts
-dev/        sandbox level used during development
+dev/        sandbox level and one test level per mechanism
 ```
 
 All art is generated procedurally in code; there are no external model or

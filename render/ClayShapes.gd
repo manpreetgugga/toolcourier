@@ -61,6 +61,18 @@ static func material(color: Color, glow: float = 0.0) -> ShaderMaterial:
 	return mat
 
 
+## The accent colour with the interactive-part pulse, for parts the player
+## works (cranks, buttons).
+static func accent_material() -> ShaderMaterial:
+	var key: String = "accent-pulse"
+	var mat: ShaderMaterial = _materials.get(key)
+	if mat == null:
+		mat = material(Palette.ACCENT).duplicate()
+		mat.set_shader_parameter(&"pulse_strength", BlockMaterials.ACCENT_PULSE)
+		_materials[key] = mat
+	return mat
+
+
 ## Rounds every corner of a closed polygon with an arc of up to
 ## [param radius] (less where the neighbouring edges are short). Works for
 ## convex and concave corners.

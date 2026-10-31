@@ -1,0 +1,18 @@
+{
+	"name": "Slider test",
+	"world": 1,
+	"palette": "meadow",
+	"blocks": [
+		[0, -1, 1, "dark_stone"], [1, -1, 1, "dark_stone"], [0, -1, 2, "dark_stone"], [1, -1, 2, "dark_stone"],
+		[4, -1, 1, "dark_stone"], [5, -1, 1, "dark_stone"], [4, -1, 2, "dark_stone"], [5, -1, 2, "dark_stone"],
+		[0, 0, 1, "grass"], [1, 0, 1, "grass"], [0, 0, 2, "grass"], [1, 0, 2, "grass"],
+		[4, 0, 1, "grass"], [5, 0, 1, "grass"], [4, 0, 2, "grass"], [5, 0, 2, "grass"]
+	],
+	"props": [[5, 1, 1, "tree_small", 0, true]],
+	"mechanisms": [
+		{ "id": "s1", "type": "slider", "cells": [[2, 0, 0], [3, 0, 0]], "axis": "z", "min": 0, "max": 2 }
+	],
+	"start": [0, 1, 1],
+	"exit": [5, 1, 2],
+	"stars": [7, 9, 12]
+}

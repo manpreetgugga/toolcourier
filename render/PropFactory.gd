@@ -86,6 +86,19 @@ static func build_stairs(grid: Grid) -> ArrayMesh:
 	return batch.commit()
 
 
+## Bars for a gate's cells (level coordinates): five posts per cell with
+## accent caps.
+static func gate_bars(cells: Array[Vector3i]) -> ArrayMesh:
+	var batch := _Batch.new()
+	for cell: Vector3i in cells:
+		var base := Transform3D(Basis.IDENTITY, Vector3(cell) + Vector3(0.5, 0.0, 0.5))
+		for spot: Vector2 in [Vector2(-0.27, -0.27), Vector2(0.27, -0.27), Vector2.ZERO,
+				Vector2(-0.27, 0.27), Vector2(0.27, 0.27)]:
+			batch.add(_cylinder(0.055, 0.82), base * _at(spot.x, 0.41, spot.y), POST)
+			batch.add(_sphere(0.075, 0.12), base * _at(spot.x, 0.84, spot.y), Palette.ACCENT)
+	return batch.commit()
+
+
 ## A taped parcel of a package colour, resting on y = 0.
 static func parcel(color: StringName) -> ArrayMesh:
 	if not _parcels.has(color):

@@ -10,8 +10,11 @@ var cells: Dictionary
 ## Vector3i -> Vector3i: the horizontal direction an oriented block faces.
 ## Stairs climb towards their facing.
 var facing: Dictionary
-## Cells the courier cannot enter although no block fills them (solid props).
+## Cells the courier cannot enter although no block fills them (solid props,
+## closed gates).
 var obstacles: Dictionary = {}
+## Running conveyor blocks: Vector3i -> Vector3i direction they carry.
+var belts: Dictionary = {}
 ## Bounding box of all blocks, in world units.
 var bounds: AABB
 
@@ -25,6 +28,17 @@ func _init(p_cells: Dictionary = {}, p_facing: Dictionary = {}) -> void:
 ## Stairs types are "stairs" or "stairs_<material>".
 static func is_stairs(block_type: StringName) -> bool:
 	return String(block_type).begins_with("stairs")
+
+
+## Whether the courier can stand on top of a block of this type.
+static func has_walkable_top(block_type: StringName) -> bool:
+	return block_type != &"water" and block_type != &"crank" and not is_stairs(block_type)
+
+
+## Whether this type is a whole cube (meshed by BlockMesher and hiding the
+## faces it touches); stairs and cranks have their own meshes.
+static func is_full_block(block_type: StringName) -> bool:
+	return block_type != &"crank" and not is_stairs(block_type)
 
 
 func get_block(cell: Vector3i) -> StringName:

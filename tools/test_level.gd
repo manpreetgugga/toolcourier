@@ -99,7 +99,7 @@ func _play() -> void:
 	await _tap_and_walk(Vector3i(2, 0, 3))
 	_check(courier.cell == Vector3i(2, 1, 3) and _scene.state.carried == [&"red"], "tapping the parcel picks it up")
 	await _wait(0.5)
-	_check(not (_scene._packages[Vector3i(2, 1, 3)] as Package).visible, "the parcel disappears into the mailbox")
+	_check(_scene._carried.size() == 1 and not _scene._carried[0].visible, "the parcel disappears into the mailbox")
 
 	_tap(Vector3i(5, 1, 1))
 	var pad: Pad = _scene._pads[Vector3i(5, 2, 1)]

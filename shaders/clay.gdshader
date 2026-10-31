@@ -12,6 +12,9 @@ uniform float dent_depth = 0.004;
 uniform float dent_scale = 9.0;
 // Self-illumination, for eye glints and similar highlights.
 uniform float glow : hint_range(0.0, 2.0) = 0.0;
+// Peak emission of the interactive-part pulse (0 = no pulse).
+uniform float pulse_strength : hint_range(0.0, 1.0) = 0.0;
+uniform float pulse_period = 1.6;
 
 varying vec3 local_pos;
 varying vec3 local_normal;
@@ -28,5 +31,6 @@ void fragment() {
 	NORMAL = bumped_view_normal(local_normal, dents, dent_depth, VIEW_MATRIX * MODEL_MATRIX);
 	ROUGHNESS = 0.6;
 	SPECULAR = 0.3;
-	EMISSION = sky_rim(NORMAL, VIEW) + albedo.rgb * glow;
+	float pulse = pulse_strength * (0.5 - 0.5 * cos(TIME * TAU / pulse_period));
+	EMISSION = sky_rim(NORMAL, VIEW) + albedo.rgb * (glow + pulse);
 }

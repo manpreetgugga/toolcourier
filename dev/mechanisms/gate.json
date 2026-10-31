@@ -1,0 +1,19 @@
+{
+	"name": "Gate test",
+	"world": 1,
+	"palette": "meadow",
+	"blocks": [
+		[0, -1, 0, "dark_stone"], [1, -1, 0, "dark_stone"], [2, -1, 0, "dark_stone"], [3, -1, 0, "dark_stone"], [4, -1, 0, "dark_stone"], [5, -1, 0, "dark_stone"], [6, -1, 0, "dark_stone"],
+		[0, -1, 1, "dark_stone"], [1, -1, 1, "dark_stone"], [2, -1, 1, "dark_stone"], [3, -1, 1, "dark_stone"], [4, -1, 1, "dark_stone"], [5, -1, 1, "dark_stone"], [6, -1, 1, "dark_stone"],
+		[0, 0, 0, "grass"], [1, 0, 0, "grass"], [2, 0, 0, "grass"], [3, 0, 0, "grass"], [4, 0, 0, "stone"], [5, 0, 0, "grass"], [6, 0, 0, "grass"],
+		[0, 0, 1, "grass"], [1, 0, 1, "grass"], [2, 0, 1, "grass"], [3, 0, 1, "grass"], [4, 0, 1, "stone"], [5, 0, 1, "grass"], [6, 0, 1, "grass"]
+	],
+	"mechanisms": [
+		{ "id": "b1", "type": "button", "pos": [1, 1, 0] },
+		{ "id": "b2", "type": "button", "pos": [2, 1, 1] },
+		{ "id": "g1", "type": "gate", "cells": [[4, 1, 0], [4, 1, 1]], "buttons": ["b1", "b2"] }
+	],
+	"start": [0, 1, 0],
+	"exit": [6, 1, 1],
+	"stars": [7, 9, 12]
+}

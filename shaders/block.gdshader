@@ -12,9 +12,13 @@ render_mode diffuse_burley, specular_schlick_ggx;
 #include "res://shaders/clay_common.gdshaderinc"
 
 uniform vec4 albedo : source_color = vec4(0.725, 0.706, 0.667, 1.0);
-// 0 = plain, 1 = wood planks, 2 = grass top over side_color.
-uniform int pattern : hint_range(0, 2) = 0;
+// 0 = plain, 1 = wood planks, 2 = grass top over side_color,
+// 3 = conveyor belt with side_color chevrons.
+uniform int pattern : hint_range(0, 3) = 0;
 uniform vec4 side_color : source_color = vec4(0.647, 0.490, 0.353, 1.0);
+// Belt direction (world x, z) and chevron speed in cells per second.
+uniform vec2 belt_dir = vec2(1.0, 0.0);
+uniform float belt_speed = 0.0;
 // Peak emission of the interactive-part pulse (0 = no pulse).
 uniform float pulse_strength : hint_range(0.0, 1.0) = 0.0;
 uniform float pulse_period = 1.6;
@@ -47,6 +51,17 @@ vec3 grass(vec3 top, vec3 side, float top_open) {
 	return mix(side, top, cover);
 }
 
+// Chevrons pointing along the belt on its top faces, streaming with time.
+vec3 belt(vec3 base, vec3 chevron_color, float time) {
+	vec2 along_dir = normalize(belt_dir);
+	vec2 across_dir = vec2(-along_dir.y, along_dir.x);
+	float along = dot(world_pos.xz, along_dir) - time * belt_speed;
+	float across = abs(fract(dot(world_pos.xz, across_dir)) - 0.5);
+	float v = fract((along - across * 0.8) * 2.0);
+	float chevron = smoothstep(0.0, 0.06, v) * (1.0 - smoothstep(0.3, 0.36, v)) * step(across, 0.34);
+	return mix(base, chevron_color, chevron * smoothstep(0.6, 0.9, world_normal.y));
+}
+
 void vertex() {
 	world_pos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
 	world_normal = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz);
@@ -58,6 +73,8 @@ void fragment() {
 		base = wood(base, UV);
 	} else if (pattern == 2) {
 		base = grass(base, side_color.rgb, COLOR.a);
+	} else if (pattern == 3) {
+		base = belt(base, side_color.rgb, TIME);
 	}
 	float mottle = surface_noise(world_pos * 2.1 + 3.7, world_normal);
 	base *= 0.94 + 0.12 * mottle;

@@ -47,7 +47,7 @@ func _ready() -> void:
 	tile.position.y = 0.03
 	add_child(tile)
 
-	_sparkles = _make_sparkles(Palette.PACKAGE[color])
+	_sparkles = Effects.sparkles(Palette.PACKAGE[color])
 	_sparkles.position.y = 0.15
 	add_child(_sparkles)
 
@@ -77,39 +77,3 @@ func set_filled(value: bool, animate: bool = true) -> void:
 
 func _set_glow(value: float) -> void:
 	_tile_material.set_shader_parameter(&"glow", value)
-
-
-static func _make_sparkles(tint: Color) -> CPUParticles3D:
-	var sparkles := CPUParticles3D.new()
-	sparkles.name = "Sparkles"
-	sparkles.emitting = false
-	sparkles.one_shot = true
-	sparkles.amount = 28
-	sparkles.lifetime = 0.9
-	sparkles.explosiveness = 0.9
-	sparkles.emission_shape = CPUParticles3D.EMISSION_SHAPE_SPHERE
-	sparkles.emission_sphere_radius = 0.25
-	sparkles.direction = Vector3.UP
-	sparkles.spread = 35.0
-	sparkles.initial_velocity_min = 1.2
-	sparkles.initial_velocity_max = 2.2
-	sparkles.gravity = Vector3(0.0, -2.5, 0.0)
-	sparkles.scale_amount_min = 0.55
-	sparkles.scale_amount_max = 1.0
-	var ramp := Gradient.new()
-	ramp.set_color(0, Color(1.0, 1.0, 1.0, 1.0))
-	ramp.set_color(1, Color(tint, 0.0))
-	sparkles.color_ramp = ramp
-	var quad := QuadMesh.new()
-	quad.size = Vector2(0.075, 0.075)
-	var material := StandardMaterial3D.new()
-	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	material.billboard_mode = BaseMaterial3D.BILLBOARD_PARTICLES
-	# Billboards drop the particle scale unless told to keep it.
-	material.billboard_keep_scale = true
-	material.vertex_color_use_as_albedo = true
-	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	material.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
-	quad.material = material
-	sparkles.mesh = quad
-	return sparkles

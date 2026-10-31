@@ -14,6 +14,9 @@ signal tapped(screen_position: Vector2)
 signal double_tapped(screen_position: Vector2)
 ## The camera distance moved by more than 2%; drives shadow range and focus.
 signal distance_changed(distance: float)
+## A grabbed drag (see [member grab_filter]) moved or ended.
+signal grab_moved(screen_position: Vector2)
+signal grab_released(screen_position: Vector2)
 
 const FOV_DEG: float = 30.0
 const TAP_SLOP_PX: float = 12.0
@@ -44,6 +47,11 @@ const FIT_YAW_SAMPLES: int = 16
 ## screen (main menu background); 0 turns it off.
 @export var idle_orbit_speed: float = 0.0
 
+## Called with the press position when a one-finger drag starts; returning
+## true hands the gesture to [signal grab_moved] / [signal grab_released]
+## (for dragging a slider) instead of orbiting.
+var grab_filter: Callable
+
 ## Current (smoothed) view, in degrees and zoom factor.
 var yaw: float
 var pitch: float
@@ -62,6 +70,8 @@ var _touches: Dictionary = {}
 var _press_position := Vector2.ZERO
 ## The gesture left the tap slop or used more than one finger.
 var _gesture_is_drag: bool = false
+## The gesture was handed to the grab signals.
+var _grabbing: bool = false
 var _gesture_fingers: int = 0
 var _last_drag_usec: int = 0
 var _pinch_start_distance: float = 1.0
@@ -166,7 +176,12 @@ func _on_touch(event: InputEventScreenTouch) -> void:
 			_stop_motion()
 			_press_position = event.position
 			_gesture_is_drag = false
+			_grabbing = false
 			_gesture_fingers = 0
+		elif _grabbing:
+			# Extra fingers are ignored while dragging a part.
+			get_viewport().set_input_as_handled()
+			return
 		_touches[event.index] = event.position
 		_gesture_fingers = maxi(_gesture_fingers, _touches.size())
 		if _touches.size() > 1:
@@ -180,7 +195,11 @@ func _on_touch(event: InputEventScreenTouch) -> void:
 		if _touches.size() == 2:
 			_begin_pinch()
 		if _touches.is_empty():
-			if not _gesture_is_drag:
+			if _grabbing:
+				_grabbing = false
+				_velocity = Vector2.ZERO
+				grab_released.emit(event.position)
+			elif not _gesture_is_drag:
 				_register_tap(event.position)
 			elif _gesture_fingers > 1 or Time.get_ticks_usec() - _last_drag_usec > FLING_REST_MSEC * 1000:
 				_velocity = Vector2.ZERO
@@ -193,6 +212,9 @@ func _on_drag(event: InputEventScreenDrag) -> void:
 	var previous: Vector2 = _touches[event.index]
 	_touches[event.index] = event.position
 	get_viewport().set_input_as_handled()
+	if _grabbing:
+		grab_moved.emit(event.position)
+		return
 	if _touches.size() >= 2:
 		_update_pinch()
 		return
@@ -200,6 +222,10 @@ func _on_drag(event: InputEventScreenDrag) -> void:
 		if event.position.distance_to(_press_position) < TAP_SLOP_PX:
 			return
 		_gesture_is_drag = true
+		if grab_filter.is_valid() and grab_filter.call(_press_position):
+			_grabbing = true
+			grab_moved.emit(event.position)
+			return
 		previous = _press_position
 
 	var short_side: float = _short_side()

@@ -10,8 +10,9 @@ extends Node3D
 signal step_finished(cell: Vector3i)
 signal arrived(cell: Vector3i)
 
-## Seconds per cell.
+## Seconds per cell walked, and per cell carried by a belt.
 const STEP_TIME: float = 0.28
+const RIDE_TIME: float = 0.22
 const TURN_RATE: float = 16.0
 const BOB_HEIGHT: float = 0.04
 const LEAN: float = 0.13
@@ -28,6 +29,8 @@ var cell: Vector3i
 var _rig: CourierBuilder.Rig
 var _queue: Array[Vector3i] = []
 var _stepping: bool = false
+## The current step is a belt carrying it, not a walk.
+var _riding: bool = false
 var _step_target: Vector3i
 var _facing_yaw: float = PI
 var _phase: float = 0.0
@@ -59,6 +62,11 @@ func place(at: Vector3i, facing: Vector3i = Vector3i(0, 0, 1)) -> void:
 
 func is_moving() -> bool:
 	return _stepping
+
+
+## The horizontal direction it faces (or is turning to face).
+func facing() -> Vector3i:
+	return Vector3i(roundi(-sin(_facing_yaw)), 0, roundi(-cos(_facing_yaw)))
 
 
 ## Where a new path should start: the cell being stepped into, or the
@@ -139,17 +147,20 @@ func door_anchor() -> Vector3:
 func _next_step() -> void:
 	if _queue.is_empty():
 		_stepping = false
+		_riding = false
 		_land(0.5)
 		arrived.emit(cell)
 		return
 	var next: Vector3i = _queue.pop_front()
 	_stepping = true
+	_riding = pathfinder.is_belt(cell)
 	_step_target = next
 	var from: Vector3 = position
 	var to: Vector3 = pathfinder.floor_position(next)
-	_face(to - from)
+	if not _riding:
+		_face(to - from)
 	var tween: Tween = create_tween()
-	tween.tween_property(self, "position", to, STEP_TIME)
+	tween.tween_property(self, "position", to, RIDE_TIME if _riding else STEP_TIME)
 	tween.tween_callback(_finish_step.bind(next, to.y - from.y))
 
 
@@ -184,8 +195,9 @@ func _set_happy_eyes(happy: bool) -> void:
 
 func _process(delta: float) -> void:
 	_time += delta
-	_walk_blend = move_toward(_walk_blend, 1.0 if _stepping else 0.0, delta * 7.0)
-	if _stepping:
+	var walking: bool = _stepping and not _riding
+	_walk_blend = move_toward(_walk_blend, 1.0 if walking else 0.0, delta * 7.0)
+	if walking:
 		_phase += delta / STEP_TIME * PI
 	elif _walk_blend == 0.0:
 		_phase = 0.0

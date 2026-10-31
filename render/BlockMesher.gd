@@ -111,8 +111,8 @@ func _bevel_offset(k: int) -> float:
 
 func _build() -> ArrayMesh:
 	for cell: Vector3i in _cells:
-		# Stairs have their own mesh (ClayShapes.stairs).
-		if not Grid.is_stairs(_cells[cell]):
+		# Stairs and cranks have their own meshes.
+		if Grid.is_full_block(_cells[cell]):
 			_mesh_block(cell, _cells[cell])
 	var mesh := ArrayMesh.new()
 	for block_type: StringName in _surfaces:
@@ -285,19 +285,20 @@ func _add_triangle(s: _Surface, i0: int, i1: int, i2: int) -> void:
 
 
 ## Whether the block at [param cell] hides a face of a neighbour. Water hides
-## only water faces; stairs hide nothing (their profile is open); other
-## solid blocks hide everything.
+## only water faces; stairs and cranks hide nothing (they are not whole
+## cubes); other solid blocks hide everything.
 func _occludes(cell: Vector3i, water: bool) -> bool:
 	var block_type: StringName = _cells.get(cell, &"")
-	if block_type == &"" or Grid.is_stairs(block_type):
+	if block_type == &"" or not Grid.is_full_block(block_type):
 		return false
 	return water or block_type != WATER
 
 
-## Whether the block at [param cell] casts ambient occlusion (water does not).
+## Whether the block at [param cell] casts ambient occlusion (water and
+## cranks do not).
 func _shades(cell: Vector3i) -> bool:
 	var block_type: StringName = _cells.get(cell, &"")
-	return block_type != &"" and block_type != WATER
+	return block_type != &"" and block_type != WATER and block_type != &"crank"
 
 
 ## Deterministic value in [-1, 1] per cell.
