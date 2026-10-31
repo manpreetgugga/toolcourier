@@ -5,8 +5,9 @@ A little walking mailbox delivers parcels across small floating clay
 dioramas: drag to rotate the diorama, tap a spot to walk there, and operate
 the orange mechanisms to open a path.
 
-> **Status:** early development (build steps 1–3 of 10 done: lighting and sky,
-> clay block meshing, orbit camera with tap picking).
+> **Status:** early development (build steps 1–4 of 10 done: lighting and sky,
+> clay block meshing, orbit camera with tap picking, the courier with
+> pathfinding and tap-to-move).
 
 ![Test diorama](docs/screenshots/clay_closeup.png)
 
@@ -24,6 +25,30 @@ deliberately avoids the crisp bevelled-cube grid and a one-eyed robot hero:
 
 Clay was picked over a storybook-ink look and a natural-rock look; see
 `docs/screenshots/look_comparison.png` (clay, storybook, isles).
+
+<img src="docs/screenshots/step4_courier.png" width="320" alt="The courier"> <img src="docs/screenshots/step4_happy.png" width="320" alt="The courier celebrating">
+
+## The courier
+
+`entities/Courier.gd` walks cell to cell (0.28 s per cell) and animates
+procedurally: breathing while idle, a waddle with swinging legs and a forward
+lean, a squash when it lands, a puzzled head tilt, a happy hop-and-spin with
+"^ ^" eyes, and the odd blink. `render/CourierBuilder.gd` builds it from clay
+parts made by `render/ClayShapes.gd` (rounded extrusions), with a soft blob
+shadow under its feet.
+
+Movement rules (`core/Pathfinder.gd`, an AStar3D graph over the grid):
+
+- the courier stands in an empty cell on top of a block with a walkable top
+  (anything but water and stairs);
+- it steps one cell at a time to a horizontal neighbour at the same height,
+  never jumping gaps or dropping down;
+- the only way up or down is stairs: a stairs block links the cell at its
+  foot with the cell past its top, one level higher.
+
+Tapping a block walks to the cell on top of it (or onto stairs). A white
+ripple marks the destination; a red ripple and a puzzled tilt mean there is
+no way there. A new tap mid-walk re-routes after the current step.
 
 ## Requirements
 
@@ -44,7 +69,7 @@ godot --path .
 | --- | --- |
 | One-finger drag | Orbit the diorama (pitch 15°–70°), with inertia when flicked |
 | Pinch (mouse wheel on desktop) | Zoom, 0.7×–1.4× |
-| Tap | Pick the block face under the finger (moves of under 12 px still count as taps) |
+| Tap | Walk to the spot under the finger (moves of under 12 px still count as taps) |
 | Double-tap empty space | Ease back to the default view |
 
 The camera (`camera/OrbitCamera.gd`) fits its distance so the diorama fills
@@ -59,6 +84,15 @@ reset, picking and the fit (needs a renderer, exits non-zero on failure):
 
 ```bash
 godot --path . --resolution 405x720 -s res://tools/test_orbit_camera.gd -- --out=docs/screenshots
+```
+
+`tools/test_courier.gd` checks walkability and stairs in the pathfinder, then
+taps through the real input path: climbing to the walkway, an unreachable
+tap, re-routing mid-walk and walking back down. It also saves close-up
+portraits of the courier:
+
+```bash
+godot --path . --resolution 405x720 -s res://tools/test_courier.gd -- --out=docs/screenshots
 ```
 
 ## Screenshots from the command line
@@ -89,8 +123,9 @@ one mesh with a surface per material:
   animated shader.
 
 Block types: `stone`, `dark_stone`, `sand`, `grass` (dirt sides with a grass
-lip), `wood` (plank lines), `brick`, `water`, and `accent` for interactive
-parts (pulsing orange). Colours live in `render/Palette.gd`, materials in
+lip), `wood` (plank lines), `brick`, `water`, `accent` for interactive parts
+(pulsing orange), and `stairs`, which has its own clay mesh and a facing (the
+direction it climbs). Colours live in `render/Palette.gd`, materials in
 `render/BlockMaterials.gd`, the clay surface in `shaders/block.gdshader` with
 shared helpers in `shaders/block_common.gdshaderinc`.
 

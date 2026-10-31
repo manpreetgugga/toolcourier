@@ -111,7 +111,9 @@ func _bevel_offset(k: int) -> float:
 
 func _build() -> ArrayMesh:
 	for cell: Vector3i in _cells:
-		_mesh_block(cell, _cells[cell])
+		# Stairs have their own mesh (ClayShapes.stairs).
+		if not Grid.is_stairs(_cells[cell]):
+			_mesh_block(cell, _cells[cell])
 	var mesh := ArrayMesh.new()
 	for block_type: StringName in _surfaces:
 		var s: _Surface = _surfaces[block_type]
@@ -283,10 +285,11 @@ func _add_triangle(s: _Surface, i0: int, i1: int, i2: int) -> void:
 
 
 ## Whether the block at [param cell] hides a face of a neighbour. Water hides
-## only water faces; solid blocks hide everything.
+## only water faces; stairs hide nothing (their profile is open); other
+## solid blocks hide everything.
 func _occludes(cell: Vector3i, water: bool) -> bool:
 	var block_type: StringName = _cells.get(cell, &"")
-	if block_type == &"":
+	if block_type == &"" or Grid.is_stairs(block_type):
 		return false
 	return water or block_type != WATER
 

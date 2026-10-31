@@ -7,13 +7,22 @@ extends RefCounted
 
 ## Vector3i -> block type (StringName).
 var cells: Dictionary
+## Vector3i -> Vector3i: the horizontal direction an oriented block faces.
+## Stairs climb towards their facing.
+var facing: Dictionary
 ## Bounding box of all blocks, in world units.
 var bounds: AABB
 
 
-func _init(p_cells: Dictionary = {}) -> void:
+func _init(p_cells: Dictionary = {}, p_facing: Dictionary = {}) -> void:
 	cells = p_cells
+	facing = p_facing
 	bounds = _compute_bounds()
+
+
+## Stairs types are "stairs" or "stairs_<material>".
+static func is_stairs(block_type: StringName) -> bool:
+	return String(block_type).begins_with("stairs")
 
 
 func get_block(cell: Vector3i) -> StringName:
@@ -22,6 +31,10 @@ func get_block(cell: Vector3i) -> StringName:
 
 func has_block(cell: Vector3i) -> bool:
 	return cells.has(cell)
+
+
+func is_stairs_at(cell: Vector3i) -> bool:
+	return is_stairs(get_block(cell))
 
 
 ## Casts a ray against the block cells with a voxel traversal (no physics
