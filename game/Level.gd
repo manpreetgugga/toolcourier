@@ -244,14 +244,7 @@ func hinted() -> Dictionary:
 
 ## The level after this one ("" when this is the last).
 func next_level_path() -> String:
-	var folder: String = level_path.get_base_dir()
-	var number: int = level_path.get_file().get_basename().trim_prefix("level_").to_int()
-	var candidate: String = folder.path_join("level_%d.json" % (number + 1))
-	if FileAccess.file_exists(candidate):
-		return candidate
-	var world: int = folder.get_file().trim_prefix("world_").to_int()
-	candidate = folder.get_base_dir().path_join("world_%d/level_1.json" % (world + 1))
-	return candidate if world > 0 and FileAccess.file_exists(candidate) else ""
+	return LevelCatalog.next_after(level_path)
 
 
 ## Replaces this level with the one at [param path].

@@ -76,7 +76,7 @@ func solve(start: Dictionary) -> Array[Dictionary]:
 				return plan
 			for action: Dictionary in _actions(snapshots[key]):
 				_state.restore(snapshots[key])
-				action["events"] = not apply_to(_state, action).is_empty()
+				action["events"] = not apply_to(_state, action, true).is_empty()
 				var next_key: String = key_of(_state)
 				var next_cost: int = depth + _state.moves - (snapshots[key]["moves"] as int)
 				if cost.has(next_key) and cost[next_key] <= next_cost:
@@ -101,13 +101,14 @@ func solve(start: Dictionary) -> Array[Dictionary]:
 
 
 ## Applies [param action] to [param state] (as the Level does for the
-## player) and returns its events.
-static func apply_to(state: LevelState, action: Dictionary) -> Array[Dictionary]:
+## player) and returns its events. [param checked]: the action was just
+## found possible in this state, so slides and turns skip checking again.
+static func apply_to(state: LevelState, action: Dictionary, checked: bool = false) -> Array[Dictionary]:
 	match action["action"]:
 		Action.SLIDE:
-			return state.slide(action["id"], action["to"])
+			return state.slide(action["id"], action["to"], checked)
 		Action.TURN:
-			return state.rotate(action["id"])
+			return state.rotate(action["id"], checked)
 	return state.enter(action["cell"], action["ride"])
 
 

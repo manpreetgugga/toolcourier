@@ -5,11 +5,12 @@ A little walking mailbox delivers parcels across small floating clay
 dioramas: drag to rotate the diorama, tap a spot to walk there, and operate
 the orange mechanisms to open a path.
 
-> **Status:** early development (build steps 1–7 of 10 done: lighting and sky,
+> **Status:** early development (build steps 1–8 of 10 done: lighting and sky,
 > clay block meshing, orbit camera with tap picking, the courier with
 > pathfinding, playable levels from JSON with parcels, pads and an exit,
 > mechanisms (sliders, elevators, buttons, conveyors, rotators and gates),
-> and undo, restart, hints, stars and saved progress).
+> undo, restart, hints, stars and saved progress, and 30 solver-checked
+> levels in three worlds).
 
 <img src="docs/screenshots/step7_hud.png" width="320" alt="World 1, level 1 with the HUD"> <img src="docs/screenshots/step7_hint_slider.png" width="320" alt="A hint: drag the slider to the outline">
 
@@ -92,7 +93,8 @@ godot --path .
 ```
 
 The main scene, `game/Level.tscn`, plays world 1 level 1 until the menus
-exist (picking up a game in progress); set its `level_path` to play another
+exist (picking up a game in progress), and Next on the finish card goes on
+through the levels in order; set its `level_path` to start on another
 level.
 
 ## Controls
@@ -160,15 +162,30 @@ godot --path . --resolution 405x720 -s res://tools/test_mechanisms.gd -- --out=d
 ```
 
 `tools/test_progress.gd` checks that the solver's shortest finish is the
-three-star limit of every level, the save file (bests, a corrupt file, a game
+three-star limit of the mechanism test levels and level 1, the save file (bests, a corrupt file, a game
 in progress coming back exactly, a stale or broken one being ignored), undo
 and restart (including undo the moment a parcel drops), the HUD buttons
 through the touch path, resuming a closed level with its undo history, and
-then finishes every level by following hints alone, expecting three stars.
+then finishes those levels by following hints alone, expecting three stars.
 It saves `step7_*.png` screenshots:
 
 ```bash
 godot --path . --resolution 405x720 -s res://tools/test_progress.gd -- --out=docs/screenshots
+```
+
+`tools/test_levels.gd` plays the whole catalogue: for each of the 30 levels
+it checks that the solver's fewest moves is the three-star limit, that a
+hint from the start stays within the search budget and that the plan
+finishes the level by the rules; then it opens the level and follows the
+hints alone through the touch path (taps, slider drags, crank taps), turning
+the camera a quarter when something hides the next tap, until the level is
+finished with three stars. It runs the game at triple speed (under two
+minutes in all) and saves `step8_levels.png`, a contact sheet of every level
+as it starts. Pass level paths to play only those (no contact sheet):
+
+```bash
+godot --path . --resolution 405x720 -s res://tools/test_levels.gd -- --out=docs/screenshots
+godot --path . --resolution 405x720 -s res://tools/test_levels.gd -- res://levels/world_2/level_3.json
 ```
 
 ## Screenshots from the command line
@@ -199,7 +216,7 @@ one mesh with a surface per material:
   animated shader.
 
 Block types: `stone`, `dark_stone`, `sand`, `grass` (dirt sides with a grass
-lip), `wood` (plank lines), `brick`, `water`, `accent` for interactive parts
+lip), `dirt`, `wood` (plank lines), `brick`, `water`, `accent` for interactive parts
 (pulsing orange), and `stairs`, which has its own clay mesh and a facing (the
 direction it climbs). Colours live in `render/Palette.gd`, materials in
 `render/BlockMaterials.gd`, the clay surface in `shaders/block.gdshader` with
@@ -232,7 +249,7 @@ block it stands on.
 | --- | --- |
 | `name`, `world` | Title, and the world (1–3) it belongs to. |
 | `palette` | Sky and light theme: `meadow`, `harbor` or `old_town`. |
-| `blocks` | `[x, y, z, type]`. Types: `stone`, `dark_stone`, `sand`, `grass`, `wood`, `brick`, `water`, `accent`. Stairs are `[x, y, z, "stairs", facing]`, climbing towards `facing` (`+x`, `-x`, `+z`, `-z`); `stairs_wood` and `stairs_brick` change the material. |
+| `blocks` | `[x, y, z, type]`. Types: `stone`, `dark_stone`, `sand`, `grass`, `dirt`, `wood`, `brick`, `water`, `accent`. Stairs are `[x, y, z, "stairs", facing]`, climbing towards `facing` (`+x`, `-x`, `+z`, `-z`); `stairs_wood` and `stairs_brick` change the material. |
 | `props` | Decor, `[x, y, z, type, rotation?, solid?]`: `tree_small`, `tree_tall`, `bush`, `lamp_post`, `flag`, `crate`, `fence`, `rock`. Rotation is in degrees about up; fences run along the cell's −z edge before rotation. Props are walk-through unless `solid` is `true`. |
 | `mechanisms` | Optional moving parts; see [Mechanisms](#mechanisms). |
 | `packages`, `pads` | `{ "pos": [x, y, z], "color": ... }` with colours `red`, `green`, `blue`, `yellow`. Each parcel needs exactly one pad of its colour. |
@@ -245,6 +262,37 @@ and press F6. `core/LevelLoader.gd` checks the level as it loads and prints
 every problem with where it is (for example `packages[0]: (2, 0, 3) is not
 a cell the courier can stand in`), and the level will not start until they
 are fixed. `dev/sandbox_level.json` is a small test level used by the tests.
+
+### The 30 levels
+
+`core/LevelCatalog.gd` finds the levels by their file names, worlds by
+number and then levels by number (gaps are allowed, other files are
+ignored), so a new file in a world folder is part of the game; Next on the
+finish card follows this order. Each world brings in something new:
+
+| World | Palette | Carry | Levels |
+| --- | --- | --- | --- |
+| 1 | `meadow` | 1 | Walking, stairs and water, then sliders: a sliding bridge, a raft, two rafts on one channel and two crossing sliders. |
+| 2 | `harbor` | 1 | Elevators, a button that calls a lift, gates opened by one button or two, belts, belts switched on and off, and all of them together. |
+| 3 | `old_town` | 2 | Two parcels at once, turntables (one carrying a parcel across, one shaped like a cross, two that get in each other's way), a button that turns a bridge, a two-button gate, then turntables, lifts, rafts and belts together. |
+
+<img src="docs/screenshots/step8_levels.png" width="640" alt="All 30 levels as they start">
+
+`tools/check_levels.gd` checks levels without a window. It loads every
+level in catalogue order (or the paths given), solves each with the hint
+solver, and fails if a level is broken, cannot be finished, or has a
+three-star limit other than its fewest moves. It warns when a world folder
+does not match the level's `world`, and when a hint from the start looks at
+more than 5,000 states, the budget for answering quickly on a phone (the
+largest level, 1-10 Crossroads, looks at about 1,600). `--plan` prints each
+level's shortest solution and `--fix-stars` rewrites each level's `stars`
+from it: the best, then best + max(2, 25%), then best + max(4, 60%).
+
+```bash
+godot --headless --path . -s res://tools/check_levels.gd
+godot --headless --path . -s res://tools/check_levels.gd -- --plan res://levels/world_2/level_3.json
+godot --headless --path . -s res://tools/check_levels.gd -- --fix-stars
+```
 
 ## Mechanisms
 
@@ -316,8 +364,10 @@ nothing; the plan is reused while the player follows it, and the search gives
 up past 150,000 states so a hint never hangs. Following the hints alone
 always earns three stars.
 
-**Stars**: each level's three-star limit should be the solver's best, and
-`tools/test_progress.gd` checks that it is for every level.
+**Stars**: each level's three-star limit is the solver's best and the
+other two are set from it (`tools/check_levels.gd --fix-stars`);
+`tools/check_levels.gd` and `tools/test_levels.gd` check that every level
+still agrees.
 
 **Saving**: `core/Progress.gd` keeps the best stars and moves per level and
 the game in progress (state and undo history) in `user://progress.json`. It
@@ -340,7 +390,7 @@ shaders/    block, clay, water, cloth, sky and effect shaders
 entities/   courier, parcels, pads, exit, mechanisms
 camera/     orbit camera
 ui/         HUD, buttons and the finish card
-levels/     level JSON, one folder per world
+levels/     the 30 levels, levels/world_<n>/level_<n>.json
 tools/      capture, tests and validation scripts
 dev/        sandbox level and one test level per mechanism
 ```

@@ -1,0 +1,37 @@
+{
+	"name": "Switchback",
+	"world": 2,
+	"palette": "harbor",
+	"blocks": [
+		[1, -2, 1, "dark_stone"], [2, -2, 1, "dark_stone"], [3, -2, 1, "dark_stone"], [4, -2, 1, "dark_stone"], [5, -2, 1, "dark_stone"],
+
+		[1, -1, 0, "dark_stone"], [2, -1, 0, "water"], [3, -1, 0, "water"], [4, -1, 0, "water"], [5, -1, 0, "dark_stone"],
+		[0, -1, 1, "dark_stone"], [1, -1, 1, "dark_stone"], [2, -1, 1, "water"], [3, -1, 1, "water"], [4, -1, 1, "water"], [5, -1, 1, "dark_stone"], [6, -1, 1, "dark_stone"],
+		[1, -1, 2, "dark_stone"], [2, -1, 2, "water"], [3, -1, 2, "water"], [4, -1, 2, "water"], [5, -1, 2, "dark_stone"],
+
+		[0, 0, 0, "stone"], [1, 0, 0, "stone"], [5, 0, 0, "sand"], [6, 0, 0, "sand"],
+		[0, 0, 1, "stone"], [1, 0, 1, "stone"], [5, 0, 1, "sand"], [6, 0, 1, "sand"],
+		[0, 0, 2, "stone"], [1, 0, 2, "stone"], [5, 0, 2, "sand"], [6, 0, 2, "sand"]
+	],
+	"props": [
+		[6, 1, 0, "tree_tall", 42, true],
+		[1, 1, 1, "rock", 8, true]
+	],
+	"mechanisms": [
+		{ "id": "out", "type": "conveyor", "cells": [[2, 0, 0], [3, 0, 0], [4, 0, 0]], "dir": "+x" },
+		{ "id": "back", "type": "conveyor", "cells": [[2, 0, 2], [3, 0, 2], [4, 0, 2]], "dir": "-x", "running": false },
+		{ "id": "west", "type": "button", "pos": [0, 1, 2], "targets": ["out", "back"] },
+		{ "id": "east", "type": "button", "pos": [6, 1, 2], "targets": ["out", "back"] }
+	],
+	"packages": [
+		{ "pos": [5, 1, 0], "color": "blue" },
+		{ "pos": [5, 1, 2], "color": "red" }
+	],
+	"pads": [
+		{ "pos": [0, 1, 1], "color": "blue" },
+		{ "pos": [1, 1, 2], "color": "red" }
+	],
+	"start": [0, 1, 0],
+	"exit": [6, 1, 1],
+	"stars": [24, 30, 38]
+}

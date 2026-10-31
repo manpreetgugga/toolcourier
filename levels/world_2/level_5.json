@@ -1,0 +1,39 @@
+{
+	"name": "Two Keys",
+	"world": 2,
+	"palette": "harbor",
+	"blocks": [
+		[1, -2, 1, "dark_stone"], [2, -2, 1, "dark_stone"], [3, -2, 1, "dark_stone"],
+		[1, -2, 2, "dark_stone"], [2, -2, 2, "dark_stone"], [3, -2, 2, "dark_stone"],
+
+		[1, -1, 0, "dark_stone"], [2, -1, 0, "dark_stone"], [3, -1, 0, "dark_stone"],
+		[0, -1, 1, "dark_stone"], [1, -1, 1, "dark_stone"], [2, -1, 1, "dark_stone"], [3, -1, 1, "dark_stone"], [4, -1, 1, "dark_stone"],
+		[0, -1, 2, "dark_stone"], [1, -1, 2, "dark_stone"], [2, -1, 2, "dark_stone"], [3, -1, 2, "dark_stone"], [4, -1, 2, "dark_stone"],
+		[1, -1, 3, "dark_stone"], [2, -1, 3, "dark_stone"], [3, -1, 3, "water"], [4, -1, 3, "water"],
+
+		[0, 0, 0, "stone"], [1, 0, 0, "stone"], [2, 0, 0, "stone"], [3, 0, 0, "stone"], [4, 0, 0, "stone"],
+		[0, 0, 1, "stone"], [1, 0, 1, "stone"], [2, 0, 1, "stone"], [3, 0, 1, "stone"], [4, 0, 1, "stone"],
+		[0, 0, 2, "stone"], [1, 0, 2, "stone"], [2, 0, 2, "stone"], [3, 0, 2, "stone"], [4, 0, 2, "stone"],
+		[0, 0, 3, "stone"], [1, 0, 3, "stone"], [2, 0, 3, "stone"]
+	],
+	"props": [
+		[3, 1, 0, "lamp_post", 21, true],
+		[1, 1, 1, "crate", 8, true],
+		[3, 1, 2, "crate", 53, true],
+		[1, 1, 3, "rock", 40, true]
+	],
+	"mechanisms": [
+		{ "id": "left", "type": "button", "pos": [1, 1, 2] },
+		{ "id": "right", "type": "button", "pos": [2, 1, 0] },
+		{ "id": "gate", "type": "gate", "cells": [[3, 1, 1]], "buttons": ["left", "right"] }
+	],
+	"packages": [
+		{ "pos": [4, 1, 2], "color": "red" }
+	],
+	"pads": [
+		{ "pos": [0, 1, 3], "color": "red" }
+	],
+	"start": [0, 1, 0],
+	"exit": [4, 1, 0],
+	"stars": [24, 30, 38]
+}

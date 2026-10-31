@@ -1,0 +1,37 @@
+{
+	"name": "Sliding Bridge",
+	"world": 1,
+	"palette": "meadow",
+	"blocks": [
+		[1, -2, 1, "dark_stone"], [2, -2, 1, "dark_stone"], [3, -2, 1, "dark_stone"],
+		[1, -2, 2, "dark_stone"], [2, -2, 2, "dark_stone"], [3, -2, 2, "dark_stone"],
+
+		[1, -1, 0, "dark_stone"], [2, -1, 0, "water"], [3, -1, 0, "dark_stone"],
+		[0, -1, 1, "dark_stone"], [1, -1, 1, "dark_stone"], [2, -1, 1, "water"], [3, -1, 1, "dark_stone"], [4, -1, 1, "dark_stone"],
+		[0, -1, 2, "dark_stone"], [1, -1, 2, "dark_stone"], [2, -1, 2, "water"], [3, -1, 2, "dark_stone"], [4, -1, 2, "dark_stone"],
+		[1, -1, 3, "dark_stone"], [2, -1, 3, "water"], [3, -1, 3, "dark_stone"],
+
+		[0, 0, 0, "grass"], [1, 0, 0, "grass"], [3, 0, 0, "grass"], [4, 0, 0, "grass"],
+		[0, 0, 1, "grass"], [1, 0, 1, "grass"], [3, 0, 1, "grass"], [4, 0, 1, "grass"],
+		[0, 0, 2, "grass"], [1, 0, 2, "grass"], [3, 0, 2, "grass"], [4, 0, 2, "grass"],
+		[0, 0, 3, "grass"], [1, 0, 3, "grass"], [3, 0, 3, "grass"], [4, 0, 3, "grass"]
+	],
+	"props": [
+		[0, 1, 0, "tree_small", 0, true],
+		[4, 1, 1, "tree_tall", 29, true],
+		[1, 1, 2, "bush", 69, true],
+		[3, 1, 3, "tree_small", 24, true]
+	],
+	"mechanisms": [
+		{ "id": "bridge", "type": "slider", "cells": [[2, 0, 0]], "axis": "z", "min": 0, "max": 3, "start": 3 }
+	],
+	"packages": [
+		{ "pos": [0, 1, 3], "color": "red" }
+	],
+	"pads": [
+		{ "pos": [3, 1, 0], "color": "red" }
+	],
+	"start": [0, 1, 1],
+	"exit": [4, 1, 3],
+	"stars": [10, 13, 16]
+}

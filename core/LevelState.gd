@@ -37,6 +37,9 @@ var completed: bool = false
 ## id -> Mechanism, and id -> its state (see Mechanism).
 var mechanisms: Dictionary = {}
 var values: Dictionary = {}
+## Cells no moving block may enter, whatever the state: level blocks, solid
+## props and the fixtures (pads, the exit, buttons).
+var _fixed: Dictionary = {}
 
 
 func _init(level: LevelData) -> void:
@@ -51,6 +54,17 @@ func _init(level: LevelData) -> void:
 	for mechanism: Mechanism in level.mechanisms:
 		mechanisms[mechanism.id] = mechanism
 		values[mechanism.id] = mechanism.initial
+	for cell: Vector3i in data.cells:
+		_fixed[cell] = true
+	for prop: Dictionary in data.props:
+		if prop["solid"]:
+			_fixed[prop["cell"]] = true
+	for cell: Vector3i in pads:
+		_fixed[cell] = true
+	_fixed[exit] = true
+	for mechanism: Mechanism in level.mechanisms:
+		if mechanism.kind == Mechanism.Kind.BUTTON:
+			_fixed[mechanism.cells[0]] = true
 	_update_gates()
 	for mechanism: Mechanism in level.mechanisms:
 		if mechanism.kind == Mechanism.Kind.CONVEYOR and values[mechanism.id] == 1:
@@ -119,16 +133,19 @@ func enter(cell: Vector3i, ride: bool = false) -> Array[Dictionary]:
 
 
 ## The player drags slider [param id] to offset [param to] (one move).
-func slide(id: String, to: int) -> Array[Dictionary]:
-	var events: Array[Dictionary] = move_mechanism(id, to)
+## [param checked] skips making sure it can get there, for a caller that
+## took [param to] from [method slide_range] in this same state.
+func slide(id: String, to: int, checked: bool = false) -> Array[Dictionary]:
+	var events: Array[Dictionary] = move_mechanism(id, to, checked)
 	if not events.is_empty():
 		moves += 1
 	return events
 
 
 ## The player turns rotator [param id] a quarter turn (one move).
-func rotate(id: String) -> Array[Dictionary]:
-	var events: Array[Dictionary] = move_mechanism(id, (values[id] + 1) % 4)
+## [param checked] as for [method slide], after [method can_move].
+func rotate(id: String, checked: bool = false) -> Array[Dictionary]:
+	var events: Array[Dictionary] = move_mechanism(id, (values[id] + 1) % 4, checked)
 	if not events.is_empty():
 		moves += 1
 	return events
@@ -137,22 +154,28 @@ func rotate(id: String) -> Array[Dictionary]:
 ## Offsets a slider can reach from where it is, as (lowest, highest).
 func slide_range(id: String) -> Vector2i:
 	var mechanism: Mechanism = mechanisms[id]
-	var low: int = values[id]
-	var high: int = low
-	while low - 1 >= mechanism.min_value and can_move(id, low - 1):
+	var from: int = values[id]
+	var start: Array[Vector3i] = mechanism.cells_at(from)
+	var riders: Array[Vector3i] = _riders(mechanism, from)
+	var blocked: Dictionary = _blocked_cells(id, riders)
+	# It moves a cell at a time, so each offset on the way is checked once.
+	var low: int = from
+	while low - 1 >= mechanism.min_value and _fits(start, mechanism.axis * (low - 1 - from), riders, blocked):
 		low -= 1
-	while high + 1 <= mechanism.max_value and can_move(id, high + 1):
+	var high: int = from
+	while high + 1 <= mechanism.max_value and _fits(start, mechanism.axis * (high + 1 - from), riders, blocked):
 		high += 1
 	return Vector2i(low, high)
 
 
 ## Moves a slider, elevator or rotator to state [param to] if nothing is in
-## the way, carrying the courier and parcels standing on it.
-func move_mechanism(id: String, to: int) -> Array[Dictionary]:
+## the way (taken as read when [param checked]), carrying the courier and
+## parcels standing on it.
+func move_mechanism(id: String, to: int, checked: bool = false) -> Array[Dictionary]:
 	var events: Array[Dictionary] = []
 	var mechanism: Mechanism = mechanisms[id]
 	var from: int = values[id]
-	if from == to or not can_move(id, to):
+	if from == to or not (checked or can_move(id, to)):
 		return events
 	events.append({"event": Event.MECHANISM, "id": id, "from": from, "to": to})
 	var rides: bool = _stands_on(mechanism, from, courier)
@@ -174,45 +197,23 @@ func can_move(id: String, to: int) -> bool:
 	var from: int = values[id]
 	if not mechanism.moves_blocks():
 		return false
-	var blocked: Dictionary = _blocked_cells(id)
-	for cell: Vector3i in pads:
-		blocked[cell] = true
-	blocked[exit] = true
-	for other: Mechanism in mechanisms.values():
-		if other.kind == Mechanism.Kind.BUTTON:
-			blocked[other.cells[0]] = true
-	var riders: Array[Vector3i] = _parcels_on(mechanism, from)
-	if _stands_on(mechanism, from, courier):
-		riders.append(courier)
-	else:
-		blocked[courier] = true
-	for cell: Vector3i in waiting:
-		if not riders.has(cell):
-			blocked[cell] = true
-
-	var start: Array[Vector3i] = mechanism.cells_at(from)
-	var poses: Array = []
+	var riders: Array[Vector3i] = _riders(mechanism, from)
+	var blocked: Dictionary = _blocked_cells(id, riders)
 	if mechanism.kind == Mechanism.Kind.ROTATOR:
-		var turned: Array[Vector3i] = []
+		# A turn only checks where it lands.
+		var landing: Array[Vector3i] = mechanism.cells_at(to)
+		for cell: Vector3i in landing:
+			if _fixed.has(cell) or blocked.has(cell):
+				return false
 		for rider: Vector3i in riders:
-			turned.append(mechanism.carry(rider, from, to))
-		poses.append([mechanism.cells_at(to), turned])
-	else:
-		for offset: Vector3i in mechanism.steps(from, to):
-			var shifted: Array[Vector3i] = []
-			for cell: Vector3i in start:
-				shifted.append(cell + offset)
-			var carried_riders: Array[Vector3i] = []
-			for rider: Vector3i in riders:
-				carried_riders.append(rider + offset)
-			poses.append([shifted, carried_riders])
-	for pose: Array in poses:
-		for cell: Vector3i in pose[0]:
-			if blocked.has(cell):
+			var turned: Vector3i = mechanism.carry(rider, from, to)
+			if _fixed.has(turned) or blocked.has(turned) or landing.has(turned):
 				return false
-		for rider: Vector3i in pose[1]:
-			if blocked.has(rider) or (pose[0] as Array).has(rider):
-				return false
+		return true
+	var start: Array[Vector3i] = mechanism.cells_at(from)
+	for offset: Vector3i in mechanism.steps(from, to):
+		if not _fits(start, offset, riders, blocked):
+			return false
 	return true
 
 
@@ -393,11 +394,37 @@ func _move_parcels(parcels: Array[Vector3i], carry: Callable, id: String, events
 	waiting.merge(moved, true)
 
 
-## Level blocks, other mechanisms' blocks, solid props and closed gates.
-func _blocked_cells(except_id: String) -> Dictionary:
+## Whether blocks at [param start] moved by [param offset], and the
+## [param riders] moved with them, all land in open cells.
+func _fits(start: Array[Vector3i], offset: Vector3i, riders: Array[Vector3i], blocked: Dictionary) -> bool:
+	for cell: Vector3i in start:
+		if _fixed.has(cell + offset) or blocked.has(cell + offset):
+			return false
+	for rider: Vector3i in riders:
+		if _fixed.has(rider + offset) or blocked.has(rider + offset) or start.has(rider):
+			return false
+	return true
+
+
+## The courier and parcels standing on [param mechanism] in state
+## [param value].
+func _riders(mechanism: Mechanism, value: int) -> Array[Vector3i]:
+	var riders: Array[Vector3i] = _parcels_on(mechanism, value)
+	if _stands_on(mechanism, value, courier):
+		riders.append(courier)
+	return riders
+
+
+## What blocks mechanism [param except_id] besides [member _fixed]: other
+## mechanisms' blocks where they are now, closed gates, and the courier and
+## parcels unless they are among its [param riders].
+func _blocked_cells(except_id: String, riders: Array[Vector3i]) -> Dictionary:
 	var blocked: Dictionary = {}
-	for cell: Vector3i in data.cells:
-		blocked[cell] = true
+	if not riders.has(courier):
+		blocked[courier] = true
+	for cell: Vector3i in waiting:
+		if not riders.has(cell):
+			blocked[cell] = true
 	for mechanism: Mechanism in mechanisms.values():
 		if mechanism.id == except_id:
 			continue
@@ -407,9 +434,6 @@ func _blocked_cells(except_id: String) -> Dictionary:
 		elif mechanism.kind == Mechanism.Kind.GATE and values[mechanism.id] == 0:
 			for cell: Vector3i in mechanism.cells:
 				blocked[cell] = true
-	for prop: Dictionary in data.props:
-		if prop["solid"]:
-			blocked[prop["cell"]] = true
 	return blocked
 
 

@@ -34,6 +34,8 @@ var handle := Vector3i.ZERO
 ## Button targets, or a gate's buttons.
 var links: Array[String] = []
 var initial: int = 0
+## State -> its block cells, filled in as [method cells_at] is asked.
+var _cells_at: Dictionary = {}
 
 
 ## Whether this mechanism is made of blocks the courier can stand on.
@@ -46,12 +48,15 @@ func moves_blocks() -> bool:
 	return kind in [Kind.SLIDER, Kind.ELEVATOR, Kind.ROTATOR]
 
 
-## Block cells in state [param value].
+## Block cells in state [param value]. The array is shared: do not change
+## it.
 func cells_at(value: int) -> Array[Vector3i]:
-	var result: Array[Vector3i] = []
-	for cell: Vector3i in cells:
-		result.append(carry(cell, 0, value) if moves_blocks() else cell)
-	return result
+	if not _cells_at.has(value):
+		var result: Array[Vector3i] = []
+		for cell: Vector3i in cells:
+			result.append(carry(cell, 0, value) if moves_blocks() else cell)
+		_cells_at[value] = result
+	return _cells_at[value]
 
 
 ## Where a cell riding the mechanism ends up when it goes from state

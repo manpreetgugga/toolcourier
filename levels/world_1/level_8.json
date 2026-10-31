@@ -1,0 +1,34 @@
+{
+	"name": "Raft Ride",
+	"world": 1,
+	"palette": "meadow",
+	"blocks": [
+		[1, -2, 1, "dark_stone"], [2, -2, 1, "dark_stone"], [3, -2, 1, "dark_stone"], [4, -2, 1, "dark_stone"], [5, -2, 1, "dark_stone"],
+
+		[1, -1, 0, "dark_stone"], [2, -1, 0, "water"], [3, -1, 0, "water"], [4, -1, 0, "water"], [5, -1, 0, "dark_stone"],
+		[0, -1, 1, "dark_stone"], [1, -1, 1, "dark_stone"], [2, -1, 1, "water"], [3, -1, 1, "water"], [4, -1, 1, "water"], [5, -1, 1, "dark_stone"], [6, -1, 1, "dark_stone"],
+		[1, -1, 2, "dark_stone"], [2, -1, 2, "water"], [3, -1, 2, "water"], [4, -1, 2, "water"], [5, -1, 2, "dark_stone"],
+
+		[0, 0, 0, "grass"], [1, 0, 0, "grass"], [5, 0, 0, "sand"], [6, 0, 0, "sand"],
+		[0, 0, 1, "grass"], [1, 0, 1, "grass"], [5, 0, 1, "sand"], [6, 0, 1, "sand"],
+		[0, 0, 2, "grass"], [1, 0, 2, "grass"], [5, 0, 2, "sand"], [6, 0, 2, "sand"]
+	],
+	"props": [
+		[0, 1, 0, "tree_small", 0, true],
+		[5, 1, 0, "tree_tall", 5, true],
+		[0, 1, 2, "bush", 32, true],
+		[6, 1, 2, "lamp_post", 74, true]
+	],
+	"mechanisms": [
+		{ "id": "raft", "type": "slider", "cells": [[2, 0, 1]], "axis": "x", "min": 0, "max": 2, "start": 2 }
+	],
+	"packages": [
+		{ "pos": [5, 1, 2], "color": "blue" }
+	],
+	"pads": [
+		{ "pos": [1, 1, 0], "color": "blue" }
+	],
+	"start": [0, 1, 1],
+	"exit": [6, 1, 1],
+	"stars": [16, 20, 26]
+}
