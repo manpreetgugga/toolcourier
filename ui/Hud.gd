@@ -1,11 +1,15 @@
 class_name Hud
 extends CanvasLayer
-## The level's 2D interface: the level name, moves and star meter at the
-## top; Restart, Undo and Hint at the bottom; a toast saying what a hint
-## means; and the card shown on finishing, with the stars earned, the best
-## so far and Replay / Next. Sizes are in the 720 x 1280 base viewport.
+## The level's 2D interface: a pause button, the level name, moves and star
+## meter at the top; Restart, Undo and Hint at the bottom; a toast saying
+## what a hint means; the pause card (Resume, Restart, Settings, Levels,
+## Home); and the card shown on finishing, with the stars earned, the best so
+## far and Replay / Next / Levels. Everything but the shade of the cards
+## keeps to the screen's safe area. Sizes are in the 720 x 1280 base
+## viewport. It keeps running while the game is paused.
 ##
-## Keys for the desktop: Z or Backspace undoes, R restarts, H shows a hint.
+## Keys for the desktop: Z or Backspace undoes, R restarts, H shows a hint,
+## Escape or P pauses.
 
 ## Gap to the screen edges.
 const MARGIN: float = 36.0
@@ -16,7 +20,9 @@ const BUTTON_SPACING: float = 210.0
 const TOAST_SECONDS: float = 3.5
 ## Celebration shown before the finish card.
 const FINISH_DELAY: float = 0.9
-const FINISH_SIZE := Vector2(580.0, 620.0)
+const FINISH_SIZE := Vector2(580.0, 700.0)
+const PAUSE_BUTTON: float = 96.0
+const PAUSE_SIZE := Vector2(600.0, 540.0)
 
 var level: Level
 
@@ -40,19 +46,36 @@ var _finish_best: Label
 var _replay: TouchButton
 var _next: TouchButton
 var _next_path: String = ""
+var _root: Control
+var _safe: Control
+var _pause_button: TouchButton
+var _pause: Control
+var _pause_card: Control
+var _settings: SettingsCard
+var _faded: bool = false
 
 
 func _ready() -> void:
 	layer = 10
-	var root := Control.new()
-	root.name = "Root"
-	root.set_anchors_preset(Control.PRESET_FULL_RECT)
-	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(root)
-	_build_top(root)
-	_build_buttons(root)
-	_build_toast(root)
-	_build_finish(root)
+	process_mode = Node.PROCESS_MODE_ALWAYS
+	_root = Control.new()
+	_root.name = "Root"
+	_root.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_root)
+	_safe = Control.new()
+	_safe.name = "Safe"
+	_safe.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_root.add_child(_safe)
+	Ui.fit_to_safe_area(_safe)
+	get_viewport().size_changed.connect(func() -> void: Ui.fit_to_safe_area(_safe))
+	_build_top(_safe)
+	_build_buttons(_safe)
+	_build_toast(_safe)
+	_build_finish(_root)
+	_build_pause(_root)
+	_settings = SettingsCard.new()
+	_root.add_child(_settings)
 	level.moves_changed.connect(_on_moves_changed)
 	level.level_completed.connect(_on_completed)
 	_on_moves_changed(level.state.moves, false)
@@ -70,7 +93,13 @@ func _process(delta: float) -> void:
 
 func _unhandled_key_input(event: InputEvent) -> void:
 	var key := event as InputEventKey
-	if not key.pressed or key.echo:
+	if not key.pressed or key.echo or _faded:
+		return
+	if key.keycode in [KEY_ESCAPE, KEY_P]:
+		go_back()
+		get_viewport().set_input_as_handled()
+		return
+	if get_tree().paused:
 		return
 	match key.keycode:
 		KEY_Z, KEY_BACKSPACE:
@@ -87,6 +116,57 @@ func _unhandled_key_input(event: InputEvent) -> void:
 ## Whether the finish card is up.
 func is_finish_showing() -> bool:
 	return _finish.visible
+
+
+func is_paused() -> bool:
+	return _pause.visible
+
+
+## Pauses the game under the pause card (not while the level is building
+## up, finished or being left).
+func pause() -> void:
+	if _pause.visible or _finish.visible or _faded or level.state.completed or level.is_assembling():
+		return
+	_hide_toast()
+	get_tree().paused = true
+	_pause.visible = true
+	_pause.modulate.a = 0.0
+	_pause_card.scale = Vector2(0.88, 0.88)
+	var tween: Tween = create_tween().set_parallel()
+	tween.tween_property(_pause, "modulate:a", 1.0, 0.2)
+	tween.tween_property(_pause_card, "scale", Vector2.ONE, 0.35).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+
+func resume() -> void:
+	_settings.close()
+	get_tree().paused = false
+	if not _pause.visible:
+		return
+	var tween: Tween = create_tween()
+	tween.tween_property(_pause, "modulate:a", 0.0, 0.15)
+	tween.tween_callback(_pause.hide)
+
+
+## The back button (or Escape): closes the settings, resumes from the pause
+## card, leaves the finish card for the level grid, and otherwise pauses.
+func go_back() -> void:
+	if _faded:
+		return
+	if _settings.visible:
+		_settings.close()
+	elif _pause.visible:
+		resume()
+	elif _finish.visible:
+		level.go_home(&"levels")
+	else:
+		pause()
+
+
+## Fades the whole interface out (the level is being left).
+func fade_away() -> void:
+	_faded = true
+	_root.mouse_filter = Control.MOUSE_FILTER_STOP
+	create_tween().tween_property(_root, "modulate:a", 0.0, 0.25)
 
 
 ## The toast's text while it shows ("" otherwise).
@@ -185,6 +265,12 @@ func _hide_toast() -> void:
 
 
 func _build_top(root: Control) -> void:
+	_pause_button = TouchButton.new(Vector2(PAUSE_BUTTON, PAUSE_BUTTON))
+	_pause_button.name = "Pause"
+	_pause_button.icon = &"pause"
+	_pause_button.position = Vector2(MARGIN - 8.0, MARGIN + (TOP_SIZE.y - PAUSE_BUTTON) * 0.5)
+	_pause_button.pressed.connect(pause)
+	root.add_child(_pause_button)
 	var card := Panel.new()
 	card.name = "Top"
 	card.add_theme_stylebox_override(&"panel", Ui.card())
@@ -291,6 +377,67 @@ func _build_finish(root: Control) -> void:
 	_next = _pill_button(card, "Next", Vector2(310.0, 450.0), Ui.ACCENT)
 	_replay.pressed.connect(_on_restart)
 	_next.pressed.connect(_on_next)
+	var levels := TouchButton.new(Vector2(220.0, 80.0))
+	levels.name = "Levels"
+	levels.text = "Levels"
+	levels.font_size = 30
+	levels.color = Ui.CREAM.darkened(0.06)
+	levels.position = Vector2((FINISH_SIZE.x - 220.0) * 0.5, 578.0)
+	levels.pressed.connect(func() -> void: level.go_home(&"levels"))
+	card.add_child(levels)
+
+
+func _build_pause(root: Control) -> void:
+	_pause = Control.new()
+	_pause.name = "Paused"
+	_pause.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_pause.mouse_filter = Control.MOUSE_FILTER_STOP
+	_pause.visible = false
+	root.add_child(_pause)
+	var shade := ColorRect.new()
+	shade.set_anchors_preset(Control.PRESET_FULL_RECT)
+	shade.color = Color(Ui.INK, 0.35)
+	shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_pause.add_child(shade)
+
+	var card := Panel.new()
+	card.name = "Card"
+	card.add_theme_stylebox_override(&"panel", Ui.card(Ui.CREAM, 48))
+	card.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	card.set_anchors_preset(Control.PRESET_CENTER)
+	card.offset_left = -PAUSE_SIZE.x * 0.5
+	card.offset_right = PAUSE_SIZE.x * 0.5
+	card.offset_top = -PAUSE_SIZE.y * 0.5
+	card.offset_bottom = PAUSE_SIZE.y * 0.5
+	card.pivot_offset = PAUSE_SIZE * 0.5
+	_pause.add_child(card)
+	_pause_card = card
+	card.add_child(_label("Paused", 60, Ui.INK, Rect2(0.0, 36.0, PAUSE_SIZE.x, 76.0)))
+	card.add_child(_label(level.data.name, 26, Ui.MUTED, Rect2(0.0, 108.0, PAUSE_SIZE.x, 36.0)))
+	var resume_button := _pill_button(card, "Resume", Vector2((PAUSE_SIZE.x - 300.0) * 0.5, 172.0), Ui.ACCENT,
+		Vector2(300.0, 104.0))
+	resume_button.pressed.connect(resume)
+	var row := Control.new()
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.position = Vector2(PAUSE_SIZE.x * 0.5, 330.0)
+	card.add_child(row)
+	var actions: Array[Array] = [
+		[&"restart", "Restart", func() -> void:
+			resume()
+			_on_restart()],
+		[&"settings", "Settings", func() -> void: _settings.open()],
+		[&"levels", "Levels", func() -> void: level.go_home(&"levels")],
+		[&"home", "Home", func() -> void: level.go_home(&"main")],
+	]
+	for i in actions.size():
+		var button := TouchButton.new(Vector2(100.0, 100.0))
+		button.name = actions[i][1]
+		button.icon = actions[i][0]
+		button.caption = actions[i][1]
+		button.color = Ui.CREAM.darkened(0.06)
+		button.position = Vector2((i - 1.5) * 130.0 - 50.0, 0.0)
+		button.pressed.connect(actions[i][2])
+		row.add_child(button)
 
 
 func _round_button(bar: Control, icon_name: StringName, caption: String, offset_x: float, color: Color) -> TouchButton:
@@ -304,8 +451,9 @@ func _round_button(bar: Control, icon_name: StringName, caption: String, offset_
 	return button
 
 
-func _pill_button(card: Control, text: String, at: Vector2, color: Color) -> TouchButton:
-	var button := TouchButton.new(Vector2(220.0, 100.0))
+func _pill_button(card: Control, text: String, at: Vector2, color: Color,
+		button_size := Vector2(220.0, 100.0)) -> TouchButton:
+	var button := TouchButton.new(button_size)
 	button.name = text
 	button.text = text
 	button.font_size = 36

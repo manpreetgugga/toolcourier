@@ -12,9 +12,15 @@ extends Node3D
 ## marks the destination; a red ripple and a puzzled tilt mean there is no
 ## way. A double tap on empty space resets the view. Input waits while
 ## mechanisms move.
+##
+## With [member intro] the diorama builds itself up when it opens and takes
+## itself down before it is left (see Assembly); input waits meanwhile. A
+## playable level plays its world's music; the back button pauses (see Hud).
 
 signal moves_changed(moves: int)
 signal level_completed(moves: int, stars: int)
+## The build-up has finished and play can start.
+signal assembled
 
 ## Undo steps kept (oldest are dropped).
 const MAX_UNDO: int = 300
@@ -24,6 +30,15 @@ const MAX_UNDO: int = 300
 @export var idle_orbit_speed: float = 0.0
 ## Adds the HUD (moves, stars, undo, restart, hint and the finish card).
 @export var show_hud: bool = true
+## Builds up on opening and takes itself down on leaving (the game's flow
+## turns it on; tests and tools start with the diorama standing).
+@export var intro: bool = false
+## Answers taps and drags; a menu backdrop turns it off.
+@export var interactive: bool = true
+## How much of the screen's short side the diorama fills.
+@export_range(0.3, 1.0) var view_fill: float = 0.75
+## Seconds the build-up waits (with nothing showing) before it starts.
+@export var intro_delay: float = 0.0
 
 var data: LevelData
 var state: LevelState
@@ -67,6 +82,13 @@ var _plan_from: Array = []
 var _hint: HintMarker
 ## What the hint showing asks for (see [method hinted]).
 var _hinted: Dictionary = {}
+var _assembly: Assembly
+## When each cell starts building up.
+var _delays: Dictionary = {}
+var _bounds: AABB
+var _leaving: bool = false
+## A slider let go of after a drag: its move makes no sliding sound.
+var _dragged: String = ""
 
 
 func _ready() -> void:
@@ -79,7 +101,9 @@ func _ready() -> void:
 	_stage = StageLighting.new()
 	_stage.name = "Stage"
 	_stage.theme_name = data.palette
+	_stage.tilt_shift_enabled = Settings.tilt_shift
 	add_child(_stage)
+	Settings.events.changed.connect(_on_setting_changed)
 
 	state = LevelState.new(data)
 	_initial = state.snapshot()
@@ -90,9 +114,13 @@ func _ready() -> void:
 		state.restore(saved["state"])
 	grid = state.build_grid()
 	pathfinder = Pathfinder.new(grid)
-	_add_mesh("Blocks", BlockMesher.build(data.cells))
-	_add_mesh("Stairs", PropFactory.build_stairs(grid))
-	_add_mesh("Props", PropFactory.build_props(data.props, Palette.season(data.palette)))
+	_delays = Assembly.delays(_build_order())
+	_assembly = Assembly.new()
+	_assembly.name = "Assembly"
+	add_child(_assembly)
+	_add_mesh("Blocks", BlockMesher.build(data.cells, _delays))
+	_add_mesh("Stairs", PropFactory.build_stairs(grid, _delays))
+	_add_mesh("Props", PropFactory.build_props(data.props, Palette.season(data.palette), _delays))
 	for mechanism: Mechanism in data.mechanisms:
 		_add_mechanism(mechanism)
 	_boards = DryBoards.new(data.cells)
@@ -123,30 +151,41 @@ func _ready() -> void:
 	camera.name = "Camera"
 	camera.attributes = _stage.camera_attributes
 	camera.idle_orbit_speed = idle_orbit_speed
+	camera.fill_fraction = view_fill
 	camera.grab_filter = _try_grab
 	add_child(camera)
 	camera.make_current()
-	var bounds: AABB = _view_bounds()
-	var weather: CPUParticles3D = Weather.create(Palette.season(data.palette), bounds)
+	camera.set_process_unhandled_input(interactive)
+	_bounds = _view_bounds()
+	var weather: CPUParticles3D = Weather.create(Palette.season(data.palette), _bounds)
 	if weather:
 		add_child(weather)
-	camera.distance_changed.connect(func(distance: float) -> void: _stage.fit_to_bounds(bounds, distance))
+	camera.distance_changed.connect(func(distance: float) -> void: _stage.fit_to_bounds(_bounds, distance))
 	camera.tapped.connect(_on_tapped)
 	camera.double_tapped.connect(_on_double_tapped)
 	camera.grab_moved.connect(_on_grab_moved)
 	camera.grab_released.connect(_on_grab_released)
-	camera.frame_bounds(bounds)
+	camera.frame_bounds(_bounds)
 
 	if show_hud:
 		hud = Hud.new()
 		hud.name = "Hud"
 		hud.level = self
 		add_child(hud)
+	_prepare_assembly()
+	if interactive and show_hud:
+		AudioManager.play_music(LevelCatalog.world_of(level_path))
+	if intro:
+		_build_up()
 
 
 func _notification(what: int) -> void:
 	if what in [NOTIFICATION_APPLICATION_PAUSED, NOTIFICATION_APPLICATION_FOCUS_OUT, NOTIFICATION_WM_CLOSE_REQUEST]:
 		keep_progress()
+	if what == NOTIFICATION_APPLICATION_PAUSED and hud:
+		hud.pause.call_deferred()
+	if what == NOTIFICATION_WM_GO_BACK_REQUEST and interactive and not Game.is_swapping():
+		go_back()
 
 
 func _exit_tree() -> void:
@@ -258,12 +297,60 @@ func next_level_path() -> String:
 	return LevelCatalog.next_after(level_path)
 
 
-## Replaces this level with the one at [param path].
+## Replaces this level with the one at [param path] (taking this one down
+## first and fading across, with [member intro]).
 func go_to(path: String) -> void:
+	if intro:
+		leave(func() -> void: Game.open_level(path))
+	else:
+		_replace_with(path)
+
+
+## Leaves for the menu's [param screen] ("main" or "levels", showing this
+## level's world).
+func go_home(screen: StringName = &"main") -> void:
+	get_tree().paused = false
+	leave(func() -> void: Game.open_menu(screen, LevelCatalog.world_of(level_path)))
+
+
+## The back button (see [method Hud.go_back]).
+func go_back() -> void:
+	if hud:
+		hud.go_back()
+
+
+## Whether the build-up or the take-down is running.
+func is_assembling() -> bool:
+	return _assembly != null and _assembly.is_playing()
+
+
+## Takes the diorama down (with [member intro]; at once otherwise), then
+## calls [param then]. Input stops; the game in progress is kept.
+func leave(then: Callable) -> void:
+	if _leaving:
+		return
+	_leaving = true
+	_busy += 1
+	_clear_hint()
+	keep_progress()
+	if courier.is_moving():
+		courier.stop()
+	if hud:
+		hud.fade_away()
+	if intro:
+		AudioManager.play(&"whoosh", -4.0)
+		_assembly.play_out()
+		await _assembly.finished
+	then.call()
+
+
+func _replace_with(path: String) -> void:
 	var next: Level = (load("res://game/Level.tscn") as PackedScene).instantiate()
 	next.level_path = path
 	next.idle_orbit_speed = idle_orbit_speed
 	next.show_hud = show_hud
+	next.intro = intro
+	next.interactive = interactive
 	var parent: Node = get_parent()
 	var was_current: bool = get_tree().current_scene == self
 	parent.remove_child(self)
@@ -275,7 +362,7 @@ func go_to(path: String) -> void:
 
 ## Saves the game in progress (or forgets it once finished or untouched).
 func keep_progress() -> void:
-	if state == null:
+	if state == null or not interactive:
 		return
 	if state.completed or state.moves == 0:
 		Progress.drop_in_progress(_id())
@@ -288,11 +375,12 @@ func _id() -> String:
 
 
 func _on_tapped(screen_position: Vector2) -> void:
-	if state.completed or _busy > 0:
+	if state.completed or _busy > 0 or not interactive:
 		return
 	var hit: Dictionary = pick(screen_position)
 	if hit.is_empty():
 		return
+	Haptics.tap()
 	var block: Vector3i = hit["cell"]
 	for mechanism: Mechanism in data.mechanisms:
 		if mechanism.kind == Mechanism.Kind.ROTATOR and mechanism.handle == block:
@@ -309,12 +397,14 @@ func _on_tapped(screen_position: Vector2) -> void:
 			center.y -= 1.0 - BlockMesher.WATER_LEVEL
 		TapRipple.spawn(self, center, Vector3(normal), false)
 		courier.puzzled()
+		AudioManager.play(&"error")
 		return
 	_clear_hint()
 	# A new walk is one undo step; re-routing mid-walk belongs to the same one.
 	if not courier.is_moving():
 		_record()
 	TapRipple.spawn(self, pathfinder.floor_position(target), Vector3.UP)
+	AudioManager.play(&"tap")
 	path.remove_at(0)
 	courier.walk(lead + path)
 
@@ -340,6 +430,7 @@ func _turn(id: String) -> void:
 		var handle: Vector3i = (state.mechanisms[id] as Mechanism).handle
 		TapRipple.spawn(self, Vector3(handle) + Vector3(0.5, 0.75, 0.5), Vector3.UP, false)
 		courier.puzzled()
+		AudioManager.play(&"error")
 		_continue_ride()
 		return
 	moves_changed.emit(state.moves)
@@ -349,6 +440,12 @@ func _turn(id: String) -> void:
 func _on_courier_step(cell: Vector3i) -> void:
 	var heading: Vector3i = Pathfinder.heading(_last_cell, cell)
 	var ride: bool = pathfinder.is_ride_step(_last_cell, cell, _glide)
+	if pathfinder.is_ice(cell) and _glide != Vector3i.ZERO:
+		AudioManager.play(&"glide")
+	else:
+		AudioManager.play(&"step")
+	if grid.get_block(cell - Vector3i.UP) == Grid.BOARDS:
+		AudioManager.play(&"creak")
 	_glide = heading if pathfinder.is_ice(cell) else Vector3i.ZERO
 	_last_cell = cell
 	var events: Array[Dictionary] = state.enter(cell, ride)
@@ -397,6 +494,7 @@ func _play(events: Array[Dictionary]) -> void:
 	for event: Dictionary in events:
 		match event["event"]:
 			LevelState.Event.PICKUP:
+				AudioManager.play(&"pickup")
 				var package: Package = _packages[event["cell"]]
 				_packages.erase(event["cell"])
 				_carried.append(package)
@@ -404,6 +502,7 @@ func _play(events: Array[Dictionary]) -> void:
 				package.fly_into(courier.door_anchor)
 				load_changed = true
 			LevelState.Event.DROP:
+				AudioManager.play(&"drop")
 				_drop(event["color"], event["cell"])
 				load_changed = true
 			LevelState.Event.EXIT_OPENED:
@@ -411,11 +510,13 @@ func _play(events: Array[Dictionary]) -> void:
 			LevelState.Event.COMPLETED:
 				courier.stop()
 				courier.celebrate()
+				_celebrate()
 				var stars: int = data.stars_for(state.moves)
 				finished_best = Progress.record(_id(), state.moves, stars)
 				level_completed.emit(state.moves, stars)
 			LevelState.Event.MECHANISM:
 				var mechanism: Mechanism = state.mechanisms[event["id"]]
+				_mechanism_sound(mechanism)
 				if mechanism.moves_blocks():
 					movers.append({"id": event["id"], "from": event["from"], "to": event["to"], "riders": []})
 				else:
@@ -423,6 +524,7 @@ func _play(events: Array[Dictionary]) -> void:
 			LevelState.Event.CARRIED:
 				_mover(movers, event["id"])["riders"].append({"node": courier, "to": event["to"]})
 			LevelState.Event.FELL:
+				AudioManager.play(&"fall")
 				_boards.fall(event["cell"])
 			LevelState.Event.PARCEL_MOVED:
 				var package: Package = _packages[event["from"]]
@@ -444,6 +546,9 @@ func _play(events: Array[Dictionary]) -> void:
 		longest = maxf(longest, node.show_value(mover["to"]))
 	if longest > 0.0:
 		await get_tree().create_timer(longest + 0.02).timeout
+	if not movers.is_empty():
+		AudioManager.play(&"snap")
+		Haptics.snap()
 	for mover: Dictionary in movers:
 		var mechanism: Mechanism = state.mechanisms[mover["id"]]
 		for rider: Dictionary in mover["riders"]:
@@ -488,11 +593,12 @@ func _light_pad(pad_cell: Vector3i) -> void:
 	var pad: Pad = _pads[pad_cell]
 	if state.filled.has(pad_cell) and not pad.filled:
 		pad.set_filled(true)
+		AudioManager.play(&"pad_complete")
 
 
 ## Starts dragging a slider when a drag begins on one (see OrbitCamera.grab_filter).
 func _try_grab(screen_position: Vector2) -> bool:
-	if state.completed or _busy > 0 or courier.is_moving():
+	if state.completed or _busy > 0 or courier.is_moving() or not interactive:
 		return false
 	var hit: Dictionary = pick(screen_position)
 	if hit.is_empty():
@@ -516,6 +622,8 @@ func _try_grab(screen_position: Vector2) -> bool:
 	for rider: Node3D in riders:
 		rider.reparent(node)
 	_busy += 1
+	Haptics.tap()
+	AudioManager.play(&"slide", -6.0)
 	_grab = {
 		"id": id, "start": state.values[id], "range": state.slide_range(id),
 		"axis_px": axis_px, "press": screen_position, "riders": riders,
@@ -558,6 +666,7 @@ func _on_grab_released(_screen_position: Vector2) -> void:
 		return
 	moves_changed.emit(state.moves)
 	_busy -= 1
+	_dragged = grab["id"]
 	await _play(events)
 
 
@@ -721,6 +830,7 @@ func _add_mechanism(mechanism: Mechanism) -> void:
 		_:
 			node = MechanismBlocks.new(mechanism)
 	node.value = state.values[mechanism.id]
+	node.build_delays = _delays
 	add_child(node)
 	if mechanism.kind == Mechanism.Kind.ROTATOR:
 		add_child((node as MechanismBlocks).make_crank())
@@ -739,6 +849,100 @@ func _add_mesh(node_name: String, mesh: ArrayMesh) -> void:
 	instance.name = node_name
 	instance.mesh = mesh
 	add_child(instance)
+	_assembly.add_mesh(instance)
+
+
+## Every cell something stands in, for the build-up order: blocks,
+## mechanisms, props, pads, parcels and the exit.
+func _build_order() -> Array[Vector3i]:
+	var cells: Array[Vector3i] = []
+	cells.assign(data.cells.keys())
+	for mechanism: Mechanism in data.mechanisms:
+		cells.append_array(mechanism.cells)
+		if mechanism.kind == Mechanism.Kind.ROTATOR:
+			cells.append(mechanism.handle)
+	for prop: Dictionary in data.props:
+		cells.append(prop["cell"])
+	for cell: Vector3i in state.pads:
+		cells.append(cell)
+	for cell: Vector3i in state.waiting:
+		cells.append(cell)
+	cells.append(data.exit)
+	return cells
+
+
+## Hands the parts that are not anchored meshes to the build-up: whole
+## nodes popping in where they stand, the courier last.
+func _prepare_assembly() -> void:
+	var latest: float = 0.0
+	for delay: float in _delays.values():
+		latest = maxf(latest, delay)
+	_assembly.cover(latest)
+	for id: String in _mechanism_nodes:
+		var node: MechanismNode = _mechanism_nodes[id]
+		var meshes: Array[GeometryInstance3D] = node.build_meshes()
+		for mesh: GeometryInstance3D in meshes:
+			_assembly.add_mesh(mesh)
+		if meshes.is_empty():
+			_assembly.add_node(node, _delays.get(node.mechanism.cells[0], 0.0))
+		if node.mechanism.kind == Mechanism.Kind.ROTATOR:
+			_assembly.add_node(get_node("Crank_%s" % id), _delays.get(node.mechanism.handle, 0.0))
+	var boards: Dictionary = _boards.standing()
+	for cell: Vector3i in boards:
+		_assembly.add_node(boards[cell], _delays.get(cell, 0.0))
+	for cell: Vector3i in _pads:
+		_assembly.add_node(_pads[cell], _delays.get(cell, 0.0))
+	for cell: Vector3i in _packages:
+		_assembly.add_node(_packages[cell], _delays.get(cell, 0.0) + 0.05)
+	for cell: Vector3i in _delivered:
+		_assembly.add_node(_delivered[cell], _delays.get(cell, 0.0) + 0.05)
+	_assembly.add_node(_exit, _delays.get(data.exit, 0.0))
+	_assembly.add_node(courier, latest + 0.12)
+
+
+func _build_up() -> void:
+	_busy += 1
+	if intro_delay > 0.0:
+		_assembly.hold()
+		await get_tree().create_timer(intro_delay, false).timeout
+	AudioManager.play(&"whoosh")
+	_assembly.play_in()
+	await _assembly.finished
+	_busy -= 1
+	assembled.emit()
+
+
+func _mechanism_sound(mechanism: Mechanism) -> void:
+	if mechanism.id == _dragged:
+		_dragged = ""
+		return
+	match mechanism.kind:
+		Mechanism.Kind.SLIDER, Mechanism.Kind.ELEVATOR, Mechanism.Kind.GATE:
+			AudioManager.play(&"slide")
+		Mechanism.Kind.ROTATOR, Mechanism.Kind.CONVEYOR:
+			AudioManager.play(&"rotate")
+		Mechanism.Kind.BUTTON:
+			AudioManager.play(&"snap", -4.0)
+			Haptics.snap()
+
+
+## The finish: the jingle (with the music dipped under it) and a shower of
+## confetti over the courier.
+func _celebrate() -> void:
+	AudioManager.play(&"level_complete")
+	AudioManager.duck()
+	Haptics.snap()
+	var confetti: CPUParticles3D = Effects.confetti()
+	confetti.position = courier.position + Vector3(0.0, 0.9, 0.0)
+	add_child(confetti)
+	confetti.restart()
+	get_tree().create_timer(confetti.lifetime + 0.5).timeout.connect(confetti.queue_free)
+
+
+func _on_setting_changed(key: StringName) -> void:
+	if key == &"tilt_shift" and camera:
+		_stage.tilt_shift_enabled = Settings.tilt_shift
+		_stage.fit_to_bounds(_bounds, camera.get_distance())
 
 
 ## Everything that can ever be on screen: blocks, mechanisms in every state,

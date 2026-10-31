@@ -42,36 +42,76 @@ const BLOB_SHADER: Shader = preload("res://shaders/blob_shadow.gdshader")
 static var _parcels: Dictionary = {}
 
 
-## Collects parts by colour and bakes one surface per colour.
+## Collects parts by colour and bakes one surface per colour. While
+## [member anchored], every part also stores [member anchor] in CUSTOM0: the
+## point it builds up from and when it starts (see Assembly).
 class _Batch:
-	var _tools: Dictionary = {}
+	var anchored: bool = false
+	var anchor := Vector4.ZERO
+	var _surfaces: Dictionary = {}
 	var _materials: Dictionary = {}
+
+	class _Surface:
+		var vertices := PackedVector3Array()
+		var normals := PackedVector3Array()
+		var anchors := PackedFloat32Array()
+		var indices := PackedInt32Array()
 
 	func add(mesh: Mesh, transform: Transform3D, color: Color, glow: float = 0.0) -> void:
 		var key: String = "%s/%.2f" % [color.to_html(), glow]
-		if not _tools.has(key):
-			var tool := SurfaceTool.new()
-			tool.begin(Mesh.PRIMITIVE_TRIANGLES)
-			_tools[key] = tool
+		if not _surfaces.has(key):
+			_surfaces[key] = _Surface.new()
 			_materials[key] = ClayShapes.material(color, glow)
-		(_tools[key] as SurfaceTool).append_from(mesh, 0, transform)
+		var surface: _Surface = _surfaces[key]
+		var arrays: Array = mesh.surface_get_arrays(0)
+		var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+		var normals: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL]
+		var indices: PackedInt32Array = arrays[Mesh.ARRAY_INDEX] if arrays[Mesh.ARRAY_INDEX] != null else PackedInt32Array()
+		var offset: int = surface.vertices.size()
+		surface.vertices.append_array(transform * vertices)
+		var turn: Basis = transform.basis.inverse().transposed()
+		for normal: Vector3 in normals:
+			surface.normals.append((turn * normal).normalized())
+		if anchored:
+			var one := PackedFloat32Array([anchor.x, anchor.y, anchor.z, anchor.w])
+			for i in vertices.size():
+				surface.anchors.append_array(one)
+		if indices.is_empty():
+			for i in vertices.size():
+				surface.indices.append(offset + i)
+		else:
+			for index: int in indices:
+				surface.indices.append(offset + index)
 
 	func commit() -> ArrayMesh:
 		var mesh := ArrayMesh.new()
-		for key: String in _tools:
-			(_tools[key] as SurfaceTool).commit(mesh)
+		for key: String in _surfaces:
+			var surface: _Surface = _surfaces[key]
+			var arrays: Array = []
+			arrays.resize(Mesh.ARRAY_MAX)
+			arrays[Mesh.ARRAY_VERTEX] = surface.vertices
+			arrays[Mesh.ARRAY_NORMAL] = surface.normals
+			arrays[Mesh.ARRAY_INDEX] = surface.indices
+			var flags: int = 0
+			if anchored:
+				arrays[Mesh.ARRAY_CUSTOM0] = surface.anchors
+				flags = Mesh.ARRAY_CUSTOM_RGBA_FLOAT << Mesh.ARRAY_FORMAT_CUSTOM0_SHIFT
+			mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays, [], {}, flags)
 			mesh.surface_set_material(mesh.get_surface_count() - 1, _materials[key])
 		return mesh
 
 
 ## All of a level's props in one mesh (props from LevelData), dressed for
-## [param season] (see [method Palette.season]).
-static func build_props(props: Array[Dictionary], season: StringName = &"summer") -> ArrayMesh:
+## [param season] (see [method Palette.season]). Each builds up from its
+## foot at the time [param delays] gives its cell (see Assembly).
+static func build_props(props: Array[Dictionary], season: StringName = &"summer", delays: Dictionary = {}) -> ArrayMesh:
 	var batch := _Batch.new()
+	batch.anchored = true
 	var snowy: bool = season == &"winter"
 	for prop: Dictionary in props:
 		var cell: Vector3i = prop["cell"]
 		var base := Transform3D(Basis(Vector3.UP, deg_to_rad(prop["rotation"])), Vector3(cell) + Vector3(0.5, 0.0, 0.5))
+		batch.anchor = Vector4(base.origin.x, base.origin.y, base.origin.z, delays.get(cell, 0.0))
 		var leaves: Array[Color] = _foliage(season, cell)
 		match prop["type"]:
 			&"tree_small": _tree(batch, base, 3, leaves, snowy)
@@ -112,12 +152,15 @@ static func board(along: Vector3i, cell: Vector3i) -> ArrayMesh:
 
 ## Every stairs block of [param grid] in one mesh, turned to climb along its
 ## facing ("stairs_wood" and "stairs_brick" take those colours).
-static func build_stairs(grid: Grid) -> ArrayMesh:
+static func build_stairs(grid: Grid, delays: Dictionary = {}) -> ArrayMesh:
 	var batch := _Batch.new()
+	batch.anchored = true
 	for cell: Vector3i in grid.cells:
 		var stairs_type: StringName = grid.cells[cell]
 		if not Grid.is_stairs(stairs_type):
 			continue
+		var centre := Vector3(cell) + Vector3(0.5, 0.5, 0.5)
+		batch.anchor = Vector4(centre.x, centre.y, centre.z, delays.get(cell, 0.0))
 		var climb: Vector3i = grid.facing.get(cell, Vector3i(1, 0, 0))
 		# The mesh climbs towards +X.
 		var turn := Basis(Vector3.UP, atan2(-float(climb.z), float(climb.x)))
@@ -129,10 +172,12 @@ static func build_stairs(grid: Grid) -> ArrayMesh:
 
 ## Bars for a gate's cells (level coordinates): five posts per cell with
 ## accent caps.
-static func gate_bars(cells: Array[Vector3i]) -> ArrayMesh:
+static func gate_bars(cells: Array[Vector3i], delays: Dictionary = {}) -> ArrayMesh:
 	var batch := _Batch.new()
+	batch.anchored = true
 	for cell: Vector3i in cells:
 		var base := Transform3D(Basis.IDENTITY, Vector3(cell) + Vector3(0.5, 0.0, 0.5))
+		batch.anchor = Vector4(base.origin.x, base.origin.y, base.origin.z, delays.get(cell, 0.0))
 		for spot: Vector2 in [Vector2(-0.27, -0.27), Vector2(0.27, -0.27), Vector2.ZERO,
 				Vector2(-0.27, 0.27), Vector2(0.27, 0.27)]:
 			batch.add(_cylinder(0.055, 0.82), base * _at(spot.x, 0.41, spot.y), POST)

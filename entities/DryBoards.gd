@@ -44,6 +44,15 @@ func _init(cells: Dictionary) -> void:
 	set_fallen({})
 
 
+## The boards still standing, by block cell.
+func standing() -> Dictionary:
+	var result: Dictionary = {}
+	for cell: Vector3i in _boards:
+		if (_boards[cell] as Node3D).visible:
+			result[cell] = _boards[cell]
+	return result
+
+
 ## Drops the board at [param cell] with a shake and a puff of dust.
 func fall(cell: Vector3i) -> void:
 	var board: MeshInstance3D = _boards[cell]

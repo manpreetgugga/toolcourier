@@ -10,6 +10,8 @@ render_mode diffuse_burley, specular_schlick_ggx;
 // Linear sky colour, set per world by StageLighting.
 global uniform vec3 sky_tint;
 
+#include "res://shaders/build_up.gdshaderinc"
+
 uniform vec4 water_color : source_color = vec4(0.373, 0.659, 0.788, 1.0);
 uniform vec4 deep_color : source_color = vec4(0.204, 0.455, 0.596, 1.0);
 uniform vec4 foam_color : source_color = vec4(0.945, 0.969, 0.976, 1.0);
@@ -61,6 +63,7 @@ void vertex() {
 	world_pos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
 	surface = smoothstep(0.75, 0.98, NORMAL.y);
 	VERTEX.y += swell(world_pos.xz, TIME) * swell_height * surface;
+	VERTEX = build_up(VERTEX, CUSTOM0);
 }
 
 void fragment() {

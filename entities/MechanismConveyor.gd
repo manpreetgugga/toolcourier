@@ -9,6 +9,7 @@ const SPEED: float = 1.2
 const BLOCK_SHADER: Shader = preload("res://shaders/block.gdshader")
 
 var _material: ShaderMaterial
+var _belt: MeshInstance3D
 var _tween: Tween
 
 
@@ -22,12 +23,16 @@ func _ready() -> void:
 	_material.set_shader_parameter(&"side_color", Palette.ACCENT)
 	_material.set_shader_parameter(&"pattern", BlockMaterials.Pattern.BELT)
 	_material.set_shader_parameter(&"belt_dir", Vector2(mechanism.axis.x, mechanism.axis.z))
-	var belt := MeshInstance3D.new()
-	belt.name = "Belt"
-	belt.mesh = BlockMesher.build(cells)
-	belt.material_override = _material
-	add_child(belt)
+	_belt = MeshInstance3D.new()
+	_belt.name = "Belt"
+	_belt.mesh = BlockMesher.build(cells, build_delays)
+	_belt.material_override = _material
+	add_child(_belt)
 	show_value(value, false)
+
+
+func build_meshes() -> Array[GeometryInstance3D]:
+	return [_belt]
 
 
 func show_value(new_value: int, animate: bool = true) -> float:

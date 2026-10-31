@@ -5,6 +5,7 @@ extends Control
 ## lifts over it. Only screen touches count (the mouse arrives as touches
 ## too, see project input settings), so one press never fires twice. Drags
 ## and the mouse wheel pass through, so orbiting across a button still works.
+## A press clicks and ticks the phone (see AudioManager and Haptics).
 
 signal pressed
 
@@ -15,6 +16,10 @@ var text: String = ""
 var caption: String = ""
 var color: Color = Ui.CREAM
 var ink: Color = Ui.INK
+## Corner radius; below 0 the ends are fully round.
+var radius: int = -1
+## A ring around the button (none when transparent).
+var outline: Color = Color.TRANSPARENT
 var font_size: int = 34
 var disabled: bool = false:
 	set(value):
@@ -37,7 +42,10 @@ func _init(button_size: Vector2 = Vector2(116.0, 116.0)) -> void:
 
 func _ready() -> void:
 	pivot_offset = size * 0.5
-	_box = Ui.card(color, int(minf(size.x, size.y) * 0.5))
+	_box = Ui.card(color, radius if radius >= 0 else int(minf(size.x, size.y) * 0.5))
+	if outline.a > 0.0:
+		_box.border_color = outline
+		_box.set_border_width_all(5)
 	_update_look()
 
 
@@ -52,6 +60,8 @@ func _gui_input(event: InputEvent) -> void:
 			_held = false
 			_update_look()
 			if Rect2(Vector2.ZERO, size).has_point(touch.position):
+				AudioManager.play(&"ui_click")
+				Haptics.tap()
 				pressed.emit()
 		accept_event()
 	elif event is InputEventMouseButton and (event as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT:

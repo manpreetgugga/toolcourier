@@ -5,14 +5,16 @@ A little walking mailbox delivers parcels across small floating clay
 dioramas: drag to rotate the diorama, tap a spot to walk there, and operate
 the orange mechanisms to open a path.
 
-> **Status:** early development (build steps 1–8 of 10 done: lighting and sky,
+> **Status:** early development (build steps 1–9 of 10 done: lighting and sky,
 > clay block meshing, orbit camera with tap picking, the courier with
 > pathfinding, playable levels from JSON with parcels, pads and an exit,
 > mechanisms (sliders, elevators, buttons, conveyors, rotators and gates),
-> undo, restart, hints, stars and saved progress, and 50 solver-checked
-> levels in five worlds, the last two seasonal).
+> undo, restart, hints, stars and saved progress, 50 solver-checked levels
+> in five worlds (the last two seasonal), and the menus, settings, generated
+> sound and music, haptics and the build-up animations). Step 10, a
+> performance pass and the Android export, is next.
 
-<img src="docs/screenshots/step7_hud.png" width="320" alt="World 1, level 1 with the HUD"> <img src="docs/screenshots/step7_hint_slider.png" width="320" alt="A hint: drag the slider to the outline">
+<img src="docs/screenshots/step9_menu.png" width="320" alt="The main menu over a turning diorama"> <img src="docs/screenshots/step7_hud.png" width="320" alt="World 1, level 1 with the HUD">
 
 ## How a level plays
 
@@ -46,9 +48,11 @@ pad lights up with a burst of sparkles.
 
 The HUD shows the level's name, the moves so far and a star meter (the stars
 you would earn by finishing now, and the move count that keeps them), with
-Restart, Undo and Hint buttons at the bottom. Finishing brings up a card with
-the stars earned, the best so far, the limits, and Replay / Next. See
-[Undo, hints, stars and saving](#undo-hints-stars-and-saving).
+Restart, Undo and Hint buttons at the bottom and Pause at the top left.
+Finishing brings up a card with the stars earned, the best so far, the
+limits, and Replay / Next / Levels. See
+[Undo, hints, stars and saving](#undo-hints-stars-and-saving) and
+[Menus](#menus).
 
 ## Art direction
 
@@ -104,10 +108,33 @@ Open the folder in Godot and press **Play**, or from a terminal:
 godot --path .
 ```
 
-The main scene, `game/Level.tscn`, plays world 1 level 1 until the menus
-exist (picking up a game in progress), and Next on the finish card goes on
-through the levels in order; set its `level_path` to start on another
-level.
+The main scene, `ui/Menu.tscn`, opens on the splash and then the main menu;
+Play opens the next level to play (picking up a game in progress). To try
+one level straight away, open `game/Level.tscn`, set its `level_path` and
+press **F6**.
+
+## Building
+
+Everything the game needs is in the project: no downloads, no network and
+no permissions at run time other than vibration. To make a build, install
+the export templates for your Godot version (**Editor → Manage Export
+Templates**), add a preset under **Project → Export** and export, or from a
+terminal once the preset exists:
+
+```bash
+godot --headless --path . --export-release "Windows Desktop" export/TinyCourier.exe
+```
+
+The levels are plain `.json` files, so a preset must include them: set
+**Resources → Filters to export non-resource files** to `*.json`. The Android
+preset (with the VIBRATE permission) comes with step 10.
+
+The sounds are generated, not recorded. They are checked in, so building
+needs nothing extra. After changing `tools/make_audio.gd`, render them again:
+
+```bash
+godot --headless --path . -s res://tools/make_audio.gd
+```
 
 ## Controls
 
@@ -122,9 +149,12 @@ level.
 | Undo button (Z or Backspace on desktop) | Take back the last walk, slider drag, crank turn or restart |
 | Restart button (R) | Start the level again |
 | Hint button (H) | Show the next step of the shortest way to finish |
+| Pause button (Esc or P) | Pause: resume, restart, settings, the level grid or the main menu |
+| Android back button (Esc) | Close the open card, then back one screen; in a level it pauses |
 
 A drag that starts on a slider moves the slider instead of the camera, and
-input waits while mechanisms move.
+input waits while mechanisms move. A level pauses itself when the app goes
+to the background.
 
 The camera (`camera/OrbitCamera.gd`) fits its distance so the diorama fills
 75% of the shorter screen axis from every yaw. Taps are resolved with a voxel
@@ -134,8 +164,9 @@ raycast against the grid (`core/Grid.gd`), so no physics bodies are needed.
 
 The test scripts need a renderer (not `--headless`), print PASS/FAIL per
 check and exit non-zero on any failure. They save to
-`user://test_progress.json`, leaving the player's own save alone. The camera
-and courier tests play `dev/sandbox_level.json`.
+`user://test_progress.json` and `user://test_settings.json`, leaving the
+player's own save and settings alone. The camera and courier tests play
+`dev/sandbox_level.json`. Add `--audio-driver Dummy` to run them silently.
 
 `tools/test_orbit_camera.gd` drives the sandbox with synthetic touch events
 and checks tap vs drag, inertia, pitch limits, pinch zoom, double-tap reset,
@@ -200,6 +231,20 @@ as it starts. Pass level paths to play only those (no contact sheet):
 ```bash
 godot --path . --resolution 405x720 -s res://tools/test_levels.gd -- --out=docs/screenshots
 godot --path . --resolution 405x720 -s res://tools/test_levels.gd -- res://levels/world_2/level_3.json
+```
+
+`tools/test_ui.gd` checks level unlocking, the settings file (defaults, a
+broken file, every setting surviving a reload), haptic ticks and their
+switch, then drives the menus through the touch path: splash, main menu,
+world select, a locked world and level, the level grid, back navigation and
+the settings card (sliders, toggles, quality). It plays a level through the
+same path: the build-up, the sounds and haptics of a walk and a delivery,
+pausing and resuming, the confetti, the
+tear-down and back to the level grid, with a simulated notch to check the
+safe area. It saves `step9_*.png` screenshots:
+
+```bash
+godot --audio-driver Dummy --path . --resolution 405x720 -s res://tools/test_ui.gd -- --out=docs/screenshots
 ```
 
 ## Screenshots from the command line
@@ -279,6 +324,11 @@ and press F6. `core/LevelLoader.gd` checks the level as it loads and prints
 every problem with where it is (for example `packages[0]: (2, 0, 3) is not
 a cell the courier can stand in`), and the level will not start until they
 are fixed. `dev/sandbox_level.json` is a small test level used by the tests.
+
+The menus find levels by their file names, so a new `level_<n>.json` shows
+up in its world's grid on its own (and a new `world_<n>` folder as a new
+world; give it a name in `core/LevelCatalog.gd`'s `WORLD_NAMES`). Check it
+and set its stars with `tools/check_levels.gd --fix-stars`.
 
 ### The 50 levels
 
@@ -409,20 +459,103 @@ still fits the level.
 
 <img src="docs/screenshots/step7_hint.png" width="320" alt="A hint: walk to the arrow"> <img src="docs/screenshots/step7_complete.png" width="320" alt="The finish card">
 
+## Menus
+
+`ui/Menu.tscn` is the front end (`ui/Menu.gd`), drawn in the 720 x 1280
+base viewport and kept inside the screen's safe area (notches and rounded
+corners) by `Ui.fit_to_safe_area`:
+
+- **Splash**: the title on cream, once per launch, fading into
+- **Main menu**: the title over a live diorama of the next level to play,
+  slowly turning and building itself up, with the stars earned so far,
+  **Play** (the next level, named underneath), **Levels** and **Settings**;
+- **World select**: a card per world with its own small turning diorama, its
+  stars and how many of its levels are delivered; a world opens with its
+  first level;
+- **Level grid**: the world's levels with the stars earned on each;
+  the next one is outlined, and a level opens once the one before it is
+  finished.
+
+`ui/Game.gd` swaps between the menu and the levels under a soft cream veil,
+and remembers which screen and world the menu goes back to. The level's HUD
+(`ui/Hud.gd`) adds a pause card (Resume, Restart, Settings, Levels, Home)
+and the finish card's Levels button. Text is set in Nunito
+(`fonts/Nunito.ttf`); the buttons, icons and cards are drawn in code
+(`ui/Ui.gd`, `ui/TouchButton.gd`).
+
+<img src="docs/screenshots/step9_worlds.png" width="240" alt="World select"> <img src="docs/screenshots/step9_levels.png" width="240" alt="The level grid"> <img src="docs/screenshots/step9_pause.png" width="240" alt="The pause card">
+
+## Settings
+
+`ui/SettingsCard.gd` opens from the main menu and the pause card: music and
+sound volumes, haptics, tilt-shift (the camera's soft focus) and the
+graphics quality (Low, Medium, High). `core/Settings.gd` keeps them in
+`user://settings.json`, written to a temporary file and then moved into
+place, and every change takes effect at once.
+
+<img src="docs/screenshots/step9_settings.png" width="240" alt="The settings card">
+
+## Sound and haptics
+
+`audio/AudioManager.gd` (the autoload `Audio`) plays named cues on the
+**SFX** bus and a calm ambient loop per world on the **Music** bus (both
+send to **Master**; see `default_bus_layout.tres`), crossfading when the
+world changes and ducking the music under the finish jingle. Anything calls
+`AudioManager.play(&"step")` or `AudioManager.play_music(world)`.
+
+| Cue | Plays when |
+| --- | --- |
+| `step`, `glide`, `creak` | the courier steps on ground, slides on ice, crosses dry boards |
+| `tap`, `error` | a tap walks somewhere, or there is no way there |
+| `pickup`, `drop`, `pad_complete` | a parcel is taken, set down, its pad lights |
+| `slide`, `rotate`, `snap` | a slider or elevator moves, a rotator turns, a part locks in place |
+| `fall` | dry boards drop away |
+| `level_complete` | the level is finished |
+| `ui_click` | a button is pressed |
+| `whoosh` | the diorama builds up or comes apart |
+
+Every sound and loop is generated by `tools/make_audio.gd` (see
+[Building](#building) and [CREDITS.md](CREDITS.md)).
+
+`core/Haptics.gd` gives a light tick for a tap on a button or the diorama
+and a firmer one when a mechanism snaps into place, on phones only, unless
+haptics are off.
+
+## Build-up and particles
+
+`render/Assembly.gd` builds each level up as it opens: blocks, stairs and
+props pop up from below one after another, lowest layer first and each layer
+from the middle outwards, then the courier, parcels, pads and the exit pop
+in. Leaving a level plays it backwards, a little faster. The block and prop
+meshes carry their anchors in a vertex channel, so the whole diorama is
+driven from one shader uniform (`shaders/build_up.gdshaderinc`) with no
+extra nodes.
+
+`render/Effects.gd` adds a soft dust puff where a mechanism stops, sparkles
+when a pad lights and confetti at the finish; summer levels have a few slow
+dust motes drifting in the light (`render/Weather.gd`).
+
+<img src="docs/screenshots/step9_buildup.png" width="240" alt="A level building itself up"> <img src="docs/screenshots/step9_confetti.png" width="240" alt="Confetti at the finish">
+
 ## Project layout
 
 ```
-core/       grid, pathfinding, level loading and rules, solver, saved progress
+core/       grid, pathfinding, level loading and rules, solver, saved progress,
+            the level catalogue, settings and haptics
 game/       the level scene that plays a level
-render/     palette, stage lighting, weather, procedural meshes and props
+render/     palette, stage lighting, weather, effects, the build-up,
+            procedural meshes and props
 shaders/    block, clay, water, cloth, sky and effect shaders
 entities/   courier, parcels, pads, exit, mechanisms, dry boards
 camera/     orbit camera
-ui/         HUD, buttons and the finish card
+ui/         menus, scene changes, HUD, pause, settings and finish cards, buttons
+audio/      the sound player, generated sound effects and world loops
+fonts/      Nunito and its licence
 levels/     the 50 levels, levels/world_<n>/level_<n>.json
-tools/      capture, tests and validation scripts
+tools/      capture, sound generation, tests and validation scripts
 dev/        sandbox level, one test level per mechanism, ice and boards
 ```
 
-All art is generated procedurally in code; there are no external model or
-texture files.
+All art is generated procedurally in code, and all sound by
+`tools/make_audio.gd`; there are no external model, texture or audio files.
+The one outside asset is the Nunito font; see [CREDITS.md](CREDITS.md).

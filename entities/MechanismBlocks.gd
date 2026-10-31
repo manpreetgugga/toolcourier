@@ -27,12 +27,16 @@ func _ready() -> void:
 		bounds = bounds.merge(AABB(Vector3(cell), Vector3.ONE))
 	_blocks = MeshInstance3D.new()
 	_blocks.name = "Blocks"
-	_blocks.mesh = BlockMesher.build(cells)
+	_blocks.mesh = BlockMesher.build(cells, build_delays)
 	add_child(_blocks)
 	_dust = Effects.dust(Vector3(bounds.size.x + 0.2, 0.1, bounds.size.z + 0.2))
 	_dust.position = Vector3(bounds.get_center().x, bounds.position.y + 0.05, bounds.get_center().z)
 	add_child(_dust)
 	set_pose(value)
+
+
+func build_meshes() -> Array[GeometryInstance3D]:
+	return [_blocks]
 
 
 ## The blocks' mesh in state 0, in level coordinates (see

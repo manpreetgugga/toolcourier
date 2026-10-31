@@ -24,6 +24,8 @@ var _completed: Array = []
 
 
 func _initialize() -> void:
+	# Default settings, whatever the player has chosen.
+	Settings.use_file("user://test_settings.json")
 	# Keep the player's own save out of it.
 	Progress.use_file("user://test_progress.json")
 	for arg: String in OS.get_cmdline_user_args():

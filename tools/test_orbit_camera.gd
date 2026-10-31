@@ -21,6 +21,8 @@ var _double_taps: int = 0
 
 
 func _initialize() -> void:
+	# Default settings, whatever the player has chosen.
+	Settings.use_file("user://test_settings.json")
 	# Keep the player's own save out of it.
 	Progress.use_file("user://test_progress.json")
 	for arg: String in OS.get_cmdline_user_args():
@@ -199,8 +201,8 @@ func _check_reset() -> void:
 	_check(_double_taps == doubles_before + 1, "two quick taps make a double tap")
 	_check(absf(wrapf(_camera.yaw - 150.0, -180.0, 180.0)) < 0.5, "a double tap on a block keeps the view")
 
-	_tap(Vector2(40, 60))
-	_tap(Vector2(40, 60))
+	_tap(Vector2(40, 420))
+	_tap(Vector2(40, 420))
 	await _wait(1.5)
 	_check(absf(wrapf(_camera.yaw - _camera.default_yaw, -180.0, 180.0)) < SETTLED
 			and absf(_camera.pitch - _camera.default_pitch) < SETTLED

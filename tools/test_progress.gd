@@ -29,6 +29,8 @@ var _failures: int = 0
 
 
 func _initialize() -> void:
+	# Default settings, whatever the player has chosen.
+	Settings.use_file("user://test_settings.json")
 	for arg: String in OS.get_cmdline_user_args():
 		if arg.begins_with("--out="):
 			_out_dir = arg.trim_prefix("--out=")
@@ -165,9 +167,9 @@ func _undo_and_restart() -> void:
 func _hud_buttons() -> void:
 	await _open(LEVEL_1)
 	var hud: Hud = _level.hud
-	var undo: TouchButton = hud.get_node("Root/Buttons/Undo")
-	var restart: TouchButton = hud.get_node("Root/Buttons/Restart")
-	var hint: TouchButton = hud.get_node("Root/Buttons/Hint")
+	var undo: TouchButton = hud.get_node("Root/Safe/Buttons/Undo")
+	var restart: TouchButton = hud.get_node("Root/Safe/Buttons/Restart")
+	var hint: TouchButton = hud.get_node("Root/Safe/Buttons/Hint")
 	await _frames(2)
 	_check(undo.disabled and restart.disabled and not hint.disabled, "at the start only Hint can be used")
 	await _walk_to(PARCEL)
@@ -204,7 +206,7 @@ func _resume() -> void:
 func _follow_hints(path: String) -> void:
 	await _open(path)
 	var data: LevelData = _level.data
-	var hint: TouchButton = _level.hud.get_node("Root/Buttons/Hint")
+	var hint: TouchButton = _level.hud.get_node("Root/Safe/Buttons/Hint")
 	var hints: int = 0
 	while not _level.state.completed and hints < 60:
 		await _settle()

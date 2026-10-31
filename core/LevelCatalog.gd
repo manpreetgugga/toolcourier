@@ -5,6 +5,55 @@ extends RefCounted
 ## not follow the naming are ignored.
 
 const ROOT: String = "res://levels"
+## What each world is called on the menus.
+const WORLD_NAMES: Dictionary = {1: "Meadow", 2: "Harbour", 3: "Old Town", 4: "Orchard", 5: "Frost Peaks"}
+
+
+static func world_name(world: int) -> String:
+	return WORLD_NAMES.get(world, "World %d" % world)
+
+
+## The world [param path] belongs to (0 outside the catalog's folders).
+static func world_of(path: String) -> int:
+	return _number(path.get_base_dir().get_file(), "world_", "")
+
+
+## Whether [param path] can be played: the very first level always, every
+## other once the level before it is finished.
+static func is_unlocked(path: String) -> bool:
+	var order: Array[String] = all()
+	var index: int = order.find(path)
+	if index <= 0:
+		return true
+	return not Progress.best(Progress.level_id(order[index - 1])).is_empty()
+
+
+## The level to play next: the first one not finished yet that is open, or
+## the last level once all are done.
+static func next_to_play() -> String:
+	var order: Array[String] = all()
+	for path: String in order:
+		if Progress.best(Progress.level_id(path)).is_empty():
+			return path if is_unlocked(path) else order[0]
+	return order[-1] if not order.is_empty() else ""
+
+
+## Stars earned in world [param world], and how many it has to give.
+static func world_stars(world: int) -> Vector2i:
+	var earned: int = 0
+	var paths: Array[String] = levels(world)
+	for path: String in paths:
+		earned += int(Progress.best(Progress.level_id(path)).get("stars", 0))
+	return Vector2i(earned, paths.size() * 3)
+
+
+## How many of world [param world]'s levels are finished.
+static func world_finished(world: int) -> int:
+	var count: int = 0
+	for path: String in levels(world):
+		if not Progress.best(Progress.level_id(path)).is_empty():
+			count += 1
+	return count
 
 
 ## World numbers that have levels, lowest first.

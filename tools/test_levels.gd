@@ -34,6 +34,8 @@ var _thumbs: Array[Array] = []
 
 
 func _initialize() -> void:
+	# Default settings, whatever the player has chosen.
+	Settings.use_file("user://test_settings.json")
 	var paths: Array[String] = []
 	for arg: String in OS.get_cmdline_user_args():
 		if arg.begins_with("--out="):
@@ -100,7 +102,7 @@ func _play(path: String) -> void:
 	_thumbs.append([path, _viewport.get_texture().get_image().get_region(CROP)])
 	_level.hud.visible = true
 
-	var hint: TouchButton = _level.hud.get_node("Root/Buttons/Hint")
+	var hint: TouchButton = _level.hud.get_node("Root/Safe/Buttons/Hint")
 	var hints: int = 0
 	var turns: int = 0
 	var stuck: String = ""
@@ -222,7 +224,7 @@ func _contact_sheet() -> void:
 		if data.world != world:
 			world = data.world
 			var heading := Label.new()
-			heading.text = "World %d · %s" % [world, String(data.palette).capitalize()]
+			heading.text = "World %d · %s" % [world, LevelCatalog.world_name(world)]
 			heading.label_settings = Ui.label_settings(30, Ui.INK)
 			rows.add_child(heading)
 			grid = GridContainer.new()

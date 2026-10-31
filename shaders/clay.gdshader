@@ -5,6 +5,7 @@ shader_type spatial;
 render_mode diffuse_burley, specular_schlick_ggx;
 
 #include "res://shaders/clay_common.gdshaderinc"
+#include "res://shaders/build_up.gdshaderinc"
 
 uniform vec4 albedo : source_color = vec4(1.0);
 // Depth (metres) and frequency of the dents.
@@ -22,6 +23,7 @@ varying vec3 local_normal;
 void vertex() {
 	local_pos = VERTEX;
 	local_normal = NORMAL;
+	VERTEX = build_up(VERTEX, CUSTOM0);
 }
 
 void fragment() {

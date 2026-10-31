@@ -12,9 +12,13 @@ var _tween: Tween
 func _ready() -> void:
 	_bars = MeshInstance3D.new()
 	_bars.name = "Bars"
-	_bars.mesh = PropFactory.gate_bars(mechanism.cells)
+	_bars.mesh = PropFactory.gate_bars(mechanism.cells, build_delays)
 	add_child(_bars)
 	show_value(value, false)
+
+
+func build_meshes() -> Array[GeometryInstance3D]:
+	return [_bars]
 
 
 func show_value(new_value: int, animate: bool = true) -> float:

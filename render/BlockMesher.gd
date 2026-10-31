@@ -12,7 +12,8 @@ extends RefCounted
 ## top/bottom tint and a per-block colour jitter are baked into vertex colours.
 ##
 ## The result has one surface per block type, so a level costs one draw call
-## per material.
+## per material. CUSTOM0 holds each vertex's block centre and the moment the
+## block starts building up (see shaders/build_up.gdshaderinc).
 
 ## Radius of the rounded outside edges.
 const DEFAULT_BEVEL: float = 0.17
@@ -55,6 +56,7 @@ class _Surface:
 	var normals := PackedVector3Array()
 	var colors := PackedColorArray()
 	var uvs := PackedVector2Array()
+	var anchors := PackedFloat32Array()
 	var indices := PackedInt32Array()
 
 
@@ -70,6 +72,8 @@ class _Block:
 	var lo: Vector3
 	var hi: Vector3
 	var jitter: float
+	## When it starts building up (seconds).
+	var delay: float
 	var lowered: bool
 	var top_open: bool
 	## Corner AO per (face * 8 + corner), -1 until computed.
@@ -77,6 +81,7 @@ class _Block:
 
 
 var _cells: Dictionary
+var _delays: Dictionary
 var _bevel: float
 var _inner: float
 ## Segments per half bevel (each face rounds its edge from 0° to 45°).
@@ -86,14 +91,17 @@ var _grid := PackedFloat32Array()
 var _surfaces: Dictionary = {}
 
 
-## [param cells] maps Vector3i -> block type (StringName). [param bevel] is
-## the edge radius, [param steps] the segments per half bevel.
-static func build(cells: Dictionary, bevel: float = DEFAULT_BEVEL, steps: int = DEFAULT_STEPS) -> ArrayMesh:
-	return BlockMesher.new(cells, bevel, steps)._build()
+## [param cells] maps Vector3i -> block type (StringName); [param delays]
+## maps cells to when they start building up (see Assembly). [param bevel]
+## is the edge radius, [param steps] the segments per half bevel.
+static func build(cells: Dictionary, delays: Dictionary = {}, bevel: float = DEFAULT_BEVEL,
+		steps: int = DEFAULT_STEPS) -> ArrayMesh:
+	return BlockMesher.new(cells, delays, bevel, steps)._build()
 
 
-func _init(cells: Dictionary, bevel: float, steps: int) -> void:
+func _init(cells: Dictionary, delays: Dictionary, bevel: float, steps: int) -> void:
 	_cells = cells
+	_delays = delays
 	_bevel = clampf(bevel, 0.005, 0.45)
 	_inner = 0.5 - _bevel
 	_steps = maxi(steps, 1)
@@ -125,8 +133,10 @@ func _build() -> ArrayMesh:
 		arrays[Mesh.ARRAY_NORMAL] = s.normals
 		arrays[Mesh.ARRAY_COLOR] = s.colors
 		arrays[Mesh.ARRAY_TEX_UV] = s.uvs
+		arrays[Mesh.ARRAY_CUSTOM0] = s.anchors
 		arrays[Mesh.ARRAY_INDEX] = s.indices
-		mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+		mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays, [], {},
+			Mesh.ARRAY_CUSTOM_RGBA_FLOAT << Mesh.ARRAY_FORMAT_CUSTOM0_SHIFT)
 		var index: int = mesh.get_surface_count() - 1
 		mesh.surface_set_name(index, block_type)
 		mesh.surface_set_material(index, BlockMaterials.get_material(block_type))
@@ -140,6 +150,7 @@ func _mesh_block(cell: Vector3i, block_type: StringName) -> void:
 	b.water = block_type == WATER
 	b.grass = BlockMaterials.CAPPED.has(block_type)
 	b.jitter = 1.0 if b.water else 1.0 + JITTER * _hash_signed(cell)
+	b.delay = _delays.get(cell, 0.0)
 	for face in 6:
 		b.exposed[face] = not _occludes(cell + DIRS[face], b.water)
 		# Round only where this side is open; a covered side runs flat into
@@ -217,6 +228,7 @@ func _grid_vertex(s: _Surface, b: _Block, n: Vector3, u: Vector3, v: Vector3,
 	var shade: float = brightness * SHADE_ENCODE
 	s.colors.append(Color(shade, shade, shade, aux))
 	s.uvs.append(Vector2(world.dot(u), world.dot(v)))
+	s.anchors.append_array(PackedFloat32Array([b.origin.x, b.origin.y, b.origin.z, b.delay]))
 	var index: int = s.vertices.size() - 1
 	grid_index[key] = index
 	return index

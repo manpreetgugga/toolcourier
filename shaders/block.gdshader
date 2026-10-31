@@ -11,6 +11,7 @@ shader_type spatial;
 render_mode diffuse_burley, specular_schlick_ggx;
 
 #include "res://shaders/clay_common.gdshaderinc"
+#include "res://shaders/build_up.gdshaderinc"
 
 uniform vec4 albedo : source_color = vec4(0.725, 0.706, 0.667, 1.0);
 // 0 = plain, 1 = wood planks, 2 = grass top over side_color,
@@ -77,8 +78,11 @@ vec3 ice(vec3 base) {
 }
 
 void vertex() {
+	// Patterns follow the block's resting place, so they ride along as it
+	// builds up.
 	world_pos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
 	world_normal = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz);
+	VERTEX = build_up(VERTEX, CUSTOM0);
 }
 
 void fragment() {
