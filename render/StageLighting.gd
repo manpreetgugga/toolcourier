@@ -35,6 +35,9 @@ func apply_theme(new_theme: StringName) -> void:
 	_sky_material.set_shader_parameter(&"top_color", t["sky_top"])
 	_sky_material.set_shader_parameter(&"horizon_color", t["sky_horizon"])
 	_sky_material.set_shader_parameter(&"ground_color", t["sky_ground"])
+	# Block and water shaders tint their rim/fresnel with the sky.
+	var sky: Color = (t["sky_top"] as Color).srgb_to_linear()
+	RenderingServer.global_shader_parameter_set(&"sky_tint", Vector3(sky.r, sky.g, sky.b))
 	environment.ambient_light_color = t["ambient_color"]
 	environment.ambient_light_energy = t["ambient_energy"]
 	sun.light_color = t["sun_color"]
@@ -58,11 +61,14 @@ func set_tilt_shift(enabled: bool, focus_distance: float, radius: float) -> void
 	camera_attributes.dof_blur_far_enabled = enabled
 	camera_attributes.dof_blur_near_enabled = enabled
 	camera_attributes.dof_blur_amount = TILT_SHIFT_AMOUNT
-	# Keep the diorama itself sharp; blur only what lies beyond it.
-	camera_attributes.dof_blur_far_distance = focus_distance + radius * 0.85
+	# Keep the front of the diorama sharp and let only its far side soften.
+	# Far blur ramps up after far_distance; near blur ramps up *towards the
+	# camera* and is full at near_distance, so that ramp ends before the
+	# diorama's nearest point.
+	camera_attributes.dof_blur_far_distance = focus_distance + radius * 0.6
 	camera_attributes.dof_blur_far_transition = radius * 1.5
-	camera_attributes.dof_blur_near_distance = maxf(focus_distance - radius * 0.85, 0.1)
 	camera_attributes.dof_blur_near_transition = radius * 0.8
+	camera_attributes.dof_blur_near_distance = maxf(focus_distance - radius * 1.8, 0.1)
 
 
 func _build() -> void:

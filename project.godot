@@ -29,6 +29,13 @@ window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
 window/handheld/orientation=1
 
+[shader_globals]
+
+sky_tint={
+"type": "vec3",
+"value": Vector3(0.274, 0.479, 0.73)
+}
+
 [input_devices]
 
 pointing/emulate_touch_from_mouse=true

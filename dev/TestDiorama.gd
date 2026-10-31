@@ -1,7 +1,6 @@
 extends Node3D
-## Step 1 test scene: a hardcoded 5x5 floating diorama under the shared stage
-## lighting. Blocks are plain boxes here; the procedural BlockMesher (bevels,
-## culling, baked AO) replaces them in step 2.
+## Test scene: a hardcoded 5x5 floating diorama under the shared stage
+## lighting, meshed by BlockMesher (bevels, culling, baked AO).
 ##
 ## Cell convention used everywhere in the project: cell (x, y, z) occupies
 ## [x, x+1] x [y, y+1] x [z, z+1], so its centre is cell + (0.5, 0.5, 0.5).
@@ -83,35 +82,10 @@ func _test_layout() -> Dictionary:
 
 
 func _build_blocks(cells: Dictionary) -> void:
-	var root := Node3D.new()
-	root.name = "Blocks"
-	add_child(root)
-	var box := BoxMesh.new()
-	box.size = Vector3.ONE
-	var materials: Dictionary = {}
-	for cell: Vector3i in cells:
-		var block_type: StringName = cells[cell]
-		if not materials.has(block_type):
-			materials[block_type] = _make_material(block_type)
-		var mi := MeshInstance3D.new()
-		mi.mesh = box
-		mi.material_override = materials[block_type]
-		mi.position = Vector3(cell) + Vector3(0.5, 0.5, 0.5)
-		root.add_child(mi)
-
-
-func _make_material(block_type: StringName) -> StandardMaterial3D:
-	var mat := StandardMaterial3D.new()
-	mat.roughness = 0.85
-	mat.metallic_specular = 0.2
-	if block_type == &"accent":
-		mat.albedo_color = Palette.ACCENT
-		mat.emission_enabled = true
-		mat.emission = Palette.ACCENT
-		mat.emission_energy_multiplier = 0.25
-	else:
-		mat.albedo_color = Palette.block_color(block_type)
-	return mat
+	var blocks := MeshInstance3D.new()
+	blocks.name = "Blocks"
+	blocks.mesh = BlockMesher.build(cells)
+	add_child(blocks)
 
 
 func _compute_bounds(cells: Dictionary) -> AABB:
@@ -125,18 +99,35 @@ func _compute_bounds(cells: Dictionary) -> AABB:
 
 func _fit_camera() -> void:
 	var vp_size: Vector2 = get_viewport().get_visible_rect().size
+	var portrait: bool = vp_size.x < vp_size.y
 	# FOV applies to the shorter screen axis so the fit works in any orientation.
-	_camera.keep_aspect = Camera3D.KEEP_WIDTH if vp_size.x < vp_size.y else Camera3D.KEEP_HEIGHT
-	var radius: float = _bounds.size.length() * 0.5
-	_distance = radius / (FILL_FRACTION * tan(deg_to_rad(CAMERA_FOV) * 0.5))
+	_camera.keep_aspect = Camera3D.KEEP_WIDTH if portrait else Camera3D.KEEP_HEIGHT
+	var aspect: float = maxf(vp_size.x, vp_size.y) / minf(vp_size.x, vp_size.y)
+	var tan_short: float = tan(deg_to_rad(CAMERA_FOV) * 0.5) * FILL_FRACTION
+	var tan_x: float = tan_short if portrait else tan_short * aspect
+	var tan_y: float = tan_short * aspect if portrait else tan_short
+	# Back off until every bounds corner fits inside the fill frame.
+	var view: Basis = _view_basis()
+	var center: Vector3 = _bounds.get_center()
+	_distance = 0.0
+	for i in 8:
+		var offset: Vector3 = _bounds.get_endpoint(i) - center
+		var needed: float = maxf(absf(offset.dot(view.x)) / tan_x, absf(offset.dot(view.y)) / tan_y)
+		_distance = maxf(_distance, needed + offset.dot(view.z))
 	_place_camera()
 	_stage.fit_to_bounds(_bounds, _distance)
 
 
-func _place_camera() -> void:
-	var target: Vector3 = _bounds.get_center()
+## Camera basis for the current yaw/pitch; z points from the target to the camera.
+func _view_basis() -> Basis:
 	var yaw: float = deg_to_rad(_yaw_deg)
 	var pitch: float = deg_to_rad(CAMERA_PITCH_DEG)
-	var offset := Vector3(sin(yaw) * cos(pitch), sin(pitch), cos(yaw) * cos(pitch)) * _distance
-	_camera.position = target + offset
+	var back := Vector3(sin(yaw) * cos(pitch), sin(pitch), cos(yaw) * cos(pitch))
+	var right: Vector3 = Vector3.UP.cross(back).normalized()
+	return Basis(right, back.cross(right), back)
+
+
+func _place_camera() -> void:
+	var target: Vector3 = _bounds.get_center()
+	_camera.position = target + _view_basis().z * _distance
 	_camera.look_at(target, Vector3.UP)
