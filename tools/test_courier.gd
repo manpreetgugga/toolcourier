@@ -19,6 +19,8 @@ var _failures: int = 0
 
 
 func _initialize() -> void:
+	# Keep the player's own save out of it.
+	Progress.use_file("user://test_progress.json")
 	for arg: String in OS.get_cmdline_user_args():
 		if arg.begins_with("--out="):
 			_out_dir = arg.trim_prefix("--out=")

@@ -5,12 +5,13 @@ A little walking mailbox delivers parcels across small floating clay
 dioramas: drag to rotate the diorama, tap a spot to walk there, and operate
 the orange mechanisms to open a path.
 
-> **Status:** early development (build steps 1–6 of 10 done: lighting and sky,
+> **Status:** early development (build steps 1–7 of 10 done: lighting and sky,
 > clay block meshing, orbit camera with tap picking, the courier with
-> pathfinding, playable levels from JSON with parcels, pads and an exit, and
-> mechanisms: sliders, elevators, buttons, conveyors, rotators and gates).
+> pathfinding, playable levels from JSON with parcels, pads and an exit,
+> mechanisms (sliders, elevators, buttons, conveyors, rotators and gates),
+> and undo, restart, hints, stars and saved progress).
 
-<img src="docs/screenshots/step5_level.png" width="320" alt="World 1, level 1"> <img src="docs/screenshots/step5_delivery.png" width="320" alt="A parcel delivered">
+<img src="docs/screenshots/step7_hud.png" width="320" alt="World 1, level 1 with the HUD"> <img src="docs/screenshots/step7_hint_slider.png" width="320" alt="A hint: drag the slider to the outline">
 
 ## How a level plays
 
@@ -31,6 +32,12 @@ undo can reuse them; `game/Level.gd` builds the scene and animates them:
 the mailbox flaps its door to swallow a parcel and raises its flag in the
 parcel's colour, flaps it again to pop the parcel out onto the pad, and the
 pad lights up with a burst of sparkles.
+
+The HUD shows the level's name, the moves so far and a star meter (the stars
+you would earn by finishing now, and the move count that keeps them), with
+Restart, Undo and Hint buttons at the bottom. Finishing brings up a card with
+the stars earned, the best so far, the limits, and Replay / Next. See
+[Undo, hints, stars and saving](#undo-hints-stars-and-saving).
 
 ## Art direction
 
@@ -85,7 +92,8 @@ godot --path .
 ```
 
 The main scene, `game/Level.tscn`, plays world 1 level 1 until the menus
-exist; set its `level_path` to play another level.
+exist (picking up a game in progress); set its `level_path` to play another
+level.
 
 ## Controls
 
@@ -97,6 +105,9 @@ exist; set its `level_path` to play another level.
 | Drag a slider | Slide it along its track; it follows the finger, stops at anything in its way and snaps to the nearest cell when let go |
 | Tap a crank | Turn its rotator a quarter turn |
 | Double-tap empty space | Ease back to the default view |
+| Undo button (Z or Backspace on desktop) | Take back the last walk, slider drag, crank turn or restart |
+| Restart button (R) | Start the level again |
+| Hint button (H) | Show the next step of the shortest way to finish |
 
 A drag that starts on a slider moves the slider instead of the camera, and
 input waits while mechanisms move.
@@ -108,8 +119,9 @@ raycast against the grid (`core/Grid.gd`), so no physics bodies are needed.
 ## Tests
 
 The test scripts need a renderer (not `--headless`), print PASS/FAIL per
-check and exit non-zero on any failure. The camera and courier tests play
-`dev/sandbox_level.json`.
+check and exit non-zero on any failure. They save to
+`user://test_progress.json`, leaving the player's own save alone. The camera
+and courier tests play `dev/sandbox_level.json`.
 
 `tools/test_orbit_camera.gd` drives the sandbox with synthetic touch events
 and checks tap vs drag, inertia, pitch limits, pinch zoom, double-tap reset,
@@ -145,6 +157,18 @@ bridge with a crank, and a gate that needs both of its buttons. It saves a
 
 ```bash
 godot --path . --resolution 405x720 -s res://tools/test_mechanisms.gd -- --out=docs/screenshots
+```
+
+`tools/test_progress.gd` checks that the solver's shortest finish is the
+three-star limit of every level, the save file (bests, a corrupt file, a game
+in progress coming back exactly, a stale or broken one being ignored), undo
+and restart (including undo the moment a parcel drops), the HUD buttons
+through the touch path, resuming a closed level with its undo history, and
+then finishes every level by following hints alone, expecting three stars.
+It saves `step7_*.png` screenshots:
+
+```bash
+godot --path . --resolution 405x720 -s res://tools/test_progress.gd -- --out=docs/screenshots
 ```
 
 ## Screenshots from the command line
@@ -269,17 +293,53 @@ re-plan. `dev/mechanisms/` has one small test level per type.
 
 <img src="docs/screenshots/step6_elevator.png" width="320" alt="Riding an elevator"> <img src="docs/screenshots/step6_conveyor.png" width="320" alt="Riding a conveyor belt">
 
+## Undo, hints, stars and saving
+
+**Undo** takes back the last action, moves and all: a whole walk (even one
+still going), a slider drag, a crank turn or a restart. Up to 300 are kept.
+`game/Level.gd` records a `LevelState` snapshot before each action and, on
+undo, rebuilds everything shown from the restored state at once. Undo waits
+while a mechanism is moving and is off once the level is finished.
+
+**Restart** goes back to the start; undo brings the game back, unless it
+was finished.
+
+**Hints** come from `core/Solver.gd`, a breadth-first search over
+`LevelState` in which walked steps, slider drags and crank turns cost a move
+and belt rides cost nothing (0-1 BFS), so it finds the fewest moves to
+finish from wherever the player is. A hint shows the first step of that
+plan: a glowing arrow over where one tap should walk (as far as the plan goes
+before something happens, with a trail of dots), or over the slider or crank
+to work along with a see-through ghost of where the part should end up. A
+toast says what to do ("Drag the orange block to the outline."). Hints cost
+nothing; the plan is reused while the player follows it, and the search gives
+up past 150,000 states so a hint never hangs. Following the hints alone
+always earns three stars.
+
+**Stars**: each level's three-star limit should be the solver's best, and
+`tools/test_progress.gd` checks that it is for every level.
+
+**Saving**: `core/Progress.gd` keeps the best stars and moves per level and
+the game in progress (state and undo history) in `user://progress.json`. It
+writes a temporary file and then moves it into place, so a crash mid-write
+never loses the save, and an unreadable save is kept as `.bad` while play
+starts afresh. The game in progress is saved when the app is paused, loses
+focus or closes, and when the level is left; it is picked up again only if
+the level file has not changed since (an MD5 fingerprint) and the saved state
+still fits the level.
+
+<img src="docs/screenshots/step7_hint.png" width="320" alt="A hint: walk to the arrow"> <img src="docs/screenshots/step7_complete.png" width="320" alt="The finish card">
+
 ## Project layout
 
 ```
-autoload/   global singletons (game state, audio, saving)
-core/       grid, pathfinding, level loading and rules, undo
+core/       grid, pathfinding, level loading and rules, solver, saved progress
 game/       the level scene that plays a level
 render/     palette, stage lighting, procedural meshes and props
 shaders/    block, clay, water, cloth, sky and effect shaders
 entities/   courier, parcels, pads, exit, mechanisms
 camera/     orbit camera
-ui/         menus and HUD
+ui/         HUD, buttons and the finish card
 levels/     level JSON, one folder per world
 tools/      capture, tests and validation scripts
 dev/        sandbox level and one test level per mechanism

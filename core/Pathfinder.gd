@@ -82,6 +82,15 @@ func is_walkable(cell: Vector3i) -> bool:
 	return _astar.has_point(_id(cell))
 
 
+## Cells the courier can step into from [param cell] (only onward on a belt).
+func neighbors(cell: Vector3i) -> Array[Vector3i]:
+	var result: Array[Vector3i] = []
+	if is_walkable(cell):
+		for id: int in _astar.get_point_connections(_id(cell)):
+			result.append(_cells_by_id[id])
+	return result
+
+
 ## Whether standing in [param cell] means riding a running belt.
 func is_belt(cell: Vector3i) -> bool:
 	return _grid.belts.has(cell - Vector3i.UP)

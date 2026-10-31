@@ -234,6 +234,82 @@ func restore(saved: Dictionary) -> void:
 	values = saved["values"].duplicate()
 
 
+## [param saved] (a snapshot) as plain JSON values, for the save file.
+static func snapshot_to_json(saved: Dictionary) -> Dictionary:
+	var parcels: Array = []
+	for cell: Vector3i in saved["waiting"]:
+		parcels.append([cell.x, cell.y, cell.z, String(saved["waiting"][cell])])
+	var pads_filled: Array = []
+	for cell: Vector3i in saved["filled"]:
+		pads_filled.append([cell.x, cell.y, cell.z])
+	var colors: Array = []
+	for color: StringName in saved["carried"]:
+		colors.append(String(color))
+	var courier_cell: Vector3i = saved["courier"]
+	return {
+		"courier": [courier_cell.x, courier_cell.y, courier_cell.z], "moves": saved["moves"],
+		"waiting": parcels, "filled": pads_filled, "carried": colors,
+		"completed": saved["completed"], "values": saved["values"].duplicate(),
+	}
+
+
+## The snapshot [method snapshot_to_json] wrote, or an empty Dictionary when
+## [param json] does not describe a state of this level.
+func snapshot_from_json(json: Variant) -> Dictionary:
+	if typeof(json) != TYPE_DICTIONARY:
+		return {}
+	var courier_cell: Variant = _json_cell(json.get("courier"))
+	var moves_made: Variant = json.get("moves")
+	if courier_cell == null or typeof(moves_made) not in [TYPE_INT, TYPE_FLOAT] or typeof(json.get("completed")) != TYPE_BOOL:
+		return {}
+	var saved := {"courier": courier_cell, "moves": int(moves_made), "completed": json["completed"]}
+	var parcels: Dictionary = {}
+	for entry: Variant in _json_list(json, "waiting"):
+		var cell: Variant = _json_cell(entry.slice(0, 3)) if typeof(entry) == TYPE_ARRAY and entry.size() == 4 else null
+		if cell == null or not Palette.PACKAGE.has(StringName(str(entry[3]))):
+			return {}
+		parcels[cell] = StringName(str(entry[3]))
+	var pads_filled: Dictionary = {}
+	for entry: Variant in _json_list(json, "filled"):
+		var cell: Variant = _json_cell(entry)
+		if cell == null or not pads.has(cell):
+			return {}
+		pads_filled[cell] = true
+	var colors: Array[StringName] = []
+	for color: Variant in _json_list(json, "carried"):
+		colors.append(StringName(str(color)))
+	var mechanism_values: Dictionary = {}
+	var saved_values: Variant = json.get("values")
+	if typeof(saved_values) != TYPE_DICTIONARY:
+		return {}
+	for id: String in values:
+		if typeof(saved_values.get(id)) not in [TYPE_INT, TYPE_FLOAT]:
+			return {}
+		mechanism_values[id] = int(saved_values[id])
+	# The parcels must still add up: each one waiting, carried or delivered.
+	if parcels.size() + colors.size() + pads_filled.size() != data.packages.size() or colors.size() > carry_limit:
+		return {}
+	saved["waiting"] = parcels
+	saved["filled"] = pads_filled
+	saved["carried"] = colors
+	saved["values"] = mechanism_values
+	return saved
+
+
+static func _json_list(json: Dictionary, key: String) -> Array:
+	var value: Variant = json.get(key)
+	return value if typeof(value) == TYPE_ARRAY else []
+
+
+static func _json_cell(value: Variant) -> Variant:
+	if typeof(value) != TYPE_ARRAY or value.size() != 3:
+		return null
+	for part: Variant in value:
+		if typeof(part) not in [TYPE_INT, TYPE_FLOAT]:
+			return null
+	return Vector3i(int(value[0]), int(value[1]), int(value[2]))
+
+
 func _press(button: Mechanism) -> Array[Dictionary]:
 	var events: Array[Dictionary] = []
 	var was: int = values[button.id]

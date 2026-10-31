@@ -64,6 +64,15 @@ func drop_onto(from: Vector3, to: Vector3, size: float = 1.0) -> void:
 	tween.tween_callback(func() -> void: _blob.visible = true)
 
 
+## Rests at [param target] at [param size] times its normal size, still
+## (delivered parcels when a level is rebuilt after undo).
+func rest_at(target: Vector3, size: float) -> void:
+	_bobbing = false
+	_visual.position.y = 0.0
+	position = target
+	scale = Vector3.ONE * size
+
+
 ## Glides along the floor to [param target] (pushed by a belt); returns how
 ## long it takes.
 func slide_to(target: Vector3) -> float:

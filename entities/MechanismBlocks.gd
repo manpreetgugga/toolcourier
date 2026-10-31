@@ -13,6 +13,7 @@ const TIME_PER_STEP: float = 0.12
 ## Current pose: a state, fractional while dragged or animating.
 var pose: float = 0.0
 
+var _blocks: MeshInstance3D
 var _dust: CPUParticles3D
 var _wheel: Node3D
 var _tween: Tween
@@ -24,14 +25,20 @@ func _ready() -> void:
 	for cell: Vector3i in mechanism.cells:
 		cells[cell] = BlockMaterials.ACCENT
 		bounds = bounds.merge(AABB(Vector3(cell), Vector3.ONE))
-	var blocks := MeshInstance3D.new()
-	blocks.name = "Blocks"
-	blocks.mesh = BlockMesher.build(cells)
-	add_child(blocks)
+	_blocks = MeshInstance3D.new()
+	_blocks.name = "Blocks"
+	_blocks.mesh = BlockMesher.build(cells)
+	add_child(_blocks)
 	_dust = Effects.dust(Vector3(bounds.size.x + 0.2, 0.1, bounds.size.z + 0.2))
 	_dust.position = Vector3(bounds.get_center().x, bounds.position.y + 0.05, bounds.get_center().z)
 	add_child(_dust)
 	set_pose(value)
+
+
+## The blocks' mesh in state 0, in level coordinates (see
+## [method Mechanism.transform_for]).
+func blocks_mesh() -> Mesh:
+	return _blocks.mesh
 
 
 ## A crank to tap for turning a rotator, standing in its handle cell. Add it

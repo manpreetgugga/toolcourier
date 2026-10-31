@@ -32,6 +32,7 @@ var _stepping: bool = false
 ## The current step is a belt carrying it, not a walk.
 var _riding: bool = false
 var _step_target: Vector3i
+var _step_tween: Tween
 var _facing_yaw: float = PI
 var _phase: float = 0.0
 var _walk_blend: float = 0.0
@@ -51,9 +52,14 @@ func _ready() -> void:
 	rotation.y = _facing_yaw
 
 
-## Puts the courier on [param at], facing [param facing] (a horizontal direction).
+## Puts the courier on [param at], facing [param facing] (a horizontal
+## direction), dropping any walk at once (the step in progress too).
 func place(at: Vector3i, facing: Vector3i = Vector3i(0, 0, 1)) -> void:
 	_queue.clear()
+	if _step_tween:
+		_step_tween.kill()
+	_stepping = false
+	_riding = false
 	cell = at
 	position = pathfinder.floor_position(at)
 	_face(Vector3(facing))
@@ -116,6 +122,21 @@ func stop() -> void:
 	_queue.clear()
 
 
+## Ends a celebration or a puzzled tilt at once and lands with a little
+## squash (after undo or restart puts it somewhere new).
+func reset_pose() -> void:
+	for tween: Tween in [_happy_tween, _tilt_tween]:
+		if tween:
+			tween.kill()
+	_set_happy_eyes(false)
+	_hop = 0.0
+	_spin = 0.0
+	_tilt = 0.0
+	_squash = Vector3.ONE
+	_rig.door_hinge.rotation.x = 0.0
+	_land(0.8)
+
+
 ## Shows what is carried: the flag goes up in the colour of the next parcel
 ## to deliver, and down again when there is nothing left.
 func set_carried(colors: Array[StringName]) -> void:
@@ -159,9 +180,9 @@ func _next_step() -> void:
 	var to: Vector3 = pathfinder.floor_position(next)
 	if not _riding:
 		_face(to - from)
-	var tween: Tween = create_tween()
-	tween.tween_property(self, "position", to, RIDE_TIME if _riding else STEP_TIME)
-	tween.tween_callback(_finish_step.bind(next, to.y - from.y))
+	_step_tween = create_tween()
+	_step_tween.tween_property(self, "position", to, RIDE_TIME if _riding else STEP_TIME)
+	_step_tween.tween_callback(_finish_step.bind(next, to.y - from.y))
 
 
 func _finish_step(next: Vector3i, rise: float) -> void:

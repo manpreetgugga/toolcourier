@@ -28,6 +28,7 @@ static func load_file(path: String) -> LevelData:
 static func parse(text: String, source: String = "<text>") -> LevelData:
 	var data := LevelData.new()
 	data.source_path = source
+	data.fingerprint = text.md5_text()
 	var json := JSON.new()
 	if json.parse(text) != OK:
 		data.errors.append("line %d: %s" % [json.get_error_line(), json.get_error_message()])

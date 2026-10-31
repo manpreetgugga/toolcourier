@@ -5,6 +5,9 @@ extends RefCounted
 ## above the block it stands on).
 
 var source_path: String = ""
+## MD5 of the file's text: a saved game in progress only resumes on the same
+## version of the level.
+var fingerprint: String = ""
 var name: String = ""
 var world: int = 1
 var palette: StringName = Palette.DEFAULT_THEME

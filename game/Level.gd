@@ -2,7 +2,9 @@ class_name Level
 extends Node3D
 ## Plays one delivery level: builds the diorama from a level JSON file, turns
 ## taps and drags into courier paths and mechanism moves, and animates what
-## LevelState reports as the rules play out.
+## LevelState reports as the rules play out. Keeps the undo history, shows
+## hints from the Solver, records finishes in Progress and saves a game in
+## progress when the app is paused or closed.
 ##
 ## Drag to orbit, pinch or scroll to zoom, tap a spot to walk there. Drag a
 ## slider along its axis; tap a crank to turn its rotator. A white ripple
@@ -13,9 +15,14 @@ extends Node3D
 signal moves_changed(moves: int)
 signal level_completed(moves: int, stars: int)
 
+## Undo steps kept (oldest are dropped).
+const MAX_UNDO: int = 300
+
 @export_file("*.json") var level_path: String = "res://levels/world_1/level_1.json"
 ## Degrees per second of idle orbit; 0 keeps the camera still.
 @export var idle_orbit_speed: float = 0.0
+## Adds the HUD (moves, stars, undo, restart, hint and the finish card).
+@export var show_hud: bool = true
 
 var data: LevelData
 var state: LevelState
@@ -23,11 +30,17 @@ var grid: Grid
 var pathfinder: Pathfinder
 var camera: OrbitCamera
 var courier: Courier
+## The 2D interface (null without [member show_hud]).
+var hud: Hud
+## Whether the last finish beat the saved best.
+var finished_best: bool = false
 
 var _stage: StageLighting
-## Parcels on the floor by their current cell; carried ones in pickup order.
+## Parcels on the floor by their current cell; carried ones in pickup order;
+## delivered ones by pad cell.
 var _packages: Dictionary = {}
 var _carried: Array[Package] = []
+var _delivered: Dictionary = {}
 var _pads: Dictionary = {}
 var _exit: ExitFlag
 ## id -> MechanismNode.
@@ -38,6 +51,17 @@ var _busy: int = 0
 var _last_cell: Vector3i
 ## The slider being dragged: id, start, range, axis_px, press, riders.
 var _grab: Dictionary = {}
+## The state at the start, and snapshots taken before each player action
+## (a walk, a slider drag, a crank turn, a restart), oldest first.
+var _initial: Dictionary
+var _history: Array[Dictionary] = []
+var _solver: Solver
+## The solver's last plan and the state it started from.
+var _plan: Array[Dictionary] = []
+var _plan_from: Array = []
+var _hint: HintMarker
+## What the hint showing asks for (see [method hinted]).
+var _hinted: Dictionary = {}
 
 
 func _ready() -> void:
@@ -53,6 +77,12 @@ func _ready() -> void:
 	add_child(_stage)
 
 	state = LevelState.new(data)
+	_initial = state.snapshot()
+	_solver = Solver.new(data)
+	var saved: Dictionary = Progress.in_progress(_id(), data.fingerprint, state)
+	if not saved.is_empty():
+		_history = saved["history"]
+		state.restore(saved["state"])
 	grid = state.build_grid()
 	pathfinder = Pathfinder.new(grid)
 	_add_mesh("Blocks", BlockMesher.build(data.cells))
@@ -61,14 +91,11 @@ func _ready() -> void:
 	for mechanism: Mechanism in data.mechanisms:
 		_add_mechanism(mechanism)
 
-	for cell: Vector3i in state.waiting:
-		var package := Package.create(state.waiting[cell])
-		_place(package, cell)
-		_packages[cell] = package
 	for cell: Vector3i in state.pads:
 		var pad := Pad.create(state.pads[cell])
 		_place(pad, cell)
 		_pads[cell] = pad
+	_rebuild_parcels()
 	_exit = ExitFlag.new()
 	_exit.name = "Exit"
 	_place(_exit, data.exit)
@@ -78,6 +105,8 @@ func _ready() -> void:
 	courier.pathfinder = pathfinder
 	add_child(courier)
 	courier.place(state.courier)
+	if not state.carried.is_empty():
+		courier.set_carried(state.carried)
 	courier.step_finished.connect(_on_courier_step)
 	courier.arrived.connect(_on_courier_arrived)
 	_last_cell = state.courier
@@ -97,6 +126,21 @@ func _ready() -> void:
 	camera.grab_released.connect(_on_grab_released)
 	camera.frame_bounds(bounds)
 
+	if show_hud:
+		hud = Hud.new()
+		hud.name = "Hud"
+		hud.level = self
+		add_child(hud)
+
+
+func _notification(what: int) -> void:
+	if what in [NOTIFICATION_APPLICATION_PAUSED, NOTIFICATION_APPLICATION_FOCUS_OUT, NOTIFICATION_WM_CLOSE_REQUEST]:
+		keep_progress()
+
+
+func _exit_tree() -> void:
+	keep_progress()
+
 
 ## Block under a screen position (see [method Grid.raycast]).
 func pick(screen_position: Vector2) -> Dictionary:
@@ -106,6 +150,137 @@ func pick(screen_position: Vector2) -> Dictionary:
 ## Whether input is waiting for something to finish.
 func is_busy() -> bool:
 	return _busy > 0
+
+
+## How many actions can be undone.
+func undo_count() -> int:
+	return _history.size()
+
+
+func can_undo() -> bool:
+	return not _history.is_empty() and _is_settled()
+
+
+## Takes back the last action (a walk, even one still going, a slider drag,
+## a crank turn or a restart), moves and all.
+func undo() -> bool:
+	if not can_undo():
+		return false
+	state.restore(_history.pop_back())
+	_sync()
+	return true
+
+
+func can_restart() -> bool:
+	return state.moves > 0 and _is_settled(true)
+
+
+## Back to the start. Undo brings the game back, unless it was finished.
+func restart() -> bool:
+	if not can_restart():
+		return false
+	if state.completed:
+		_history.clear()
+	else:
+		_record()
+	state.restore(_initial)
+	_sync()
+	return true
+
+
+func can_hint() -> bool:
+	return _is_settled() and not courier.is_moving()
+
+
+## Shows the first step of the shortest way to finish from here: where to
+## walk, which slider to drag where, or which crank to turn. Returns what
+## to tell the player, or "" if no hint can be shown now.
+func show_hint() -> String:
+	if not can_hint():
+		return ""
+	_clear_hint()
+	var plan: Array[Dictionary] = _plan_from_here()
+	if plan.is_empty():
+		courier.puzzled()
+		return "Too tricky to work out from here." if _solver.gave_up else "No way forward from here: undo or restart."
+	var first: Dictionary = plan[0]
+	_hinted = {"action": first["action"], "id": first.get("id", ""), "to": first.get("to", 0)}
+	match first["action"]:
+		Solver.Action.SLIDE:
+			var mechanism: Mechanism = state.mechanisms[first["id"]]
+			_hint = HintMarker.pointing_at(_centre(mechanism.cells_at(state.values[first["id"]])) + Vector3(0.0, 0.5, 0.0))
+			_hint.add_ghost((_mechanism_nodes[first["id"]] as MechanismBlocks).blocks_mesh(), mechanism.transform_for(first["to"]))
+			add_child(_hint)
+			return "Drag the orange block to the outline."
+		Solver.Action.TURN:
+			var mechanism: Mechanism = state.mechanisms[first["id"]]
+			_hint = HintMarker.pointing_at(Vector3(mechanism.handle) + Vector3(0.5, 0.65, 0.5))
+			_hint.add_ghost((_mechanism_nodes[first["id"]] as MechanismBlocks).blocks_mesh(),
+				mechanism.transform_for((state.values[first["id"]] + 1) % 4))
+			add_child(_hint)
+			return "Tap the crank to turn the bridge."
+	var route: Array[Vector3i] = _hint_route(plan)
+	_hinted["cell"] = route[-1]
+	_hint = HintMarker.pointing_at(pathfinder.floor_position(route[-1]))
+	var dots: Array[Vector3] = []
+	for i in range(1, route.size() - 1):
+		dots.append(pathfinder.floor_position(route[i]))
+	_hint.add_trail(dots)
+	add_child(_hint)
+	return "Walk to the arrow."
+
+
+## Whether a hint is showing.
+func has_hint() -> bool:
+	return _hint != null
+
+
+## What the hint showing asks for: {"action": Solver.Action.STEP, "cell":
+## where to walk}, {"action": SLIDE, "id", "to"} or {"action": TURN, "id"};
+## empty when no hint shows.
+func hinted() -> Dictionary:
+	return _hinted
+
+
+## The level after this one ("" when this is the last).
+func next_level_path() -> String:
+	var folder: String = level_path.get_base_dir()
+	var number: int = level_path.get_file().get_basename().trim_prefix("level_").to_int()
+	var candidate: String = folder.path_join("level_%d.json" % (number + 1))
+	if FileAccess.file_exists(candidate):
+		return candidate
+	var world: int = folder.get_file().trim_prefix("world_").to_int()
+	candidate = folder.get_base_dir().path_join("world_%d/level_1.json" % (world + 1))
+	return candidate if world > 0 and FileAccess.file_exists(candidate) else ""
+
+
+## Replaces this level with the one at [param path].
+func go_to(path: String) -> void:
+	var next: Level = (load("res://game/Level.tscn") as PackedScene).instantiate()
+	next.level_path = path
+	next.idle_orbit_speed = idle_orbit_speed
+	next.show_hud = show_hud
+	var parent: Node = get_parent()
+	var was_current: bool = get_tree().current_scene == self
+	parent.remove_child(self)
+	queue_free()
+	parent.add_child(next)
+	if was_current:
+		get_tree().current_scene = next
+
+
+## Saves the game in progress (or forgets it once finished or untouched).
+func keep_progress() -> void:
+	if state == null:
+		return
+	if state.completed or state.moves == 0:
+		Progress.drop_in_progress(_id())
+	else:
+		Progress.keep_in_progress(_id(), data.fingerprint, _history, state.snapshot())
+
+
+func _id() -> String:
+	return Progress.level_id(level_path)
 
 
 func _on_tapped(screen_position: Vector2) -> void:
@@ -129,6 +304,10 @@ func _on_tapped(screen_position: Vector2) -> void:
 		TapRipple.spawn(self, center, Vector3(normal), false)
 		courier.puzzled()
 		return
+	_clear_hint()
+	# A new walk is one undo step; re-routing mid-walk belongs to the same one.
+	if not courier.is_moving():
+		_record()
 	TapRipple.spawn(self, pathfinder.floor_position(target), Vector3.UP)
 	path.remove_at(0)
 	courier.walk(path)
@@ -141,14 +320,20 @@ func _on_double_tapped(screen_position: Vector2) -> void:
 
 ## Turns a rotator a quarter (one move), once the courier has stopped.
 func _turn(id: String) -> void:
+	_clear_hint()
 	if courier.is_moving():
 		courier.stop()
+		_busy += 1
 		await courier.arrived
+		_busy -= 1
+	_record()
 	var events: Array[Dictionary] = state.rotate(id)
 	if events.is_empty():
+		_history.pop_back()
 		var handle: Vector3i = (state.mechanisms[id] as Mechanism).handle
 		TapRipple.spawn(self, Vector3(handle) + Vector3(0.5, 0.75, 0.5), Vector3.UP, false)
 		courier.puzzled()
+		_continue_ride()
 		return
 	moves_changed.emit(state.moves)
 	await _play(events)
@@ -203,7 +388,9 @@ func _play(events: Array[Dictionary]) -> void:
 			LevelState.Event.COMPLETED:
 				courier.stop()
 				courier.celebrate()
-				level_completed.emit(state.moves, data.stars_for(state.moves))
+				var stars: int = data.stars_for(state.moves)
+				finished_best = Progress.record(_id(), state.moves, stars)
+				level_completed.emit(state.moves, stars)
 			LevelState.Event.MECHANISM:
 				var mechanism: Mechanism = state.mechanisms[event["id"]]
 				if mechanism.moves_blocks():
@@ -263,10 +450,18 @@ func _drop(color: StringName, pad_cell: Vector3i) -> void:
 			package = carried
 			break
 	_carried.erase(package)
+	_delivered[pad_cell] = package
 	var pad: Pad = _pads[pad_cell]
 	courier.flap_door()
 	package.drop_onto(courier.door_anchor(), pad.global_position + Pad.PARCEL_SPOT, Pad.PARCEL_SIZE)
-	get_tree().create_timer(Package.DROP_TIME).timeout.connect(pad.set_filled.bind(true))
+	get_tree().create_timer(Package.DROP_TIME).timeout.connect(_light_pad.bind(pad_cell))
+
+
+## Lights a pad as its parcel lands, unless undo took the parcel back.
+func _light_pad(pad_cell: Vector3i) -> void:
+	var pad: Pad = _pads[pad_cell]
+	if state.filled.has(pad_cell) and not pad.filled:
+		pad.set_filled(true)
 
 
 ## Starts dragging a slider when a drag begins on one (see OrbitCamera.grab_filter).
@@ -285,6 +480,7 @@ func _try_grab(screen_position: Vector2) -> bool:
 	var axis_px: Vector2 = camera.unproject_position(centre + Vector3(mechanism.axis)) - camera.unproject_position(centre)
 	if axis_px.length() < 8.0:
 		return false
+	_clear_hint()
 	var riders: Array[Node3D] = []
 	if mechanism.cells_at(state.values[id]).has(state.courier - Vector3i.UP):
 		riders.append(courier)
@@ -320,8 +516,10 @@ func _on_grab_released(_screen_position: Vector2) -> void:
 	var target: int = clampi(roundi(node.pose), reach.x, reach.y)
 	for rider: Node3D in grab["riders"]:
 		rider.reparent(self)
+	_record()
 	var events: Array[Dictionary] = state.slide(grab["id"], target)
 	if events.is_empty():
+		_history.pop_back()
 		# Not moved after all: ease back, riders and all.
 		for rider: Node3D in grab["riders"]:
 			rider.reparent(node)
@@ -349,6 +547,117 @@ func _cell_of(package: Node3D) -> Vector3i:
 		if _packages[cell] == package:
 			return cell
 	return Vector3i.ZERO
+
+
+## Nothing is moving or being dragged, so the state can be replaced (a walk
+## may still be going; undo stops it). [param finished_ok] also allows a
+## finished level.
+func _is_settled(finished_ok: bool = false) -> bool:
+	return _busy == 0 and _grab.is_empty() and (finished_ok or not state.completed)
+
+
+func _record() -> void:
+	_history.append(state.snapshot())
+	if _history.size() > MAX_UNDO:
+		_history.pop_front()
+
+
+## Rebuilds everything shown from [member state] at once (after undo,
+## restart or resuming).
+func _sync() -> void:
+	_clear_hint()
+	_refresh_grid()
+	courier.place(state.courier, courier.facing())
+	courier.reset_pose()
+	courier.set_carried(state.carried)
+	_last_cell = state.courier
+	_rebuild_parcels()
+	_exit.set_open(state.all_delivered(), false)
+	for id: String in _mechanism_nodes:
+		(_mechanism_nodes[id] as MechanismNode).show_value(state.values[id], false)
+	moves_changed.emit(state.moves)
+
+
+## Parcel nodes for [member state]: waiting on the floor, hidden in the
+## mailbox, or resting on their pads.
+func _rebuild_parcels() -> void:
+	for package: Package in _packages.values() + _carried + _delivered.values():
+		package.queue_free()
+	_packages.clear()
+	_carried.clear()
+	_delivered.clear()
+	for cell: Vector3i in state.waiting:
+		var package := Package.create(state.waiting[cell])
+		_place(package, cell)
+		_packages[cell] = package
+	for color: StringName in state.carried:
+		var package := Package.create(color)
+		_place(package, state.courier)
+		package.hide()
+		_carried.append(package)
+	for cell: Vector3i in _pads:
+		var pad: Pad = _pads[cell]
+		pad.set_filled(state.filled.has(cell), false)
+		if state.filled.has(cell):
+			var package := Package.create(pad.color)
+			add_child(package)
+			package.rest_at(pad.position + Pad.PARCEL_SPOT, Pad.PARCEL_SIZE)
+			_delivered[cell] = package
+
+
+## The rest of the shortest plan from the current state, reusing the last
+## one while the player follows it.
+func _plan_from_here() -> Array[Dictionary]:
+	var here: Array = [Solver.key_of(state), state.moves]
+	var rest: Array[Dictionary] = []
+	if _plan_from == here:
+		rest.assign(_plan)
+		return rest
+	for i in _plan.size():
+		if _plan[i]["key"] == here[0] and _plan[i]["moves"] == here[1]:
+			rest.assign(_plan.slice(i + 1))
+			return rest
+	_plan = _solver.solve(state.snapshot())
+	_plan_from = here
+	rest.assign(_plan)
+	return rest
+
+
+## The cells a single tap walks through to follow [param plan] (which starts
+## with steps) as far as possible: up to its first event, and only as far as
+## the path a tap would take really does what the plan does.
+func _hint_route(plan: Array[Dictionary]) -> Array[Vector3i]:
+	var last: int = 0
+	while last + 1 < plan.size() and plan[last + 1]["action"] == Solver.Action.STEP and not plan[last]["events"]:
+		last += 1
+	for stop in range(last, -1, -1):
+		var path: Array[Vector3i] = pathfinder.find_path(state.courier, plan[stop]["cell"])
+		if path.size() < 2:
+			continue
+		var trial := LevelState.new(data)
+		trial.restore(state.snapshot())
+		var on_the_way: bool = false
+		for i in range(1, path.size()):
+			if not trial.enter(path[i], pathfinder.is_belt(path[i - 1])).is_empty() and i < path.size() - 1:
+				on_the_way = true
+				break
+		if on_the_way:
+			continue
+		for cell: Vector3i in pathfinder.ride_from(path[-1]):
+			trial.enter(cell, true)
+		var key: String = Solver.key_of(trial)
+		for k in range(stop, last + 1):
+			if plan[k]["key"] == key and plan[k]["moves"] == trial.moves:
+				return path
+	var first: Array[Vector3i] = [state.courier, plan[0]["cell"]]
+	return first
+
+
+func _clear_hint() -> void:
+	_hinted = {}
+	if _hint:
+		_hint.dismiss()
+		_hint = null
 
 
 static func _mover(movers: Array[Dictionary], id: String) -> Dictionary:
