@@ -3,17 +3,34 @@
 	"world": 3,
 	"palette": "old_town",
 	"blocks": [
-		[1, -2, 1, "dark_stone"], [2, -2, 1, "dark_stone"], [3, -2, 1, "dark_stone"], [4, -2, 1, "dark_stone"], [5, -2, 1, "dark_stone"],
+		[3, -4, 1, "dark_stone"],
 
-		[1, -1, 0, "dark_stone"], [2, -1, 0, "water"], [3, -1, 0, "water"], [4, -1, 0, "water"], [5, -1, 0, "dark_stone"],
+		[2, -3, 0, "dark_stone"], [3, -3, 0, "dark_stone"],
+		[2, -3, 1, "dark_stone"], [3, -3, 1, "dark_stone"], [4, -3, 1, "dark_stone"],
+		[3, -3, 2, "dark_stone"],
+
+		[1, -2, 0, "dark_stone"], [2, -2, 0, "dark_stone"], [3, -2, 0, "dark_stone"], [4, -2, 0, "dark_stone"],
+		[1, -2, 1, "dark_stone"], [2, -2, 1, "dark_stone"], [3, -2, 1, "dark_stone"], [4, -2, 1, "dark_stone"], [5, -2, 1, "dark_stone"],
+		[2, -2, 2, "dark_stone"], [3, -2, 2, "dark_stone"], [4, -2, 2, "dark_stone"],
+
+		[4, -1, -1, "dark_stone"],
+		[0, -1, 0, "dark_stone"], [1, -1, 0, "dark_stone"], [2, -1, 0, "water"], [3, -1, 0, "water"], [4, -1, 0, "water"], [5, -1, 0, "dark_stone"],
 		[0, -1, 1, "dark_stone"], [1, -1, 1, "dark_stone"], [2, -1, 1, "water"], [3, -1, 1, "water"], [4, -1, 1, "water"], [5, -1, 1, "dark_stone"], [6, -1, 1, "dark_stone"],
 		[1, -1, 2, "dark_stone"], [2, -1, 2, "water"], [3, -1, 2, "water"], [4, -1, 2, "water"], [5, -1, 2, "dark_stone"],
 
+		[0, 0, -1, "brick"], [1, 0, -1, "brick"], [3, 0, -1, "brick"], [5, 0, -1, "brick"],
 		[0, 0, 0, "brick"], [1, 0, 0, "brick"], [5, 0, 0, "brick"], [6, 0, 0, "brick"],
 		[0, 0, 1, "brick"], [1, 0, 1, "brick"], [5, 0, 1, "brick"], [6, 0, 1, "brick"],
-		[0, 0, 2, "brick"], [1, 0, 2, "brick"], [5, 0, 2, "brick"], [6, 0, 2, "brick"]
+		[0, 0, 2, "brick"], [1, 0, 2, "brick"], [5, 0, 2, "brick"], [6, 0, 2, "brick"],
+
+		[0, 1, -1, "brick"], [1, 1, -1, "brick"], [3, 1, -1, "brick"], [5, 1, -1, "brick"],
+
+		[0, 2, -1, "brick"], [1, 2, -1, "brick"], [3, 2, -1, "brick"], [4, 2, -1, "brick"], [5, 2, -1, "brick"],
+
+		[0, 3, -1, "brick"]
 	],
 	"props": [
+		[0, 4, -1, "flag", 29],
 		[5, 1, 0, "tree_tall", 5, true],
 		[5, 1, 2, "bush", 37, true]
 	],

@@ -295,8 +295,13 @@ finish card follows this order. Each world brings in something new:
 | 4 | `orchard` | 2 | Dry boards: planks that hold for one crossing, a hay loft on stilts, then boards with a raft, a two-button gate, a lattice barn floor, a belt, a windmill turntable and lifts, ending in two trips through the loft. |
 | 5 | `frost_peaks` | 2 | Ice rinks: rocks and snowmen to stop on, snow patches, two frozen terraces, then a stone slider to slide against, a two-button gate, a lift, belts across the rink, a turning floe and a summit that needs both the stone and the lift. |
 
-Worlds 4 and 5 stand on tall rock bases that taper downwards, so each
-diorama reads as a floating crag.
+Every diorama is a floating crag: its rock base erodes from the corners
+down to a hanging point, and behind the play area stands scenery the
+courier cannot reach, always higher than the ground next to it: grassy
+knolls with trees in the meadow, stone sheds and a lighthouse at the
+harbour, brick arches and flag towers in the old town (3-4 has towers in
+its empty corners instead), the orchard's high banks and lofts, and the
+frost peaks' slate ridge.
 
 <img src="docs/screenshots/step8_levels.png" width="640" alt="All 50 levels as they start">
 

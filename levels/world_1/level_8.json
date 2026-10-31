@@ -3,17 +3,37 @@
 	"world": 1,
 	"palette": "meadow",
 	"blocks": [
-		[1, -2, 1, "dark_stone"], [2, -2, 1, "dark_stone"], [3, -2, 1, "dark_stone"], [4, -2, 1, "dark_stone"], [5, -2, 1, "dark_stone"],
+		[3, -5, 0, "dark_stone"],
 
-		[1, -1, 0, "dark_stone"], [2, -1, 0, "water"], [3, -1, 0, "water"], [4, -1, 0, "water"], [5, -1, 0, "dark_stone"],
+		[3, -4, 0, "dark_stone"],
+		[3, -4, 1, "dark_stone"],
+
+		[2, -3, 0, "dark_stone"], [3, -3, 0, "dark_stone"], [4, -3, 0, "dark_stone"],
+		[2, -3, 1, "dark_stone"], [3, -3, 1, "dark_stone"], [4, -3, 1, "dark_stone"],
+		[3, -3, 2, "dark_stone"],
+
+		[1, -2, 0, "dark_stone"], [2, -2, 0, "dark_stone"], [3, -2, 0, "dark_stone"], [4, -2, 0, "dark_stone"], [5, -2, 0, "dark_stone"],
+		[1, -2, 1, "dark_stone"], [2, -2, 1, "dark_stone"], [3, -2, 1, "dark_stone"], [4, -2, 1, "dark_stone"], [5, -2, 1, "dark_stone"],
+		[2, -2, 2, "dark_stone"], [3, -2, 2, "dark_stone"], [4, -2, 2, "dark_stone"],
+
+		[5, -1, -1, "dark_stone"],
+		[0, -1, 0, "dark_stone"], [1, -1, 0, "dark_stone"], [2, -1, 0, "water"], [3, -1, 0, "water"], [4, -1, 0, "water"], [5, -1, 0, "dark_stone"], [6, -1, 0, "dark_stone"],
 		[0, -1, 1, "dark_stone"], [1, -1, 1, "dark_stone"], [2, -1, 1, "water"], [3, -1, 1, "water"], [4, -1, 1, "water"], [5, -1, 1, "dark_stone"], [6, -1, 1, "dark_stone"],
 		[1, -1, 2, "dark_stone"], [2, -1, 2, "water"], [3, -1, 2, "water"], [4, -1, 2, "water"], [5, -1, 2, "dark_stone"],
 
+		[0, 0, -1, "dirt"], [1, 0, -1, "dirt"], [4, 0, -1, "sand"], [5, 0, -1, "sand"], [6, 0, -1, "sand"],
 		[0, 0, 0, "grass"], [1, 0, 0, "grass"], [5, 0, 0, "sand"], [6, 0, 0, "sand"],
 		[0, 0, 1, "grass"], [1, 0, 1, "grass"], [5, 0, 1, "sand"], [6, 0, 1, "sand"],
-		[0, 0, 2, "grass"], [1, 0, 2, "grass"], [5, 0, 2, "sand"], [6, 0, 2, "sand"]
+		[0, 0, 2, "grass"], [1, 0, 2, "grass"], [5, 0, 2, "sand"], [6, 0, 2, "sand"],
+
+		[0, 1, -1, "dirt"], [1, 1, -1, "grass"], [4, 1, -1, "sand"], [5, 1, -1, "sand"], [6, 1, -1, "sand"],
+
+		[0, 2, -1, "grass"], [5, 2, -1, "sand"]
 	],
 	"props": [
+		[0, 3, -1, "tree_tall", 29, true],
+		[1, 2, -1, "tree_small", 66, true],
+		[5, 3, -1, "tree_tall", 34, true],
 		[0, 1, 0, "tree_small", 0, true],
 		[5, 1, 0, "tree_tall", 5, true],
 		[0, 1, 2, "bush", 32, true],

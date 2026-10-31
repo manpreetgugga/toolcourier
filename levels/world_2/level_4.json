@@ -3,17 +3,34 @@
 	"world": 2,
 	"palette": "harbor",
 	"blocks": [
-		[1, -2, 1, "dark_stone"], [2, -2, 1, "dark_stone"], [3, -2, 1, "dark_stone"],
+		[2, -4, 0, "dark_stone"],
 
-		[1, -1, 0, "dark_stone"], [2, -1, 0, "dark_stone"], [3, -1, 0, "dark_stone"],
+		[2, -3, 0, "dark_stone"],
+		[2, -3, 1, "dark_stone"],
+
+		[2, -2, -1, "dark_stone"],
+		[1, -2, 0, "dark_stone"], [2, -2, 0, "dark_stone"], [3, -2, 0, "dark_stone"],
+		[1, -2, 1, "dark_stone"], [2, -2, 1, "dark_stone"], [3, -2, 1, "dark_stone"],
+		[2, -2, 2, "dark_stone"],
+
+		[1, -1, -1, "dark_stone"], [2, -1, -1, "dark_stone"], [3, -1, -1, "dark_stone"],
+		[0, -1, 0, "dark_stone"], [1, -1, 0, "dark_stone"], [2, -1, 0, "dark_stone"], [3, -1, 0, "dark_stone"], [4, -1, 0, "dark_stone"],
 		[0, -1, 1, "dark_stone"], [1, -1, 1, "dark_stone"], [2, -1, 1, "dark_stone"], [3, -1, 1, "dark_stone"], [4, -1, 1, "dark_stone"],
 		[1, -1, 2, "dark_stone"], [2, -1, 2, "dark_stone"], [3, -1, 2, "dark_stone"],
 
+		[0, 0, -1, "stone"], [1, 0, -1, "stone"], [2, 0, -1, "stone"], [3, 0, -1, "stone"], [4, 0, -1, "stone"],
 		[0, 0, 0, "stone"], [1, 0, 0, "stone"], [2, 0, 0, "stone"], [3, 0, 0, "stone"], [4, 0, 0, "stone"],
 		[0, 0, 1, "stone"], [1, 0, 1, "stone"], [2, 0, 1, "stone"], [3, 0, 1, "stone"], [4, 0, 1, "stone"],
-		[0, 0, 2, "stone"], [1, 0, 2, "stone"], [2, 0, 2, "stone"], [3, 0, 2, "stone"], [4, 0, 2, "stone"]
+		[0, 0, 2, "stone"], [1, 0, 2, "stone"], [2, 0, 2, "stone"], [3, 0, 2, "stone"], [4, 0, 2, "stone"],
+
+		[0, 1, -1, "wood"], [1, 1, -1, "stone"], [2, 1, -1, "stone"], [3, 1, -1, "wood"], [4, 1, -1, "stone"],
+
+		[1, 2, -1, "stone"], [2, 2, -1, "stone"], [4, 2, -1, "stone"],
+
+		[2, 3, -1, "stone"]
 	],
 	"props": [
+		[2, 4, -1, "lamp_post", 13, true],
 		[3, 1, 0, "lamp_post", 21, true],
 		[1, 1, 1, "bush", 8, true],
 		[3, 1, 2, "lamp_post", 53, true]

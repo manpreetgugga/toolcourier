@@ -3,6 +3,8 @@
 	"world": 4,
 	"palette": "orchard",
 	"blocks": [
+		[4, -3, 1, "dark_stone"],
+
 		[4, -2, 1, "dark_stone"],
 		[4, -2, 2, "dark_stone"],
 
