@@ -124,7 +124,7 @@ network is used only by the ads (Google AdMob, from world 2 on; see
 
 ### Android
 
-The Android preset is checked in (`export_presets.cfg`): package
+The Android presets are checked in (`export_presets.cfg`): package
 `com.manpreetgugga.tinycourier`, version 1.0.0 (code 1), 64-bit ARM only,
 full screen, portrait, with the permissions VIBRATE, INTERNET,
 ACCESS_NETWORK_STATE and AD_ID (the last three for the ads; Google's ads
@@ -166,15 +166,22 @@ Google.
 keytool -genkeypair -v -keystore ~/keys/tinycourier.jks -alias tinycourier -keyalg RSA -keysize 2048 -validity 10000
 ```
 
+There are two Android presets, the same apart from what they make:
+**Android** makes an APK to install straight on a phone, and **Android
+(Play)** makes the Android App Bundle (`.aab`) that Google Play wants.
+
 Godot finds the key through the environment rather than the preset, so
 nothing secret is committed. The password is read without echoing it, so it
-stays out of the shell's history. In PowerShell:
+stays out of the shell's history. Run from a terminal, Gradle's background
+daemon can keep Godot from exiting once the export is done, so the commands
+turn it off. In PowerShell:
 
 ```powershell
 $env:GODOT_ANDROID_KEYSTORE_RELEASE_PATH = "$HOME\keys\tinycourier.jks"
 $env:GODOT_ANDROID_KEYSTORE_RELEASE_USER = "tinycourier"
 $env:GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD = [Net.NetworkCredential]::new("", (Read-Host -AsSecureString "Keystore password")).Password
-godot --headless --path . --export-release "Android" export/TinyCourier.apk
+$env:GRADLE_OPTS = "-Dorg.gradle.daemon=false"
+godot --headless --path . --export-release "Android (Play)" export/TinyCourier.aab
 ```
 
 or in bash:
@@ -183,17 +190,19 @@ or in bash:
 export GODOT_ANDROID_KEYSTORE_RELEASE_PATH=~/keys/tinycourier.jks
 export GODOT_ANDROID_KEYSTORE_RELEASE_USER=tinycourier
 read -rsp "Keystore password: " GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD; echo; export GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD
-godot --headless --path . --export-release "Android" export/TinyCourier.apk
+export GRADLE_OPTS=-Dorg.gradle.daemon=false
+godot --headless --path . --export-release "Android (Play)" export/TinyCourier.aab
 ```
 
-The variables last only as long as that terminal.
+The variables last only as long as that terminal. For a signed APK, export
+the **Android** preset to `export/TinyCourier.apk` instead. Each upload to
+Play needs a higher version code (`version/code` in both presets) than the
+last; the version name is what players see.
 
 A release build shows Google's test ads until the game is live on Google
-Play; see [Ads](#ads) for switching to its own.
-
-Google Play wants an Android App Bundle (`.aab`) rather than an APK: set the
-preset's export format to AAB. Play also lists the game only for phones
-with Vulkan; the game itself falls back to OpenGL where Vulkan is missing.
+Play; see [Ads](#ads) for switching to its own. The build asks for
+OpenGL ES 3.0 and marks Vulkan as optional, so Play also offers the game to
+phones without Vulkan, where it falls back to OpenGL.
 
 ### Other platforms
 
@@ -205,7 +214,7 @@ godot --headless --path . --export-release "Windows Desktop" export/TinyCourier.
 
 The levels are plain `.json` files, so every preset must include them: set
 **Resources → Filters to export non-resource files** to `*.json` (the
-Android preset does). It also leaves out `dev/`, `tools/` and the icon
+Android presets do). It also leaves out `dev/`, `tools/` and the icon
 layers that only the Android launcher uses.
 
 ### Icons and sounds
@@ -665,7 +674,7 @@ device ids, which the SDK prints to logcat, in `ADMOB_TEST_DEVICE_IDS`,
 comma-separated.
 
 ```bash
-TINY_COURIER_LIVE_ADS=1 godot --headless --path . --export-release "Android" export/TinyCourier.aab
+TINY_COURIER_LIVE_ADS=1 godot --headless --path . --export-release "Android (Play)" export/TinyCourier.aab
 ```
 
 **Away from phones** there are no ads; `--ads-preview` puts a stand-in in
