@@ -8,6 +8,11 @@ extends CanvasLayer
 ## keeps to the screen's safe area. Sizes are in the 720 x 1280 base
 ## viewport. It keeps running while the game is paused.
 ##
+## The ads (see Ads) show in two places only. From world 2 on, the first
+## Hint in a level offers a short video that turns hints on for the rest of
+## it (a play mark on Hint says so); and moving on from the finish card
+## (Next, Levels or back, never Replay) may play a level break first.
+##
 ## Keys for the desktop: Z or Backspace undoes, R restarts, H shows a hint,
 ## Escape or P pauses.
 
@@ -23,6 +28,9 @@ const FINISH_DELAY: float = 0.9
 const FINISH_SIZE := Vector2(580.0, 700.0)
 const PAUSE_BUTTON: float = 96.0
 const PAUSE_SIZE := Vector2(600.0, 540.0)
+const OFFER_SIZE := Vector2(600.0, 520.0)
+## Seconds between checks of whether a hint needs a video.
+const BADGE_CHECK: float = 0.5
 
 var level: Level
 
@@ -53,6 +61,12 @@ var _pause: Control
 var _pause_card: Control
 var _settings: SettingsCard
 var _faded: bool = false
+## The card offering a video for hints.
+var _offer: Control
+var _offer_card: Control
+var _badge_left: float = 0.0
+## Leaving the finish card (a level break may be playing).
+var _moving_on: bool = false
 
 
 func _ready() -> void:
@@ -74,6 +88,7 @@ func _ready() -> void:
 	_build_toast(_safe)
 	_build_finish(_root)
 	_build_pause(_root)
+	_build_offer(_root)
 	_settings = SettingsCard.new()
 	_root.add_child(_settings)
 	level.moves_changed.connect(_on_moves_changed)
@@ -85,6 +100,10 @@ func _process(delta: float) -> void:
 	_restart.disabled = not level.can_restart()
 	_undo.disabled = not level.can_undo()
 	_hint.disabled = not level.can_hint()
+	_badge_left -= delta
+	if _badge_left <= 0.0:
+		_badge_left = BADGE_CHECK
+		_hint.badge = &"play" if Ads.hint_needs_video(level.level_path) else &""
 	if _toast_left > 0.0:
 		_toast_left -= delta
 		if _toast_left <= 0.0 or (_toast_for_hint and not level.has_hint()):
@@ -122,10 +141,16 @@ func is_paused() -> bool:
 	return _pause.visible
 
 
+## Whether the card offering a video for hints is up.
+func is_offer_showing() -> bool:
+	return _offer.visible
+
+
 ## Pauses the game under the pause card (not while the level is building
 ## up, finished or being left).
 func pause() -> void:
-	if _pause.visible or _finish.visible or _faded or level.state.completed or level.is_assembling():
+	if _pause.visible or _offer.visible or _finish.visible or _faded or level.state.completed \
+			or level.is_assembling():
 		return
 	_hide_toast()
 	get_tree().paused = true
@@ -148,7 +173,8 @@ func resume() -> void:
 
 
 ## The back button (or Escape): closes the settings, resumes from the pause
-## card, leaves the finish card for the level grid, and otherwise pauses.
+## card, turns down the video offer, leaves the finish card for the level
+## grid, and otherwise pauses.
 func go_back() -> void:
 	if _faded:
 		return
@@ -156,8 +182,10 @@ func go_back() -> void:
 		_settings.close()
 	elif _pause.visible:
 		resume()
+	elif _offer.visible:
+		_close_offer()
 	elif _finish.visible:
-		level.go_home(&"levels")
+		_move_on(level.go_home.bind(&"levels"))
 	else:
 		pause()
 
@@ -185,7 +213,7 @@ func _on_moves_changed(moves: int, animate: bool = true) -> void:
 
 
 func _on_restart() -> void:
-	if not level.can_restart():
+	if not level.can_restart() or _moving_on:
 		return
 	_hide_toast()
 	_hide_finish()
@@ -197,15 +225,77 @@ func _on_undo() -> void:
 		_hide_toast()
 
 
+## Shows a hint, or first offers the video that turns hints on (see Ads).
 func _on_hint() -> void:
+	if not level.can_hint() or _offer.visible or Ads.is_showing():
+		return
+	if Ads.hint_needs_video(level.level_path):
+		_open_offer()
+	else:
+		_give_hint()
+
+
+## Shows a hint, with [param lead] on the line above what it says.
+func _give_hint(lead: String = "") -> void:
 	var message: String = level.show_hint()
+	if not lead.is_empty():
+		message = lead if message.is_empty() else lead + "\n" + message
 	if not message.is_empty():
 		_show_toast(message, level.has_hint())
 
 
+## Plays the hint video; watched to the end, it turns hints on for the level
+## and shows one. Closed early, there is no hint; if no video could play,
+## the hint is free.
+func _on_watch() -> void:
+	_close_offer()
+	var result: Dictionary = await Ads.watch_hint_video(level.level_path)
+	if _faded or not is_inside_tree():
+		return
+	_badge_left = 0.0
+	if result["earned"]:
+		_give_hint("Hints are on for this level.")
+	elif result["reason"] == "cancelled":
+		_show_toast("No hint this time: the video was closed early.", false)
+	else:
+		_give_hint()
+
+
+func _open_offer() -> void:
+	_hide_toast()
+	get_tree().paused = true
+	_offer.visible = true
+	_offer.modulate.a = 0.0
+	_offer_card.scale = Vector2(0.88, 0.88)
+	var tween: Tween = create_tween().set_parallel()
+	tween.tween_property(_offer, "modulate:a", 1.0, 0.2)
+	tween.tween_property(_offer_card, "scale", Vector2.ONE, 0.35).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+
+func _close_offer() -> void:
+	if not _offer.visible:
+		return
+	get_tree().paused = false
+	var tween: Tween = create_tween()
+	tween.tween_property(_offer, "modulate:a", 0.0, 0.15)
+	tween.tween_callback(_offer.hide)
+
+
 func _on_next() -> void:
 	if not _next_path.is_empty():
-		level.go_to(_next_path)
+		_move_on(level.go_to.bind(_next_path))
+
+
+## Leaves the finish card with [param then], after a level break if one is
+## due (see Ads).
+func _move_on(then: Callable) -> void:
+	if _moving_on:
+		return
+	_moving_on = true
+	await Ads.play_break_if_due()
+	_moving_on = false
+	if is_inside_tree():
+		then.call()
 
 
 func _on_completed(moves: int, stars: int) -> void:
@@ -383,7 +473,7 @@ func _build_finish(root: Control) -> void:
 	levels.font_size = 30
 	levels.color = Ui.CREAM.darkened(0.06)
 	levels.position = Vector2((FINISH_SIZE.x - 220.0) * 0.5, 578.0)
-	levels.pressed.connect(func() -> void: level.go_home(&"levels"))
+	levels.pressed.connect(func() -> void: _move_on(level.go_home.bind(&"levels")))
 	card.add_child(levels)
 
 
@@ -438,6 +528,43 @@ func _build_pause(root: Control) -> void:
 		button.position = Vector2((i - 1.5) * 130.0 - 50.0, 0.0)
 		button.pressed.connect(actions[i][2])
 		row.add_child(button)
+
+
+func _build_offer(root: Control) -> void:
+	_offer = Control.new()
+	_offer.name = "Offer"
+	_offer.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_offer.mouse_filter = Control.MOUSE_FILTER_STOP
+	_offer.visible = false
+	root.add_child(_offer)
+	var shade := ColorRect.new()
+	shade.set_anchors_preset(Control.PRESET_FULL_RECT)
+	shade.color = Color(Ui.INK, 0.35)
+	shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_offer.add_child(shade)
+
+	var card := Panel.new()
+	card.name = "Card"
+	card.add_theme_stylebox_override(&"panel", Ui.card(Ui.CREAM, 48))
+	card.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	card.set_anchors_preset(Control.PRESET_CENTER)
+	card.offset_left = -OFFER_SIZE.x * 0.5
+	card.offset_right = OFFER_SIZE.x * 0.5
+	card.offset_top = -OFFER_SIZE.y * 0.5
+	card.offset_bottom = OFFER_SIZE.y * 0.5
+	card.pivot_offset = OFFER_SIZE * 0.5
+	_offer.add_child(card)
+	_offer_card = card
+	card.add_child(_label("Need a hint?", 56, Ui.INK, Rect2(0.0, 36.0, OFFER_SIZE.x, 76.0)))
+	card.add_child(_label("Watch a short video to turn on\nhints for the rest of this level.", 28, Ui.MUTED,
+		Rect2(0.0, 124.0, OFFER_SIZE.x, 84.0)))
+	var watch := _pill_button(card, "Watch video", Vector2((OFFER_SIZE.x - 340.0) * 0.5, 240.0), Ui.ACCENT,
+		Vector2(340.0, 104.0))
+	watch.pressed.connect(_on_watch)
+	var later := _pill_button(card, "Not now", Vector2((OFFER_SIZE.x - 240.0) * 0.5, 376.0), Ui.CREAM.darkened(0.06),
+		Vector2(240.0, 88.0))
+	later.font_size = 30
+	later.pressed.connect(_close_offer)
 
 
 func _round_button(bar: Control, icon_name: StringName, caption: String, offset_x: float, color: Color) -> TouchButton:

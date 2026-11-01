@@ -1,0 +1,48 @@
+// The Android side of the ads: a Godot plugin (the TinyCourierAds singleton)
+// built as an .aar into addons/tiny_courier_ads/bin, where the export plugin
+// picks it up. The Android Gradle plugin matches Godot 4.7.1's Android build
+// template; Kotlin is newer than the template's, because the ads SDK is
+// built with Kotlin 2.3. Gradle 8.11 needs a JDK 17 to 23.
+//
+//   ./gradlew copyToAddon
+
+plugins {
+    id 'com.android.library' version '8.6.1'
+    id 'org.jetbrains.kotlin.android' version '2.3.21'
+}
+
+android {
+    namespace 'com.manpreetgugga.tinycourier.ads'
+    compileSdk 36
+
+    defaultConfig {
+        minSdk 24
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = '17'
+        // The game's build brings the Kotlin library the ads SDK asks for
+        // (2.1 or newer), so keep to its API.
+        apiVersion = '2.1'
+    }
+}
+
+dependencies {
+    // The game's build supplies all three: Godot itself, and the ads SDKs
+    // that addons/tiny_courier_ads/plugin.gd lists (keep the versions in step).
+    compileOnly 'org.godotengine:godot:4.7.1.stable'
+    compileOnly 'com.google.android.gms:play-services-ads:25.5.0'
+    compileOnly 'com.google.android.ump:user-messaging-platform:4.0.0'
+}
+
+tasks.register('copyToAddon', Copy) {
+    dependsOn 'assembleRelease'
+    from layout.buildDirectory.file('outputs/aar/tiny-courier-ads-release.aar')
+    into '../addons/tiny_courier_ads/bin'
+    rename { 'tiny-courier-ads.aar' }
+}

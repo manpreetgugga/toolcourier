@@ -12,8 +12,9 @@ the orange mechanisms to open a path.
 > undo, restart, hints, stars and saved progress, 50 solver-checked levels
 > in five worlds (the last two seasonal), the menus, settings, generated
 > sound and music, haptics and the build-up animations, and the graphics
-> quality presets and the Android build. The APK has been run on an
-> emulator; frame rate and memory still need checking on real phones (see
+> quality presets and the Android build, plus calm ads from world 2 on (see
+> [Ads](#ads)). The APK has been run on an emulator; frame rate and memory
+> still need checking on real phones (see
 > [Performance and quality](#performance-and-quality)).
 
 <img src="docs/screenshots/step9_menu.png" width="320" alt="The main menu over a turning diorama"> <img src="docs/screenshots/step7_hud.png" width="320" alt="World 1, level 1 with the HUD">
@@ -117,51 +118,82 @@ press **F6**.
 
 ## Building
 
-Everything the game needs is in the project: no downloads, no network and
-no permissions at run time other than vibration.
+The game itself plays offline, with everything it needs in the project. The
+network is used only by the ads (Google AdMob, from world 2 on; see
+[Ads](#ads)), whose libraries Gradle downloads when the Android build runs.
 
 ### Android
 
 The Android preset is checked in (`export_presets.cfg`): package
 `com.manpreetgugga.tinycourier`, version 1.0.0 (code 1), 64-bit ARM only,
-full screen, portrait, and VIBRATE as its only permission. It builds the APK
-straight from Godot's template, without Gradle. Once per machine:
+full screen, portrait, with the permissions VIBRATE, INTERNET,
+ACCESS_NETWORK_STATE and AD_ID (the last three for the ads; Google's ads
+SDK merges in a few of its own, such as the Privacy Sandbox's
+ACCESS_ADSERVICES_* and WAKE_LOCK). It uses Godot's Gradle build, which
+the ads plugin needs. Once per machine:
 
 1. Install the export templates for your Godot version (**Editor → Manage
-   Export Templates**).
+   Export Templates**), then the Android build template into the project
+   (**Project → Install Android Build Template**). The template lands in
+   `android/`, which is not checked in.
 2. Install the Android SDK (with build-tools and platform-tools; Android
-   Studio does this) and a JDK 17 or newer (Android Studio's own, in its
-   `jbr` folder, will do).
+   Studio does this) and a JDK **17 to 23**: Gradle 8.11, which the
+   template uses, doesn't run on Java 24 or newer, and the newest Android
+   Studio ships Java 25 in its `jbr` folder. A JDK 21 is a safe choice.
 3. In **Editor → Editor Settings → Export → Android**, set **Java SDK Path**
-   and **Android SDK Path**. Godot reads them from there only, not from
-   `JAVA_HOME`. It makes a debug keystore by itself.
+   (to that JDK) and **Android SDK Path**. Godot reads them from there only,
+   not from `JAVA_HOME`. It makes a debug keystore by itself.
 
-Then build a debug APK (about 32 MB) and install it on a phone with USB
-debugging on:
+Then build a debug APK (about 50 MB) and install it on a phone with USB
+debugging on (the first build downloads Gradle and the libraries, which
+takes a few minutes):
 
 ```bash
 godot --headless --path . --export-debug "Android" export/TinyCourier-debug.apk
 adb install -r export/TinyCourier-debug.apk
 ```
 
-A release build must be signed with your own key. Make one with `keytool`
-(it comes with the JDK) and keep it, and its passwords, out of the
-repository; then point Godot at it through the environment rather than the
-preset, so nothing secret is committed:
+A release build must be signed with your own upload key: Google Play signs
+the published game with its own key (Play App Signing), and the upload key
+proves each upload is yours. It was made once, with `keytool` (it comes
+with the JDK), as `~/keys/tinycourier.jks` with the alias `tinycourier`,
+valid until 2054. Keep it and its password out of the repository
+(`.gitignore` skips `*.jks` too), and back both up: every update must be
+signed with the same key, and replacing a lost one takes a request to
+Google.
 
 ```bash
 keytool -genkeypair -v -keystore ~/keys/tinycourier.jks -alias tinycourier -keyalg RSA -keysize 2048 -validity 10000
-export GODOT_ANDROID_KEYSTORE_RELEASE_PATH=~/keys/tinycourier.jks
-export GODOT_ANDROID_KEYSTORE_RELEASE_USER=tinycourier
-export GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD=...
+```
+
+Godot finds the key through the environment rather than the preset, so
+nothing secret is committed. The password is read without echoing it, so it
+stays out of the shell's history. In PowerShell:
+
+```powershell
+$env:GODOT_ANDROID_KEYSTORE_RELEASE_PATH = "$HOME\keys\tinycourier.jks"
+$env:GODOT_ANDROID_KEYSTORE_RELEASE_USER = "tinycourier"
+$env:GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD = [Net.NetworkCredential]::new("", (Read-Host -AsSecureString "Keystore password")).Password
 godot --headless --path . --export-release "Android" export/TinyCourier.apk
 ```
 
-Google Play wants an Android App Bundle (`.aab`) rather than an APK: for
-that, install the Android build template (**Project → Install Android Build
-Template**), turn on **Gradle Build → Use Gradle Build** and set the export
-format to AAB. Play also lists the game only for phones with Vulkan; the
-game itself falls back to OpenGL where Vulkan is missing.
+or in bash:
+
+```bash
+export GODOT_ANDROID_KEYSTORE_RELEASE_PATH=~/keys/tinycourier.jks
+export GODOT_ANDROID_KEYSTORE_RELEASE_USER=tinycourier
+read -rsp "Keystore password: " GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD; echo; export GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD
+godot --headless --path . --export-release "Android" export/TinyCourier.apk
+```
+
+The variables last only as long as that terminal.
+
+A release build shows Google's test ads until the game is live on Google
+Play; see [Ads](#ads) for switching to its own.
+
+Google Play wants an Android App Bundle (`.aab`) rather than an APK: set the
+preset's export format to AAB. Play also lists the game only for phones
+with Vulkan; the game itself falls back to OpenGL where Vulkan is missing.
 
 ### Other platforms
 
@@ -305,6 +337,19 @@ safe area. It saves `step9_*.png` screenshots:
 
 ```bash
 godot --audio-driver Dummy --path . --resolution 405x720 -s res://tools/test_ui.gd -- --out=docs/screenshots
+```
+
+`tools/test_ads.gd` checks where and when ads may show, with `Ads.Preview`
+standing in for AdMob: the switch, world 1 without ads, the hint video
+offer (Not now, back, a video closed early, one watched to the end), the
+level breaks (only as the finish card is left by Next or back, every 3 or 4
+levels, never on Replay, after a restart, after a finish with no star or
+within 4 minutes of another ad), the count surviving a restart of the game,
+no pause card under an ad, and the Ad privacy row in Settings. The other
+tests turn the ads off. It saves `ads_*.png` screenshots:
+
+```bash
+godot --audio-driver Dummy --path . --resolution 405x720 -s res://tools/test_ads.gd -- --out=docs/screenshots
 ```
 
 `tools/benchmark.gd` measures the quality presets; see
@@ -501,8 +546,10 @@ finish from wherever the player is. A hint shows the first step of that
 plan: a glowing arrow over where one tap should walk (as far as the plan goes
 before something happens, with a trail of dots), or over the slider or crank
 to work along with a see-through ghost of where the part should end up. A
-toast says what to do ("Drag the orange block to the outline."). Hints cost
-nothing; the plan is reused while the player follows it, and the search gives
+toast says what to do ("Drag the orange block to the outline."). Hints are
+free in world 1; from world 2 on, the first Hint in a level offers a short
+video that turns them on for the rest of it (see [Ads](#ads)). The plan is
+reused while the player follows it, and the search gives
 up past 150,000 states so a hint never hangs. Following the hints alone
 always earns three stars.
 
@@ -554,13 +601,99 @@ and the finish card's Levels button. Text is set in Nunito
 sound volumes, haptics, tilt-shift (the camera's soft focus) and the
 graphics quality (Low, Medium, High). `core/Settings.gd` keeps them in
 `user://settings.json`, written to a temporary file and then moved into
-place, and every change takes effect at once.
+place, and every change takes effect at once. Where the law gives the
+player a say over ads (the EEA, the UK and Switzerland, for instance), an
+**Ad privacy** row opens Google's privacy options; elsewhere it isn't there.
 
-The version number at the foot of the card has a hidden use: tap it five
-times quickly to bring up the performance readout (see below), and five
-more to put it away.
+The foot of the card has the version number and a link to the
+[privacy policy](PRIVACY.md). The version number has a hidden use: tap it
+five times quickly to bring up the performance readout (see below), and
+five more to put it away.
 
 <img src="docs/screenshots/step9_settings.png" width="240" alt="The settings card">
+
+## Ads
+
+The game shows Google AdMob ads, kept calm and rare:
+
+- **World 1 has none.** The ads don't even start there: no consent form,
+  no ads SDK, nothing loaded.
+- **Hint video** (rewarded), only when the player asks: from world 2 on,
+  the first Hint in a level opens a card, "Need a hint?", offering a short
+  video that turns hints on for the rest of that level (a small play mark
+  on Hint shows a video is needed). **Not now** or back closes it with no
+  video and no hint. A video closed early gives no hint; if none can play
+  (offline, nothing to show, no consent), the hint is simply free.
+- **Level break** (interstitial), from world 2 on, at most once every 3 or
+  4 levels finished (picked afresh each time), and only on the
+  level-complete card, as the player moves on from it with Next, Levels or
+  back. Never on Replay, never after a level that was restarted along the
+  way or finished without a star, never within 4 minutes of another ad, and
+  never mid-puzzle.
+- **No banners**, and ad content is limited to PG.
+
+`core/Ads.gd` holds these rules and **the one switch**, `Ads.enabled`: off,
+Google's consent form never shows, the ads SDK never starts, hints are free
+and no break plays. The tests turn it off, as does `--no-ads` on the
+command line; a "remove ads" purchase would turn it off too. The count
+towards the next break is kept in `user://ads.json`.
+
+On first reaching world 2 (after the splash, or on opening a world-2
+level), the game asks for consent with Google's User Messaging Platform
+form where the law requires it, then starts the Mobile Ads SDK, which loads
+one ad of each kind ahead of time. Settings then offers the privacy options
+where required (see [Settings](#settings)).
+
+**On Android** the ads come from a small Godot plugin, the `TinyCourierAds`
+singleton (`android-plugin/`, Kotlin, after the one in the developer's
+other game), which `addons/tiny_courier_ads/` adds to Android exports along
+with the Google Mobile Ads SDK 25.5.0, the UMP SDK 4.0.0 and the ad ids.
+Its built `.aar` is checked in; after changing the plugin, rebuild it with a
+JDK 17 to 23:
+
+```bash
+cd android-plugin && ./gradlew copyToAddon
+```
+
+**Ad ids.** Debug exports always use Google's test ids, and so do release
+exports until the game is live on Google Play. Then export with
+`TINY_COURIER_LIVE_ADS=1` for the game's own: the AdMob app
+`ca-app-pub-6111568882988372~2256360108` with its units "Hint video"
+(rewarded) and "Level break" (interstitial). Your own phones must still get
+test ads (tapping your own ads breaks AdMob's rules): put their hashed
+device ids, which the SDK prints to logcat, in `ADMOB_TEST_DEVICE_IDS`,
+comma-separated.
+
+```bash
+TINY_COURIER_LIVE_ADS=1 godot --headless --path . --export-release "Android" export/TinyCourier.aab
+```
+
+**Away from phones** there are no ads; `--ads-preview` puts a stand-in in
+their place (`Ads.Preview`), a plain "Test ad" card for each, so the
+placements can be tried on the desktop:
+
+```bash
+godot --path . -- --ads-preview
+```
+
+**Before publishing:**
+
+- The [privacy policy](PRIVACY.md) is linked from Settings at
+  `https://github.com/manpreetgugga/toolcourier/blob/main/PRIVACY.md`, so
+  it must be on `main`; give the same address in Play Console. Fill in
+  Play's Data safety form to match it (advertising ID, IP address and app
+  interactions, collected by the AdMob SDK for advertising, fraud
+  prevention and analytics; nothing shared by the developer). The game's
+  target audience in Play Console must be 13 and over to match it; a
+  younger audience needs AdMob's child-directed settings instead.
+- [`app-ads.txt`](app-ads.txt) must be served at the root of the developer
+  website listed in Play Console (for example
+  `https://<your-site>/app-ads.txt`); AdMob checks it there, not in the
+  app. It covers every app of the AdMob account, so one file is enough.
+- In AdMob, link the app to its Play listing once it is live; until then
+  AdMob limits serving for it.
+
+<img src="docs/screenshots/ads_hint_offer.png" width="240" alt="The hint video offer"> <img src="docs/screenshots/ads_hint_on.png" width="240" alt="Hints turned on"> <img src="docs/screenshots/ads_settings.png" width="240" alt="Settings with Ad privacy">
 
 ## Performance and quality
 
@@ -670,7 +803,7 @@ dust motes drifting in the light (`render/Weather.gd`).
 
 ```
 core/       grid, pathfinding, level loading and rules, solver, saved progress,
-            the level catalogue, settings and haptics
+            the level catalogue, settings, haptics and the ads' rules
 game/       the level scene that plays a level
 render/     palette, stage lighting, weather, effects, the build-up,
             procedural meshes and props
@@ -686,9 +819,14 @@ tools/      capture, benchmark, icon and sound generation, tests and
             validation scripts
 dev/        sandbox level, one test level per mechanism, ice and boards,
             the icon's island
+addons/     tiny_courier_ads: adds the ads plugin, its libraries and the ad
+            ids to Android exports
+android-plugin/
+            the ads plugin's Android source (Kotlin, built with Gradle)
 ```
 
 All art is generated procedurally in code (the app icon is rendered from
 the game), and all sound by `tools/make_audio.gd`; there are no external
 model, texture or audio files.
-The one outside asset is the Nunito font; see [CREDITS.md](CREDITS.md).
+The one outside asset is the Nunito font, and the Android build adds
+Google's ads libraries; see [CREDITS.md](CREDITS.md).

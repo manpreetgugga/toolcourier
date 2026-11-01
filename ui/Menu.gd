@@ -104,6 +104,8 @@ func _ready() -> void:
 	show_screen(Game.menu_screen if _screens.has(Game.menu_screen) else &"main", false)
 	if not Game.splash_done:
 		_play_splash(layer)
+	else:
+		Ads.start_for(next)
 
 
 func _notification(what: int) -> void:
@@ -233,7 +235,9 @@ func _play_splash(layer: CanvasLayer) -> void:
 	tween.chain().tween_callback(func() -> void:
 		Game.splash_done = true
 		_splash.queue_free()
-		_splash = null)
+		_splash = null
+		# Google's consent form, where needed, comes up here (from world 2 on).
+		Ads.start_for(LevelCatalog.next_to_play()))
 	AudioManager.play(&"pad_complete", -6.0)
 
 

@@ -1,18 +1,25 @@
 class_name SettingsCard
 extends Control
 ## The settings, as a card over a shaded screen: music and sound volumes,
-## haptics, the tilt-shift blur and the graphics quality, with the version
-## number at the foot. Each change goes to Settings at once (a volume slider
-## saves when let go), so the sound and picture follow while the card is up.
-## Sizes are in the 720 x 1280 base viewport.
+## haptics, the tilt-shift blur and the graphics quality, then Google's ad
+## privacy options where the law gives the player a say (see Ads), with the
+## version number and a link to the privacy policy at the foot. Each change
+## goes to Settings at once (a volume slider saves when let go), so the
+## sound and picture follow while the card is up. Sizes are in the 720 x
+## 1280 base viewport.
 
 signal closed
 
-const SIZE := Vector2(600.0, 840.0)
+## Without the ad privacy row, which adds a row's height.
+const SIZE := Vector2(600.0, 860.0)
 const ROW_TOP: float = 150.0
 const ROW_HEIGHT: float = 108.0
+const AD_ROW: int = 5
 
 var _card: Control
+var _ad_row: Array[Control] = []
+var _done: TouchButton
+var _foot: Array[Control] = []
 var _sliders: Dictionary = {}
 var _toggles: Dictionary = {}
 var _quality: _Segmented
@@ -38,11 +45,6 @@ func _ready() -> void:
 	_card.add_theme_stylebox_override(&"panel", Ui.card(Ui.CREAM, 48))
 	_card.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_card.set_anchors_preset(Control.PRESET_CENTER)
-	_card.offset_left = -SIZE.x * 0.5
-	_card.offset_right = SIZE.x * 0.5
-	_card.offset_top = -SIZE.y * 0.5
-	_card.offset_bottom = SIZE.y * 0.5
-	_card.pivot_offset = SIZE * 0.5
 	add_child(_card)
 	_card.add_child(_label("Settings", 52, HORIZONTAL_ALIGNMENT_CENTER, Rect2(0.0, 40.0, SIZE.x, 70.0)))
 
@@ -57,23 +59,42 @@ func _ready() -> void:
 	_quality.size = Vector2(330.0, 64.0)
 	_quality.picked.connect(func(index: int) -> void: Settings.set_value(&"quality", index))
 	_card.add_child(_quality)
+	var ad_label: Label = _row_label(AD_ROW, "Ad privacy")
+	_card.add_child(ad_label)
+	var ad_options := TouchButton.new(Vector2(200.0, 68.0))
+	ad_options.name = "AdPrivacy"
+	ad_options.text = "Options"
+	ad_options.font_size = 28
+	ad_options.color = Ui.CREAM.darkened(0.06)
+	ad_options.position = Vector2(SIZE.x - 48.0 - 200.0, _row_y(AD_ROW) + 2.0)
+	ad_options.pressed.connect(func() -> void: Ads.show_privacy_options())
+	_card.add_child(ad_options)
+	_ad_row.assign([ad_label, ad_options])
 
-	var done := TouchButton.new(Vector2(260.0, 96.0))
-	done.name = "Done"
-	done.text = "Done"
-	done.font_size = 36
-	done.color = Ui.ACCENT
-	done.position = Vector2((SIZE.x - 260.0) * 0.5, SIZE.y - 130.0)
-	done.pressed.connect(close)
-	_card.add_child(done)
+	_done = TouchButton.new(Vector2(260.0, 96.0))
+	_done.name = "Done"
+	_done.text = "Done"
+	_done.font_size = 36
+	_done.color = Ui.ACCENT
+	_done.pressed.connect(close)
+	_card.add_child(_done)
 
 	var version: Label = _label("Version %s" % ProjectSettings.get_setting("application/config/version"), 20,
-		HORIZONTAL_ALIGNMENT_CENTER, Rect2(SIZE.x * 0.5 - 120.0, SIZE.y - 32.0, 240.0, 28.0))
+		HORIZONTAL_ALIGNMENT_LEFT, Rect2(56.0, 0.0, 240.0, 28.0))
 	version.name = "Version"
 	version.label_settings.font_color = Ui.MUTED
 	version.mouse_filter = Control.MOUSE_FILTER_STOP
 	version.gui_input.connect(_on_version_input)
 	_card.add_child(version)
+	var policy: Label = _label("Privacy policy", 20, HORIZONTAL_ALIGNMENT_RIGHT, Rect2(SIZE.x - 56.0 - 240.0, 0.0, 240.0, 28.0))
+	policy.name = "Policy"
+	policy.label_settings.font_color = Ui.ACCENT.darkened(0.2)
+	policy.mouse_filter = Control.MOUSE_FILTER_STOP
+	policy.gui_input.connect(_on_policy_input)
+	_card.add_child(policy)
+	_foot.assign([version, policy])
+	_layout()
+	Ads.events.changed.connect(_layout)
 
 
 ## Shows the card with the current settings.
@@ -84,6 +105,7 @@ func open() -> void:
 	for key: StringName in _toggles:
 		(_toggles[key] as _Toggle).set_on(Settings.get_value(key), false)
 	_quality.set_index(Settings.quality)
+	_layout()
 	visible = true
 	modulate.a = 0.0
 	_card.scale = Vector2(0.9, 0.9)
@@ -128,6 +150,29 @@ func _add_toggle(row: int, text: String, key: StringName) -> void:
 			Haptics.snap())
 	_card.add_child(toggle)
 	_toggles[key] = toggle
+
+
+## Shows the ad privacy row only where it is needed, and sizes the card to
+## fit.
+func _layout() -> void:
+	var with_ads: bool = Ads.privacy_options_required()
+	for control: Control in _ad_row:
+		control.visible = with_ads
+	var height: float = SIZE.y + (ROW_HEIGHT if with_ads else 0.0)
+	_card.offset_left = -SIZE.x * 0.5
+	_card.offset_right = SIZE.x * 0.5
+	_card.offset_top = -height * 0.5
+	_card.offset_bottom = height * 0.5
+	_card.pivot_offset = Vector2(SIZE.x, height) * 0.5
+	_done.position = Vector2((SIZE.x - 260.0) * 0.5, height - 150.0)
+	for control: Control in _foot:
+		control.position.y = height - 44.0
+
+
+func _on_policy_input(event: InputEvent) -> void:
+	if event is InputEventScreenTouch and not event.is_pressed():
+		AudioManager.play(&"ui_click")
+		OS.shell_open(Ads.PRIVACY_URL)
 
 
 ## Five quick taps on the version number turn the performance readout on or

@@ -15,7 +15,8 @@ extends Node3D
 ##
 ## With [member intro] the diorama builds itself up when it opens and takes
 ## itself down before it is left (see Assembly); input waits meanwhile. A
-## playable level plays its world's music; the back button pauses (see Hud).
+## playable level plays its world's music, starts the ads from world 2 on
+## and tells them of each finish (see Ads); the back button pauses (see Hud).
 
 signal moves_changed(moves: int)
 signal level_completed(moves: int, stars: int)
@@ -89,6 +90,9 @@ var _bounds: AABB
 var _leaving: bool = false
 ## A slider let go of after a drag: its move makes no sliding sound.
 var _dragged: String = ""
+## Restarted since it opened (Replay too): a finish after that is never
+## followed by a level break.
+var _restarted: bool = false
 
 
 func _ready() -> void:
@@ -175,6 +179,7 @@ func _ready() -> void:
 	_prepare_assembly()
 	if interactive and show_hud:
 		AudioManager.play_music(LevelCatalog.world_of(level_path))
+		Ads.start_for(level_path)
 	if intro:
 		_build_up()
 
@@ -182,7 +187,8 @@ func _ready() -> void:
 func _notification(what: int) -> void:
 	if what in [NOTIFICATION_APPLICATION_PAUSED, NOTIFICATION_APPLICATION_FOCUS_OUT, NOTIFICATION_WM_CLOSE_REQUEST]:
 		keep_progress()
-	if what == NOTIFICATION_APPLICATION_PAUSED and hud:
+	# An ad on screen pauses the app too; the game carries on after it.
+	if what == NOTIFICATION_APPLICATION_PAUSED and hud and not Ads.is_showing():
 		hud.pause.call_deferred()
 	if what == NOTIFICATION_WM_GO_BACK_REQUEST and interactive and not Game.is_swapping():
 		go_back()
@@ -234,6 +240,7 @@ func restart() -> bool:
 	else:
 		_record()
 	state.restore(_initial)
+	_restarted = true
 	_sync()
 	return true
 
@@ -513,6 +520,7 @@ func _play(events: Array[Dictionary]) -> void:
 				_celebrate()
 				var stars: int = data.stars_for(state.moves)
 				finished_best = Progress.record(_id(), state.moves, stars)
+				Ads.level_finished(level_path, stars > 0 and not _restarted)
 				level_completed.emit(state.moves, stars)
 			LevelState.Event.MECHANISM:
 				var mechanism: Mechanism = state.mechanisms[event["id"]]

@@ -42,3 +42,14 @@ Built with [Godot Engine](https://godotengine.org) 4.7, MIT licence,
 © Juan Linietsky, Ariel Manzur and the Godot Engine contributors. Godot's
 own third-party licences are listed in its `COPYRIGHT.txt` and shown by
 `Engine.get_license_info()`.
+
+## Ads libraries
+
+The Android build adds Google's ads libraries, which Gradle downloads from
+Google's Maven repository when the game is exported (they are not in the
+repository): the **Google Mobile Ads SDK** (`play-services-ads` 25.5.0) and
+the **User Messaging Platform SDK** (`user-messaging-platform` 4.0.0), with
+their own dependencies. They are © Google LLC and used under the
+[Google Mobile Ads SDK terms](https://developers.google.com/admob/terms)
+and Google's AdMob policies. The plugin that drives them
+(`android-plugin/`) is part of this game.

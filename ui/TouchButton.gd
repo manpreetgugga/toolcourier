@@ -21,6 +21,13 @@ var radius: int = -1
 ## A ring around the button (none when transparent).
 var outline: Color = Color.TRANSPARENT
 var font_size: int = 34
+## Icon of a small mark at the top right (none when empty), like the play
+## mark on Hint while a hint needs a video first.
+var badge: StringName = &"":
+	set(value):
+		if value != badge:
+			badge = value
+			queue_redraw()
 var disabled: bool = false:
 	set(value):
 		if value != disabled:
@@ -80,6 +87,12 @@ func _draw() -> void:
 	if not caption.is_empty():
 		draw_string(Ui.bold_font(), Vector2(-20.0, size.y + 34.0), caption, HORIZONTAL_ALIGNMENT_CENTER,
 			size.x + 40.0, 22, Ui.MUTED if not disabled else Color(Ui.MUTED, 0.25))
+	if badge != &"":
+		var radius: float = minf(size.x, size.y) * 0.2
+		var spot := Vector2(size.x - radius * 0.7, radius * 0.7)
+		draw_circle(spot + Vector2(0.0, 2.0), radius + 1.0, Ui.SHADOW, true, -1.0, true)
+		draw_circle(spot, radius, ink if not disabled else Color(ink, 0.35), true, -1.0, true)
+		Ui.draw_icon(self, badge, spot, radius * 2.0, Ui.CREAM)
 
 
 func _update_look() -> void:

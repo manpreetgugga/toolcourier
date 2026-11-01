@@ -8,3 +8,8 @@ export/
 *.keystore
 *.jks
 .DS_Store
+
+# The ads plugin's Gradle build (its .aar is checked in, in addons/)
+/android-plugin/build/
+/android-plugin/.gradle/
+/android-plugin/local.properties

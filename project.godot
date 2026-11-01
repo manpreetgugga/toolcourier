@@ -41,6 +41,10 @@ sky_tint={
 "value": Vector3(0.274, 0.479, 0.73)
 }
 
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/tiny_courier_ads/plugin.cfg")
+
 [input_devices]
 
 pointing/emulate_touch_from_mouse=true

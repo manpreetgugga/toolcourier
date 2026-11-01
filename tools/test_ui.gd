@@ -27,6 +27,8 @@ var _failures: int = 0
 func _initialize() -> void:
 	Progress.use_file("user://test_ui_progress.json")
 	Settings.use_file(SETTINGS)
+	# No ads: Hint gives hints straight away, and no level break plays.
+	Ads.enabled = false
 	for arg: String in OS.get_cmdline_user_args():
 		if arg.begins_with("--out="):
 			_out_dir = arg.trim_prefix("--out=")

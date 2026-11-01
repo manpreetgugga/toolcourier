@@ -22,6 +22,8 @@ func _initialize() -> void:
 	Settings.use_file("user://test_settings.json")
 	# Keep the player's own save out of it.
 	Progress.use_file("user://test_progress.json")
+	# No ads: Hint gives hints straight away, and no level break plays.
+	Ads.enabled = false
 	for arg: String in OS.get_cmdline_user_args():
 		if arg.begins_with("--out="):
 			_out_dir = arg.trim_prefix("--out=")

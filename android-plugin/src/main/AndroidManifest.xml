@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application>
+        <!-- Registers the plugin with Godot: Engine.get_singleton("TinyCourierAds"). -->
+        <meta-data
+            android:name="org.godotengine.plugin.v2.TinyCourierAds"
+            android:value="com.manpreetgugga.tinycourier.ads.TinyCourierAds" />
+    </application>
+</manifest>

@@ -49,6 +49,8 @@ func _initialize() -> void:
 		paths = LevelCatalog.all()
 	# Keep the player's own save out of it.
 	Progress.use_file(SAVE)
+	# No ads: Hint gives hints straight away, and no level break plays.
+	Ads.enabled = false
 	_check(not sheet or paths.size() == 50, "the catalog has 50 levels (%d)" % paths.size())
 	for path: String in paths:
 		_check_solution(path)
