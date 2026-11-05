@@ -1,0 +1,49 @@
+// The Android side of the daily reminders: a Godot plugin (the
+// TinyCourierReminders singleton) built as an .aar into
+// addons/tiny_courier_reminders/bin, where the export plugin picks it up.
+// Same Android Gradle plugin and Kotlin as android-plugin/ (the ads), and,
+// like it, Gradle 8.11 needs a JDK 17 to 23.
+//
+//   ./gradlew copyToAddon
+
+plugins {
+    id 'com.android.library' version '8.6.1'
+    id 'org.jetbrains.kotlin.android' version '2.3.21'
+}
+
+android {
+    namespace 'com.manpreetgugga.tinycourier.reminders'
+    compileSdk 36
+
+    defaultConfig {
+        minSdk 24
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = '17'
+        // The game's build brings its own Kotlin library (2.1 or newer, for
+        // the ads), so keep to that API.
+        apiVersion = '2.1'
+    }
+}
+
+dependencies {
+    // The game's build supplies both: Godot, and the Analytics library of
+    // the Firebase plugin (addons/tiny_courier_firebase), which counts the
+    // reminders shown and opened (see Stats.kt). Everything else is
+    // Android's own.
+    compileOnly 'org.godotengine:godot:4.7.1.stable'
+    compileOnly 'com.google.firebase:firebase-analytics:24.0.0'
+}
+
+tasks.register('copyToAddon', Copy) {
+    dependsOn 'assembleRelease'
+    from layout.buildDirectory.file('outputs/aar/tiny-courier-reminders-release.aar')
+    into '../addons/tiny_courier_reminders/bin'
+    rename { 'tiny-courier-reminders.aar' }
+}

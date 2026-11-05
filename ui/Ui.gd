@@ -15,6 +15,23 @@ const SHADOW := Color(0.227, 0.208, 0.314, 0.22)
 ## Nunito (SIL Open Font License, fonts/OFL.txt), a variable font with
 ## weights from 200 to 1000.
 const FONT: FontFile = preload("res://fonts/Nunito.ttf")
+const PICTURE_SHADER: String = """
+shader_type canvas_item;
+// Rounds the corners of a picture (a world's or a level's diorama) and greys
+// out a locked one.
+uniform float radius = 0.16;
+uniform float grey = 0.0;
+void fragment() {
+	vec4 c = texture(TEXTURE, UV);
+	float l = dot(c.rgb, vec3(0.3, 0.59, 0.11));
+	c.rgb = mix(c.rgb, vec3(l) * 0.85 + 0.12, grey);
+	vec2 q = abs(UV - 0.5) - (0.5 - radius);
+	float d = length(max(q, 0.0)) - radius;
+	float aa = fwidth(d);
+	c.a *= 1.0 - smoothstep(-aa, aa, d);
+	COLOR = c * COLOR;
+}
+"""
 
 ## Pretend screen insets (left, top, right, bottom, in base-viewport units)
 ## for trying out a notch away from a phone; phones report their own.
@@ -22,6 +39,7 @@ static var simulated_insets := Vector4.ZERO
 
 ## Weight -> FontVariation.
 static var _weights: Dictionary = {}
+static var _picture_shader: Shader
 
 
 ## The part of [param viewport]'s canvas clear of notches, rounded corners
@@ -89,9 +107,27 @@ static func label_settings(size: int, color: Color = INK) -> LabelSettings:
 	return settings
 
 
+## A material for a picture with rounded corners (see [constant
+## PICTURE_SHADER]); its "grey" parameter greys the picture out.
+static func picture_material() -> ShaderMaterial:
+	if _picture_shader == null:
+		_picture_shader = Shader.new()
+		_picture_shader.code = PICTURE_SHADER
+	var material := ShaderMaterial.new()
+	material.shader = _picture_shader
+	return material
+
+
+## Screen pixels to a unit of [param viewport]'s canvas (1 to 2), to draw a
+## 3D picture sharp without drawing more than a phone needs.
+static func pixel_scale(viewport: Viewport) -> float:
+	var pixels: Vector2 = Vector2((viewport as Window).size) if viewport is Window else Vector2((viewport as SubViewport).size)
+	return clampf(pixels.x / maxf(viewport.get_visible_rect().size.x, 1.0), 1.0, 2.0)
+
+
 ## Draws icon [param icon_name] ("undo", "restart", "hint", "pause", "play",
-## "home", "levels", "settings", "back" or "lock") on [param canvas],
-## centred on [param center], about [param size] across.
+## "home", "levels", "settings", "back", "close" or "lock") on [param
+## canvas], centred on [param center], about [param size] across.
 static func draw_icon(canvas: CanvasItem, icon_name: StringName, center: Vector2, size: float, color: Color) -> void:
 	var width: float = size * 0.12
 	match icon_name:
@@ -135,6 +171,10 @@ static func draw_icon(canvas: CanvasItem, icon_name: StringName, center: Vector2
 			var tip: Vector2 = center + Vector2(-size * 0.11, 0.0)
 			_bar(canvas, tip, tip + Vector2(size * 0.22, -size * 0.22), width * 1.1, color)
 			_bar(canvas, tip, tip + Vector2(size * 0.22, size * 0.22), width * 1.1, color)
+		&"close":
+			for side: float in [-1.0, 1.0]:
+				_bar(canvas, center + Vector2(-size, side * size) * 0.18, center + Vector2(size, -side * size) * 0.18,
+					width * 1.1, color)
 		&"lock":
 			var hub: Vector2 = center + Vector2(0.0, -size * 0.08)
 			canvas.draw_arc(hub, size * 0.15, PI, TAU, 16, color, size * 0.09, true)

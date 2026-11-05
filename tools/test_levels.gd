@@ -21,8 +21,8 @@ const SPEED: float = 3.0
 ## The part of a frame a contact sheet thumbnail shows (the HUD is hidden),
 ## and the thumbnail size.
 const CROP := Rect2i(0, 190, 720, 900)
-const THUMB := Vector2i(256, 320)
-const COLUMNS: int = 5
+const THUMB := Vector2i(192, 240)
+const COLUMNS: int = 10
 const SHEET := "step8_levels.png"
 
 var _viewport: SubViewport
@@ -51,7 +51,7 @@ func _initialize() -> void:
 	Progress.use_file(SAVE)
 	# No ads: Hint gives hints straight away, and no level break plays.
 	Ads.enabled = false
-	_check(not sheet or paths.size() == 50, "the catalog has 50 levels (%d)" % paths.size())
+	_check(not sheet or paths.size() == 520, "the catalog has 520 levels (%d)" % paths.size())
 	for path: String in paths:
 		_check_solution(path)
 	_viewport = SubViewport.new()
@@ -177,7 +177,7 @@ func _tap_cell(cell: Vector3i) -> bool:
 	for spot: Vector2 in [Vector2(0.5, 0.5), Vector2(0.3, 0.3), Vector2(0.7, 0.7), Vector2(0.3, 0.7), Vector2(0.7, 0.3)]:
 		var at: Vector2 = _screen(Vector3(block) + Vector3(spot.x, height, spot.y))
 		var hit: Dictionary = _level.pick(at)
-		if not hit.is_empty() and _level.pathfinder.target_for_block(hit["cell"]) == cell:
+		if not hit.is_empty() and _level.pathfinder.target_for_block(hit["cell"]) == cell and not _level.taps_courier(at):
 			_touch(at, true)
 			_touch(at, false)
 			return true
@@ -204,7 +204,8 @@ func _drag_slider(id: String, to: int) -> bool:
 	return _level.state.values[id] == to
 
 
-## Lays the thumbnails out by world, five to a row, each with its name.
+## Lays the thumbnails out by world, ten to a row, each with its name (the
+## sheet stays within the 16384 px a texture may have on most GPUs).
 func _contact_sheet() -> void:
 	var sheet := SubViewport.new()
 	sheet.transparent_bg = false
@@ -243,7 +244,7 @@ func _contact_sheet() -> void:
 		cell.add_child(picture)
 		var caption := Label.new()
 		caption.text = "%d-%s  %s · %d" % [world, path.get_file().get_basename().trim_prefix("level_"), data.name, data.stars[0]]
-		caption.label_settings = Ui.label_settings(17, Ui.INK)
+		caption.label_settings = Ui.label_settings(15, Ui.INK)
 		caption.custom_minimum_size.x = THUMB.x
 		caption.clip_text = true
 		cell.add_child(caption)

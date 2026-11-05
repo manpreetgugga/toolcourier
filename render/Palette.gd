@@ -16,13 +16,14 @@ const BLOCK: Dictionary = {
 	&"wood": Color("#DDA066"),
 	&"brick": Color("#E8845E"),
 	&"water": Color("#6EC6EA"),
-	# The seasons: autumn grass, winter snow, slate and ice, and autumn's dry
-	# boards.
+	# The seasons: autumn grass, winter snow, slate and ice, autumn's dry
+	# boards and summer's springs.
 	&"autumn_grass": Color("#DDA24A"),
 	&"snow": Color("#F1F4F9"),
 	&"slate": Color("#8E98B0"),
 	&"ice": Color("#B9E1F0"),
 	&"boards": Color("#A9764E"),
+	&"spring": Color("#EE6C4D"),
 }
 
 ## The single accent used by every interactive part.
@@ -40,8 +41,9 @@ const PACKAGE: Dictionary = {
 ## "sky_top" is the top of the screen, "sky_horizon" the bottom of the screen;
 ## "sky_ground" is only used for the lower hemisphere of the ambient/radiance
 ## map. "clouds" is the coverage of the cloud sea below the diorama. An
-## optional "season" (autumn or winter; summer when missing) recolours the
-## trees and bushes and adds falling leaves or snow.
+## optional "season" (spring, autumn or winter; summer when missing) recolours
+## the trees and bushes and adds falling petals, leaves or snow; an optional
+## "weather" puts something else in the air instead (see [method weather]).
 const THEMES: Dictionary = {
 	&"meadow": {
 		"sky_top": Color("#C9B8E8"),
@@ -105,6 +107,32 @@ const THEMES: Dictionary = {
 		"ambient_energy": 0.5,
 		"shadow_blur": 3.0,
 	},
+	&"blossom_valley": {
+		"season": &"spring",
+		"sky_top": Color("#A6D9CB"),
+		"sky_horizon": Color("#FDE7E4"),
+		"sky_ground": Color("#E4D3D2"),
+		"clouds": 0.55,
+		"cloud_color": Color("#FFF6F6"),
+		"sun_color": Color("#FFEEDF"),
+		"sun_energy": 1.5,
+		"ambient_color": Color("#B4D3CF"),
+		"ambient_energy": 0.45,
+		"shadow_blur": 3.0,
+	},
+	&"sunflower_fields": {
+		"weather": &"seeds",
+		"sky_top": Color("#86C3EC"),
+		"sky_horizon": Color("#FFEBB5"),
+		"sky_ground": Color("#E9DBAE"),
+		"clouds": 0.5,
+		"cloud_color": Color("#FFFFFF"),
+		"sun_color": Color("#FFE4AC"),
+		"sun_energy": 1.65,
+		"ambient_color": Color("#A7C8E8"),
+		"ambient_energy": 0.44,
+		"shadow_blur": 3.0,
+	},
 }
 
 const DEFAULT_THEME: StringName = &"meadow"
@@ -118,6 +146,13 @@ static func theme(theme_name: StringName) -> Dictionary:
 	return THEMES.get(theme_name, THEMES[DEFAULT_THEME])
 
 
-## summer, autumn or winter.
+## spring, summer, autumn or winter.
 static func season(theme_name: StringName) -> StringName:
 	return theme(theme_name).get("season", &"summer")
+
+
+## What drifts in the air (see Weather): the season's petals, leaves, snow
+## or summer motes, or the theme's own "weather" (seeds: dandelion clocks
+## floating on the breeze).
+static func weather(theme_name: StringName) -> StringName:
+	return theme(theme_name).get("weather", season(theme_name))

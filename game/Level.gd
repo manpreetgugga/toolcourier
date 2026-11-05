@@ -7,16 +7,18 @@ extends Node3D
 ## progress when the app is paused or closed.
 ##
 ## Drag to orbit, pinch or scroll to zoom, tap a spot to walk there (a slide
-## over ice runs to its end before the courier can turn). Drag a slider
+## over ice or a bounce off a spring runs to its end before the courier can
+## turn). Drag a slider
 ## along its axis; tap a crank to turn its rotator. A white ripple
 ## marks the destination; a red ripple and a puzzled tilt mean there is no
-## way. A double tap on empty space resets the view. Input waits while
-## mechanisms move.
+## way. Tapping the courier while it stands still plays an emote. A double
+## tap on empty space resets the view. Input waits while mechanisms move.
 ##
 ## With [member intro] the diorama builds itself up when it opens and takes
 ## itself down before it is left (see Assembly); input waits meanwhile. A
-## playable level plays its world's music, starts the ads from world 2 on
-## and tells them of each finish (see Ads); the back button pauses (see Hud).
+## playable level plays its world's music, starts the ads (from world 1's
+## level 21 on) and tells them of each finish (see Ads); the back button
+## pauses (see Hud).
 
 signal moves_changed(moves: int)
 signal level_completed(moves: int, stars: int)
@@ -25,6 +27,8 @@ signal assembled
 
 ## Undo steps kept (oldest are dropped).
 const MAX_UNDO: int = 300
+## The sound of each of the courier's emotes (see Courier.emote).
+const EMOTE_SOUNDS: Dictionary = {&"wave": &"pickup", &"hop": &"whoosh", &"chatter": &"drop", &"wiggle": &"tap"}
 
 @export_file("*.json") var level_path: String = "res://levels/world_1/level_1.json"
 ## Degrees per second of idle orbit; 0 keeps the camera still.
@@ -66,11 +70,13 @@ var _mechanism_nodes: Dictionary = {}
 var _busy: int = 0
 ## Where the courier stood before its current step (a step from a belt is a ride).
 var _last_cell: Vector3i
-## The way the courier came onto the ice it is on (zero off ice or once it
-## has stopped): carrying on that way is a ride.
+## The way the courier came onto the ice or the spring it is on (zero off
+## them or once it has stopped): carrying on that way is a ride.
 var _glide: Vector3i
 var _boards: DryBoards
-## The slider being dragged: id, start, range, axis_px, press, riders.
+var _springs: Springs
+## The slider being dragged: id, start, range, the track it slides along (a
+## point and the axis), where along it the press was, and its riders.
 var _grab: Dictionary = {}
 ## The state at the start, and snapshots taken before each player action
 ## (a walk, a slider drag, a crank turn, a restart), oldest first.
@@ -93,9 +99,18 @@ var _dragged: String = ""
 ## Restarted since it opened (Replay too): a finish after that is never
 ## followed by a level break.
 var _restarted: bool = false
+## The go at the level under way, for the statistics (see Analytics): the
+## seconds played in it (not paused), and its hints, undos and restarts.
+## Not counting before it starts or once it has ended.
+var _counting: bool = false
+var _seconds: float = 0.0
+var _hints: int = 0
+var _undos: int = 0
+var _restarts: int = 0
 
 
 func _ready() -> void:
+	set_process(false)
 	data = LevelLoader.load_file(level_path)
 	if not data.is_valid():
 		for problem: String in data.errors:
@@ -130,6 +145,8 @@ func _ready() -> void:
 	_boards = DryBoards.new(data.cells)
 	add_child(_boards)
 	_boards.set_fallen(state.fallen)
+	_springs = Springs.new(data.cells)
+	add_child(_springs)
 
 	for cell: Vector3i in state.pads:
 		var pad := Pad.create(state.pads[cell])
@@ -161,7 +178,7 @@ func _ready() -> void:
 	camera.make_current()
 	camera.set_process_unhandled_input(interactive)
 	_bounds = _view_bounds()
-	var weather: CPUParticles3D = Weather.create(Palette.season(data.palette), _bounds)
+	var weather: CPUParticles3D = Weather.create(Palette.weather(data.palette), _bounds)
 	if weather:
 		add_child(weather)
 	camera.distance_changed.connect(func(distance: float) -> void: _stage.fit_to_bounds(_bounds, distance))
@@ -180,6 +197,10 @@ func _ready() -> void:
 	if interactive and show_hud:
 		AudioManager.play_music(LevelCatalog.world_of(level_path))
 		Ads.start_for(level_path)
+		Analytics.start()
+		Reminders.start()
+		Analytics.screen("level")
+		_begin_go(not saved.is_empty(), false)
 	if intro:
 		_build_up()
 
@@ -196,11 +217,27 @@ func _notification(what: int) -> void:
 
 func _exit_tree() -> void:
 	keep_progress()
+	_end_go(false, 0)
+
+
+func _process(delta: float) -> void:
+	_seconds += delta
 
 
 ## Block under a screen position (see [method Grid.raycast]).
 func pick(screen_position: Vector2) -> Dictionary:
 	return grid.raycast(camera.project_ray_origin(screen_position), camera.project_ray_normal(screen_position))
+
+
+## Whether a tap at [param screen_position] lands on the courier, in front
+## of any block there.
+func taps_courier(screen_position: Vector2) -> bool:
+	var along: float = courier.ray_distance(camera.project_ray_origin(screen_position),
+		camera.project_ray_normal(screen_position))
+	if along < 0.0:
+		return false
+	var hit: Dictionary = pick(screen_position)
+	return hit.is_empty() or hit["distance"] > along - Courier.TAP_RADIUS
 
 
 ## Whether input is waiting for something to finish.
@@ -224,6 +261,7 @@ func undo() -> bool:
 		return false
 	state.restore(_history.pop_back())
 	_sync()
+	_undos += 1
 	return true
 
 
@@ -235,13 +273,18 @@ func can_restart() -> bool:
 func restart() -> bool:
 	if not can_restart():
 		return false
-	if state.completed:
+	var replay: bool = state.completed
+	if replay:
 		_history.clear()
 	else:
 		_record()
 	state.restore(_initial)
 	_restarted = true
 	_sync()
+	if replay:
+		_begin_go(false, true)
+	else:
+		_restarts += 1
 	return true
 
 
@@ -260,6 +303,7 @@ func show_hint() -> String:
 	if plan.is_empty():
 		courier.puzzled()
 		return "Too tricky to work out from here." if _solver.gave_up else "No way forward from here: undo or restart."
+	_hints += 1
 	var first: Dictionary = plan[0]
 	_hinted = {"action": first["action"], "id": first.get("id", ""), "to": first.get("to", 0)}
 	match first["action"]:
@@ -381,8 +425,37 @@ func _id() -> String:
 	return Progress.level_id(level_path)
 
 
+## A go at the level starts (for the statistics): it was opened, [param
+## resumed] when a game in progress was picked up, or played again after a
+## finish ([param replay]).
+func _begin_go(resumed: bool, replay: bool) -> void:
+	_counting = true
+	_seconds = 0.0
+	_hints = 0
+	_undos = 0
+	_restarts = 0
+	set_process(true)
+	Analytics.level_started(level_path, resumed, replay)
+
+
+## The go at the level ends: finished with [param stars], or left.
+func _end_go(finished: bool, stars: int) -> void:
+	if not _counting:
+		return
+	_counting = false
+	set_process(false)
+	Analytics.level_ended(level_path, {"success": finished, "moves": state.moves, "stars": stars,
+		"seconds": roundi(_seconds), "hints": _hints, "undos": _undos, "restarts": _restarts})
+
+
 func _on_tapped(screen_position: Vector2) -> void:
-	if state.completed or _busy > 0 or not interactive:
+	if _busy > 0 or not interactive:
+		return
+	if not courier.is_moving() and taps_courier(screen_position):
+		Haptics.tap()
+		AudioManager.play(EMOTE_SOUNDS[courier.emote(camera.global_position)])
+		return
+	if state.completed:
 		return
 	var hit: Dictionary = pick(screen_position)
 	if hit.is_empty():
@@ -453,7 +526,11 @@ func _on_courier_step(cell: Vector3i) -> void:
 		AudioManager.play(&"step")
 	if grid.get_block(cell - Vector3i.UP) == Grid.BOARDS:
 		AudioManager.play(&"creak")
-	_glide = heading if pathfinder.is_ice(cell) else Vector3i.ZERO
+	if pathfinder.is_spring(cell):
+		var throws: bool = pathfinder.bounce(cell, heading) != cell
+		_springs.press(cell - Vector3i.UP, throws)
+		AudioManager.play(&"bounce", 0.0 if throws else -8.0)
+	_glide = heading if pathfinder.is_ice(cell) or pathfinder.is_spring(cell) else Vector3i.ZERO
 	_last_cell = cell
 	var events: Array[Dictionary] = state.enter(cell, ride)
 	# Moving parts change the ground; let the player re-plan from here.
@@ -468,17 +545,13 @@ func _on_courier_arrived(_cell: Vector3i) -> void:
 	_continue_ride()
 
 
-## The cells the courier still has to slide through after the one it is
-## stepping into (empty unless it is sliding on from there).
+## The cells the courier still has to slide or bounce through after the one
+## it is stepping into (empty unless ice or a spring carries it on from there).
 func _slide_rest() -> Array[Vector3i]:
-	var rest: Array[Vector3i] = []
+	if not courier.is_moving():
+		return []
 	var origin: Vector3i = courier.path_origin()
-	var came: Vector3i = Pathfinder.heading(courier.cell, origin)
-	var onward: Vector3i = origin + came
-	if courier.is_moving() and pathfinder.is_ice(origin) and pathfinder.is_walkable(onward) \
-			and pathfinder.is_ride_step(origin, onward, came):
-		rest = pathfinder.glide(onward, came)
-	return rest
+	return pathfinder.glide(origin, Pathfinder.heading(courier.cell, origin)).slice(1)
 
 
 ## A courier left standing on a running belt is carried on.
@@ -520,7 +593,9 @@ func _play(events: Array[Dictionary]) -> void:
 				_celebrate()
 				var stars: int = data.stars_for(state.moves)
 				finished_best = Progress.record(_id(), state.moves, stars)
+				_end_go(true, stars)
 				Ads.level_finished(level_path, stars > 0 and not _restarted)
+				Reminders.level_finished()
 				level_completed.emit(state.moves, stars)
 			LevelState.Event.MECHANISM:
 				var mechanism: Mechanism = state.mechanisms[event["id"]]
@@ -632,18 +707,32 @@ func _try_grab(screen_position: Vector2) -> bool:
 	_busy += 1
 	Haptics.tap()
 	AudioManager.play(&"slide", -6.0)
+	# The slider follows the finger along its track, in perspective.
+	var track: Vector3 = centre + Vector3.UP * 0.5
 	_grab = {
-		"id": id, "start": state.values[id], "range": state.slide_range(id),
-		"axis_px": axis_px, "press": screen_position, "riders": riders,
+		"id": id, "start": state.values[id], "range": state.slide_range(id), "track": track,
+		"axis": Vector3(mechanism.axis), "press": _along_track(screen_position, track, Vector3(mechanism.axis)),
+		"riders": riders,
 	}
 	return true
+
+
+## How far along the line through [param origin] in direction [param axis]
+## (a unit vector) the point under [param screen_position] lies.
+func _along_track(screen_position: Vector2, origin: Vector3, axis: Vector3) -> float:
+	var from: Vector3 = camera.project_ray_origin(screen_position)
+	var ray: Vector3 = camera.project_ray_normal(screen_position)
+	var facing: float = axis.dot(ray)
+	var offset: Vector3 = origin - from
+	# Closest point between the track and the ray; _try_grab refuses tracks
+	# seen nearly end-on, so the two are never parallel.
+	return (facing * ray.dot(offset) - axis.dot(offset)) / maxf(1.0 - facing * facing, 0.0001)
 
 
 func _on_grab_moved(screen_position: Vector2) -> void:
 	if _grab.is_empty():
 		return
-	var axis_px: Vector2 = _grab["axis_px"]
-	var cells: float = (screen_position - (_grab["press"] as Vector2)).dot(axis_px) / axis_px.length_squared()
+	var cells: float = _along_track(screen_position, _grab["track"], _grab["axis"]) - (_grab["press"] as float)
 	var reach: Vector2i = _grab["range"]
 	(_mechanism_nodes[_grab["id"]] as MechanismBlocks).set_pose(clampf(_grab["start"] + cells, reach.x, reach.y))
 
@@ -716,6 +805,7 @@ func _sync() -> void:
 	_last_cell = state.courier
 	_glide = Vector3i.ZERO
 	_boards.set_fallen(state.fallen)
+	_springs.settle()
 	_rebuild_parcels()
 	_exit.set_open(state.all_delivered(), false)
 	for id: String in _mechanism_nodes:
@@ -898,6 +988,9 @@ func _prepare_assembly() -> void:
 	var boards: Dictionary = _boards.standing()
 	for cell: Vector3i in boards:
 		_assembly.add_node(boards[cell], _delays.get(cell, 0.0))
+	var springs: Dictionary = _springs.all()
+	for cell: Vector3i in springs:
+		_assembly.add_node(springs[cell], _delays.get(cell, 0.0))
 	for cell: Vector3i in _pads:
 		_assembly.add_node(_pads[cell], _delays.get(cell, 0.0))
 	for cell: Vector3i in _packages:

@@ -1,0 +1,73 @@
+{
+	"name": "Rime",
+	"world": 5,
+	"palette": "frost_peaks",
+	"blocks": [
+		[3, -5, 2, "slate"],
+
+		[2, -4, 2, "slate"], [3, -4, 2, "slate"],
+		[3, -4, 3, "slate"],
+
+		[1, -3, 0, "slate"],
+		[1, -3, 1, "slate"], [2, -3, 1, "slate"], [3, -3, 1, "slate"],
+		[2, -3, 2, "slate"], [3, -3, 2, "slate"], [4, -3, 2, "slate"],
+		[2, -3, 3, "slate"], [3, -3, 3, "slate"], [4, -3, 3, "slate"],
+		[1, -3, 4, "slate"], [3, -3, 4, "slate"],
+
+		[1, -2, -1, "slate"],
+		[0, -2, 0, "slate"], [1, -2, 0, "slate"], [2, -2, 0, "slate"], [3, -2, 0, "slate"], [4, -2, 0, "slate"],
+		[1, -2, 1, "slate"], [2, -2, 1, "slate"], [3, -2, 1, "slate"], [4, -2, 1, "slate"],
+		[1, -2, 2, "slate"], [2, -2, 2, "slate"], [3, -2, 2, "slate"], [4, -2, 2, "slate"],
+		[1, -2, 3, "slate"], [2, -2, 3, "slate"], [3, -2, 3, "slate"], [4, -2, 3, "slate"], [5, -2, 3, "slate"],
+		[0, -2, 4, "slate"], [1, -2, 4, "slate"], [2, -2, 4, "slate"], [3, -2, 4, "slate"], [4, -2, 4, "slate"],
+		[1, -2, 5, "slate"], [3, -2, 5, "slate"],
+
+		[0, -1, -1, "slate"], [1, -1, -1, "slate"], [2, -1, -1, "slate"], [3, -1, -1, "slate"], [4, -1, -1, "slate"], [5, -1, -1, "slate"],
+		[0, -1, 0, "slate"], [1, -1, 0, "slate"], [2, -1, 0, "slate"], [3, -1, 0, "slate"], [4, -1, 0, "slate"], [5, -1, 0, "slate"],
+		[0, -1, 1, "slate"], [1, -1, 1, "slate"], [2, -1, 1, "slate"], [3, -1, 1, "slate"], [4, -1, 1, "slate"], [5, -1, 1, "slate"],
+		[0, -1, 2, "slate"], [1, -1, 2, "slate"], [2, -1, 2, "slate"], [3, -1, 2, "slate"], [4, -1, 2, "slate"], [5, -1, 2, "slate"],
+		[0, -1, 3, "slate"], [1, -1, 3, "slate"], [2, -1, 3, "slate"], [3, -1, 3, "slate"], [4, -1, 3, "slate"], [5, -1, 3, "slate"],
+		[0, -1, 4, "slate"], [1, -1, 4, "slate"], [2, -1, 4, "slate"], [3, -1, 4, "slate"], [4, -1, 4, "slate"], [5, -1, 4, "slate"],
+		[0, -1, 5, "slate"], [1, -1, 5, "slate"], [2, -1, 5, "slate"], [3, -1, 5, "water"], [4, -1, 5, "slate"], [5, -1, 5, "slate"],
+
+		[0, 0, -1, "slate"], [1, 0, -1, "slate"], [2, 0, -1, "slate"], [3, 0, -1, "slate"], [4, 0, -1, "slate"], [5, 0, -1, "slate"],
+		[0, 0, 0, "snow"], [1, 0, 0, "snow"], [2, 0, 0, "ice"], [3, 0, 0, "ice"], [4, 0, 0, "ice"], [5, 0, 0, "ice"],
+		[0, 0, 1, "snow"], [1, 0, 1, "ice"], [2, 0, 1, "ice"], [3, 0, 1, "ice"], [4, 0, 1, "ice"], [5, 0, 1, "ice"],
+		[0, 0, 2, "ice"], [1, 0, 2, "ice"], [2, 0, 2, "ice"], [3, 0, 2, "ice"], [4, 0, 2, "ice"], [5, 0, 2, "ice"],
+		[0, 0, 3, "ice"], [1, 0, 3, "snow"], [2, 0, 3, "ice"], [3, 0, 3, "snow"], [4, 0, 3, "ice"], [5, 0, 3, "ice"],
+		[0, 0, 4, "ice"], [1, 0, 4, "ice"], [2, 0, 4, "slate"], [3, 0, 4, "ice"], [4, 0, 4, "ice"], [5, 0, 4, "ice"],
+		[0, 0, 5, "snow"], [1, 0, 5, "ice"], [2, 0, 5, "ice"], [4, 0, 5, "snow"], [5, 0, 5, "snow"],
+
+		[0, 1, -1, "slate"], [1, 1, -1, "slate"], [2, 1, -1, "slate"], [3, 1, -1, "slate"], [4, 1, -1, "slate"], [5, 1, -1, "slate"],
+		[2, 1, 4, "slate"],
+
+		[0, 2, -1, "slate"], [1, 2, -1, "slate"], [2, 2, -1, "slate"], [3, 2, -1, "slate"], [4, 2, -1, "slate"],
+
+		[3, 3, -1, "slate"], [4, 3, -1, "slate"],
+
+		[4, 4, -1, "slate"]
+	],
+	"props": [
+		[5, 1, 4, "snowman", 77, true],
+		[0, 1, 0, "tree_tall", 73, true],
+		[2, 1, 0, "tree_tall", 19, true],
+		[1, 3, -1, "tree_tall", 78, true],
+		[5, 2, -1, "tree_tall", 18, true]
+	],
+	"mechanisms": [
+		{ "id": "stone1", "type": "slider", "cells": [[3, 1, 0]], "axis": "z", "min": 0, "max": 2, "start": 2 },
+		{ "id": "bell2", "type": "button", "pos": [0, 1, 5], "targets": [] },
+		{ "id": "gate3", "type": "gate", "cells": [[1, 1, 1]], "buttons": ["bell2"] }
+	],
+	"packages": [
+		{ "pos": [0, 1, 1], "color": "yellow" },
+		{ "pos": [5, 1, 5], "color": "blue" }
+	],
+	"pads": [
+		{ "pos": [3, 1, 3], "color": "yellow" },
+		{ "pos": [1, 1, 3], "color": "blue" }
+	],
+	"start": [0, 1, 2],
+	"exit": [4, 1, 5],
+	"stars": [17, 21, 27]
+}

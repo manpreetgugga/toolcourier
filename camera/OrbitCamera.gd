@@ -1,7 +1,8 @@
 class_name OrbitCamera
 extends Camera3D
 ## Orbits a diorama. One-finger drag rotates it (yaw free, pitch clamped) with
-## inertia, pinch or mouse wheel zooms, and presses that stay within
+## inertia, pinch or mouse wheel zooms, moving two fingers together pans the
+## view (kept over the diorama), and presses that stay within
 ## [constant TAP_SLOP_PX] are reported as taps.
 ##
 ## Call [method frame_bounds] after building a level. The distance is fitted
@@ -24,8 +25,8 @@ const DOUBLE_TAP_MSEC: int = 300
 const DOUBLE_TAP_SLOP_PX: float = 40.0
 const PITCH_MIN: float = 15.0
 const PITCH_MAX: float = 70.0
-const ZOOM_MIN: float = 0.7
-const ZOOM_MAX: float = 1.4
+const ZOOM_MIN: float = 0.5
+const ZOOM_MAX: float = 2.5
 const WHEEL_ZOOM_STEP: float = 1.1
 ## Degrees turned by a drag across the shorter screen axis.
 const YAW_PER_SCREEN: float = 270.0
@@ -56,10 +57,13 @@ var grab_filter: Callable
 var yaw: float
 var pitch: float
 var zoom: float = 1.0
+## Offset of the orbit centre from the middle of the diorama.
+var pan := Vector3.ZERO
 
 var _target_yaw: float
 var _target_pitch: float
 var _target_zoom: float = 1.0
+var _target_pan := Vector3.ZERO
 ## Fling velocity in degrees per second (x = yaw, y = pitch).
 var _velocity := Vector2.ZERO
 var _bounds := AABB(Vector3.ZERO, Vector3.ONE)
@@ -76,6 +80,7 @@ var _gesture_fingers: int = 0
 var _last_drag_usec: int = 0
 var _pinch_start_distance: float = 1.0
 var _pinch_start_zoom: float = 1.0
+var _pinch_midpoint := Vector2.ZERO
 var _last_tap_msec: int = -100000
 var _last_tap_position := Vector2.ZERO
 
@@ -104,15 +109,17 @@ func frame_bounds(bounds: AABB, reset: bool = true) -> void:
 		yaw = default_yaw
 		pitch = default_pitch
 		zoom = 1.0
+		pan = Vector3.ZERO
 		_target_yaw = yaw
 		_target_pitch = pitch
 		_target_zoom = zoom
+		_target_pan = pan
 	_fit_pitch = -1000.0
 	_reported_distance = 0.0
 	_update_transform()
 
 
-## Eases back to the default angle and zoom.
+## Eases back to the default angle and zoom, centred again.
 func reset_view() -> void:
 	_stop_motion()
 	var to_yaw: float = _target_yaw + wrapf(default_yaw - _target_yaw, -180.0, 180.0)
@@ -121,6 +128,7 @@ func reset_view() -> void:
 	_reset_tween.tween_property(self, "_target_yaw", to_yaw, RESET_DURATION)
 	_reset_tween.tween_property(self, "_target_pitch", default_pitch, RESET_DURATION)
 	_reset_tween.tween_property(self, "_target_zoom", 1.0, RESET_DURATION)
+	_reset_tween.tween_property(self, "_target_pan", Vector3.ZERO, RESET_DURATION)
 
 
 ## Current distance from the orbit centre.
@@ -152,6 +160,7 @@ func _process(delta: float) -> void:
 	yaw = lerpf(yaw, _target_yaw, follow)
 	pitch = lerpf(pitch, _target_pitch, follow)
 	zoom = lerpf(zoom, _target_zoom, follow)
+	pan = pan.lerp(_target_pan, follow)
 	_update_transform()
 
 
@@ -247,12 +256,30 @@ func _begin_pinch() -> void:
 	var points: Array = _touches.values()
 	_pinch_start_distance = maxf((points[0] as Vector2).distance_to(points[1]), 1.0)
 	_pinch_start_zoom = _target_zoom
+	_pinch_midpoint = ((points[0] as Vector2) + (points[1] as Vector2)) * 0.5
 
 
 func _update_pinch() -> void:
 	var points: Array = _touches.values()
 	var spread: float = (points[0] as Vector2).distance_to(points[1])
 	_set_zoom(_pinch_start_zoom * spread / _pinch_start_distance)
+	var midpoint: Vector2 = ((points[0] as Vector2) + (points[1] as Vector2)) * 0.5
+	_pan_by(midpoint - _pinch_midpoint)
+	_pinch_midpoint = midpoint
+
+
+## Slides the view over the ground so the diorama follows the fingers'
+## midpoint by [param screen_delta] pixels, keeping the orbit centre over the
+## diorama.
+func _pan_by(screen_delta: Vector2) -> void:
+	var view: Basis = _orbit_basis(_target_yaw, _target_pitch)
+	# World units per pixel at the orbit centre (the FOV spans the short side);
+	# the ground is foreshortened along the view by the pitch.
+	var scale: float = 2.0 * get_distance() * tan(deg_to_rad(fov) * 0.5) / _short_side()
+	var away := Vector3(-view.z.x, 0.0, -view.z.z).normalized()
+	var moved: Vector3 = _target_pan - view.x * screen_delta.x * scale 		+ away * screen_delta.y * scale / maxf(sin(deg_to_rad(_target_pitch)), 0.4)
+	var half: Vector3 = _bounds.size * 0.5
+	_target_pan = Vector3(clampf(moved.x, -half.x, half.x), 0.0, clampf(moved.z, -half.z, half.z))
 
 
 func _register_tap(at: Vector2) -> void:
@@ -289,7 +316,7 @@ func _is_resetting() -> bool:
 func _update_transform() -> void:
 	var view: Basis = _orbit_basis(yaw, pitch)
 	var distance: float = get_distance()
-	transform = Transform3D(view, _bounds.get_center() + view.z * distance)
+	transform = Transform3D(view, _bounds.get_center() + pan + view.z * distance)
 	if absf(distance - _reported_distance) > _reported_distance * 0.02:
 		_reported_distance = distance
 		distance_changed.emit(distance)

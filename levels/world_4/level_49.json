@@ -1,0 +1,67 @@
+{
+	"name": "Tractor Shed",
+	"world": 4,
+	"palette": "orchard",
+	"blocks": [
+		[6, -3, 1, "dark_stone"],
+
+		[6, -2, 0, "dark_stone"],
+		[6, -2, 1, "dark_stone"],
+		[0, -2, 5, "dark_stone"], [6, -2, 5, "dark_stone"],
+
+		[0, -1, -1, "dark_stone"], [1, -1, -1, "dark_stone"], [2, -1, -1, "dark_stone"], [4, -1, -1, "dark_stone"], [6, -1, -1, "dark_stone"], [7, -1, -1, "dark_stone"],
+		[0, -1, 0, "dark_stone"], [1, -1, 0, "dark_stone"], [3, -1, 0, "dark_stone"], [4, -1, 0, "dark_stone"], [6, -1, 0, "dark_stone"], [7, -1, 0, "dark_stone"],
+		[0, -1, 1, "dark_stone"], [1, -1, 1, "dark_stone"], [3, -1, 1, "dark_stone"], [4, -1, 1, "dark_stone"], [6, -1, 1, "dark_stone"], [7, -1, 1, "dark_stone"],
+		[0, -1, 2, "dark_stone"], [1, -1, 2, "dark_stone"], [3, -1, 2, "dark_stone"], [4, -1, 2, "dark_stone"], [6, -1, 2, "dark_stone"], [7, -1, 2, "dark_stone"],
+		[0, -1, 4, "dark_stone"], [1, -1, 4, "dark_stone"], [3, -1, 4, "dark_stone"], [4, -1, 4, "dark_stone"], [6, -1, 4, "dark_stone"], [7, -1, 4, "dark_stone"],
+		[0, -1, 5, "dark_stone"], [1, -1, 5, "dark_stone"], [3, -1, 5, "dark_stone"], [4, -1, 5, "dark_stone"], [6, -1, 5, "dark_stone"], [7, -1, 5, "dark_stone"],
+		[0, -1, 6, "dark_stone"], [1, -1, 6, "dark_stone"], [3, -1, 6, "dark_stone"], [4, -1, 6, "dark_stone"], [6, -1, 6, "dark_stone"], [7, -1, 6, "dark_stone"],
+		[0, -1, 8, "dark_stone"], [1, -1, 8, "dark_stone"], [3, -1, 8, "dark_stone"], [4, -1, 8, "dark_stone"],
+
+		[0, 0, -1, "dirt"], [1, 0, -1, "dirt"], [2, 0, -1, "dirt"], [4, 0, -1, "dirt"], [6, 0, -1, "dirt"], [7, 0, -1, "dirt"],
+		[0, 0, 0, "stone"], [1, 0, 0, "stone"], [3, 0, 0, "autumn_grass"], [4, 0, 0, "autumn_grass"], [6, 0, 0, "autumn_grass"], [7, 0, 0, "autumn_grass"],
+		[0, 0, 1, "stone"], [1, 0, 1, "stone"], [3, 0, 1, "autumn_grass"], [4, 0, 1, "autumn_grass"], [5, 0, 1, "boards"], [6, 0, 1, "autumn_grass"], [7, 0, 1, "autumn_grass"],
+		[0, 0, 2, "stone"], [1, 0, 2, "stone"], [2, 0, 2, "stone"], [3, 0, 2, "autumn_grass"], [4, 0, 2, "autumn_grass"], [6, 0, 2, "autumn_grass"], [7, 0, 2, "autumn_grass"],
+		[4, 0, 3, "boards"], [7, 0, 3, "boards"],
+		[0, 0, 4, "autumn_grass"], [1, 0, 4, "autumn_grass"], [2, 0, 4, "wood"], [3, 0, 4, "stone"], [4, 0, 4, "stone"], [6, 0, 4, "autumn_grass"], [7, 0, 4, "autumn_grass"],
+		[0, 0, 5, "autumn_grass"], [1, 0, 5, "autumn_grass"], [3, 0, 5, "stone"], [4, 0, 5, "stone"], [6, 0, 5, "autumn_grass"], [7, 0, 5, "autumn_grass"],
+		[0, 0, 6, "autumn_grass"], [1, 0, 6, "autumn_grass"], [3, 0, 6, "stone"], [4, 0, 6, "stone"], [5, 0, 6, "boards"], [6, 0, 6, "autumn_grass"], [7, 0, 6, "autumn_grass"],
+		[1, 0, 7, "boards"], [3, 0, 7, "boards"],
+		[0, 0, 8, "autumn_grass"], [1, 0, 8, "autumn_grass"], [2, 0, 8, "boards"], [3, 0, 8, "autumn_grass"], [4, 0, 8, "autumn_grass"],
+
+		[0, 1, -1, "dirt"], [1, 1, -1, "dirt"], [2, 1, -1, "dirt"], [4, 1, -1, "dirt"], [6, 1, -1, "dirt"], [7, 1, -1, "dirt"],
+		[0, 1, 0, "wood"], [1, 1, 0, "wood"],
+		[0, 1, 1, "wood"], [1, 1, 1, "wood"],
+		[0, 1, 2, "wood"], [1, 1, 2, "wood"],
+
+		[0, 2, -1, "dirt"], [1, 2, -1, "dirt"], [2, 2, -1, "autumn_grass"], [4, 2, -1, "autumn_grass"], [6, 2, -1, "autumn_grass"], [7, 2, -1, "dirt"],
+
+		[0, 3, -1, "autumn_grass"], [1, 3, -1, "autumn_grass"], [7, 3, -1, "autumn_grass"],
+
+		[2, 1, 2, "stairs_wood", "-x"]
+	],
+	"props": [
+		[0, 4, -1, "pumpkin", 76, true],
+		[3, 1, 0, "bush", 84, true],
+		[7, 1, 1, "bush", 89, true],
+		[7, 1, 0, "pumpkin", 70, true]
+	],
+	"mechanisms": [
+		{ "id": "lift1", "type": "elevator", "cells": [[1, 0, 3]], "travel": 1 },
+		{ "id": "bell3", "type": "button", "pos": [7, 1, 6], "targets": [] },
+		{ "id": "gate2", "type": "gate", "cells": [[2, 1, 4]], "buttons": ["bell3"] }
+	],
+	"packages": [
+		{ "pos": [7, 1, 4], "color": "yellow" },
+		{ "pos": [3, 1, 2], "color": "green" },
+		{ "pos": [3, 1, 8], "color": "blue" }
+	],
+	"pads": [
+		{ "pos": [6, 1, 6], "color": "yellow" },
+		{ "pos": [3, 1, 4], "color": "green" },
+		{ "pos": [4, 1, 4], "color": "blue" }
+	],
+	"start": [6, 1, 1],
+	"exit": [7, 1, 2],
+	"stars": [36, 45, 58]
+}

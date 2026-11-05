@@ -4,10 +4,14 @@ extends Node
 ## main menu over a live, slowly turning diorama of the next level to play,
 ## which builds itself up as the splash fades: Play, Levels and Settings.
 ## Levels opens the world select, each world a little turning diorama on a
-## card, and each world opens its grid of levels with the stars earned. A
-## level opens once the one before it is finished, a world with its first
-## level. Each screen plays its world's music. Sizes are in the 720 x 1280
-## base viewport, kept to the screen's safe area.
+## card, and each world opens its map: a trail winding up through floating
+## islands, with a badge for each level and the stars earned (see LevelMap).
+## A badge opens the level's card, with a diorama of it and Play (see
+## LevelPeek). A level opens once the one before it is finished, a world
+## with its first level. Each screen plays its world's music. Sizes are in
+## the 720 x 1280 base viewport, kept to the screen's safe area. Where the
+## law asks for it, the main menu first asks once whether the game may send
+## statistics and crash reports (see StatisticsCard and Analytics).
 ##
 ## Keys for the desktop: Escape goes back (Android's back button too).
 
@@ -20,24 +24,6 @@ const SPLASH_FADE: float = 0.5
 const WORLD_CARD := Vector2(648.0, 196.0)
 const WORLD_GAP: float = 16.0
 const PREVIEW: float = 168.0
-const LEVEL_CARD := Vector2(312.0, 168.0)
-const LEVEL_GAP := Vector2(24.0, 18.0)
-const PREVIEW_SHADER: String = """
-shader_type canvas_item;
-// Rounds the corners of a world preview and greys out a locked world.
-uniform float radius = 0.16;
-uniform float grey = 0.0;
-void fragment() {
-	vec4 c = texture(TEXTURE, UV);
-	float l = dot(c.rgb, vec3(0.3, 0.59, 0.11));
-	c.rgb = mix(c.rgb, vec3(l) * 0.85 + 0.12, grey);
-	vec2 q = abs(UV - 0.5) - (0.5 - radius);
-	float d = length(max(q, 0.0)) - radius;
-	float aa = fwidth(d);
-	c.a *= 1.0 - smoothstep(-aa, aa, d);
-	COLOR = c * COLOR;
-}
-"""
 
 ## The diorama behind the main screen.
 var backdrop: Level
@@ -47,6 +33,7 @@ var _world: int = 1
 var _screens: Dictionary = {}
 var _sky: _Sky
 var _settings: SettingsCard
+var _statistics: StatisticsCard
 var _splash: Control
 var _play_caption: Label
 var _total: Label
@@ -54,7 +41,8 @@ var _world_cards: Dictionary = {}
 var _previews: Array[SubViewport] = []
 var _levels_title: Label
 var _levels_stars: Label
-var _level_grid: Control
+var _map: LevelMap
+var _peek: LevelPeek
 var _leaving: bool = false
 
 
@@ -98,14 +86,23 @@ func _ready() -> void:
 	_screens[&"main"] = _build_main(safe, next)
 	_screens[&"worlds"] = _build_worlds(safe)
 	_screens[&"levels"] = _build_levels(safe)
+	_peek = LevelPeek.new()
+	_peek.play_pressed.connect(play)
+	_peek.closed.connect(func() -> void: _map.frozen = false)
+	root.add_child(_peek)
 	_settings = SettingsCard.new()
 	root.add_child(_settings)
+	_statistics = StatisticsCard.new()
+	root.add_child(_statistics)
+	Analytics.start()
+	Reminders.start()
 
 	show_screen(Game.menu_screen if _screens.has(Game.menu_screen) else &"main", false)
 	if not Game.splash_done:
 		_play_splash(layer)
 	else:
 		Ads.start_for(next)
+		_ask_statistics()
 
 
 func _notification(what: int) -> void:
@@ -125,16 +122,18 @@ func screen() -> StringName:
 	return _screen
 
 
-## The world the level grid shows.
+## The world the level map shows.
 func world() -> int:
 	return _world
 
 
-## Shows [param name] ("main", "worlds" or "levels"; the grid shows
-## [method world]).
+## Shows [param name] ("main", "worlds" or "levels"; the map shows [method
+## world]).
 func show_screen(screen_name: StringName, animate: bool = true) -> void:
+	_peek.close()
 	var old: Control = _screens.get(_screen)
 	_screen = screen_name
+	Analytics.screen({&"main": "menu", &"worlds": "worlds", &"levels": "map"}.get(screen_name, str(screen_name)))
 	var shown: Control = _screens[screen_name]
 	match screen_name:
 		&"worlds":
@@ -166,7 +165,7 @@ func show_screen(screen_name: StringName, animate: bool = true) -> void:
 		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 
 
-## Opens the level grid of world [param world_number].
+## Opens the map of world [param world_number].
 func open_world(world_number: int) -> void:
 	_world = world_number
 	show_screen(&"levels")
@@ -189,19 +188,31 @@ func play(path: String) -> void:
 		Game.open_level(path)
 
 
-## The back button (or Escape): closes the settings, goes up a screen, and
-## from the main screen closes the game.
+## The back button (or Escape): answers the statistics question with a no,
+## closes the settings or a level's card, goes up a screen, and from the
+## main screen closes the game.
 func go_back() -> void:
 	if _leaving:
 		return
-	if _settings.visible:
+	if _statistics.is_asking():
+		_statistics.answer(false)
+	elif _settings.visible:
 		_settings.close()
+	elif _peek.is_open():
+		_peek.close()
 	elif _screen == &"levels":
 		show_screen(&"worlds")
 	elif _screen == &"worlds":
 		show_screen(&"main")
 	else:
 		get_tree().quit()
+
+
+## Asks whether the game may send statistics and crash reports, where the
+## player must say yes first and hasn't been asked.
+func _ask_statistics() -> void:
+	if Analytics.needs_consent():
+		_statistics.open()
 
 
 func _play_splash(layer: CanvasLayer) -> void:
@@ -236,8 +247,10 @@ func _play_splash(layer: CanvasLayer) -> void:
 		Game.splash_done = true
 		_splash.queue_free()
 		_splash = null
-		# Google's consent form, where needed, comes up here (from world 2 on).
-		Ads.start_for(LevelCatalog.next_to_play()))
+		# Google's consent form, where needed, comes up here (from world 1's
+		# level 21 on), and so does the statistics question.
+		Ads.start_for(LevelCatalog.next_to_play())
+		_ask_statistics())
 	AudioManager.play(&"pad_complete", -6.0)
 
 
@@ -324,11 +337,7 @@ func _build_worlds(parent: Control) -> Control:
 		picture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		picture.stretch_mode = TextureRect.STRETCH_SCALE
 		picture.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		var shader := Shader.new()
-		shader.code = PREVIEW_SHADER
-		var material := ShaderMaterial.new()
-		material.shader = shader
-		picture.material = material
+		picture.material = Ui.picture_material()
 		card.add_child(picture)
 		var x: float = PREVIEW + 40.0
 		var width: float = WORLD_CARD.x - x - 24.0
@@ -353,24 +362,49 @@ func _build_worlds(parent: Control) -> Control:
 		note.size = Vector2(width, 32.0)
 		card.add_child(note)
 		_world_cards[number] = {"card": card, "picture": picture, "glyph": glyph, "stars": stars, "note": note}
+	# The cards shrink together when they stand taller than the screen, as
+	# seven do on a 16:9 phone.
+	var height: float = worlds.size() * (WORLD_CARD.y + WORLD_GAP) - WORLD_GAP
+	var fit := func() -> void:
+		list.scale = Vector2.ONE * clampf((screen_root.size.y - list.offset_top - WORLD_GAP) / height, 0.5, 1.0)
+	screen_root.resized.connect(fit)
+	fit.call()
 	return screen_root
 
 
 func _build_levels(parent: Control) -> Control:
 	var screen_root := _screen_root(parent, "Levels")
-	_levels_title = _header(screen_root, "", show_screen.bind(&"worlds"))
-	_levels_stars = _label("", 26, Ui.MUTED, HORIZONTAL_ALIGNMENT_CENTER)
-	_levels_stars.set_anchors_preset(Control.PRESET_TOP_WIDE)
-	_levels_stars.offset_top = 102.0
-	_levels_stars.offset_bottom = 140.0
-	screen_root.add_child(_levels_stars)
-	_level_grid = Control.new()
-	_level_grid.name = "Grid"
-	_level_grid.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_level_grid.set_anchors_preset(Control.PRESET_CENTER_TOP)
-	_level_grid.offset_top = 164.0
-	screen_root.add_child(_level_grid)
+	_map = LevelMap.new()
+	_map.level_chosen.connect(_open_peek)
+	_map.world_chosen.connect(open_world)
+	screen_root.add_child(_map)
+	# The world's name and stars, on a card floating over the map.
+	var banner := Panel.new()
+	banner.name = "Banner"
+	banner.add_theme_stylebox_override(&"panel", Ui.card(Ui.CREAM, 40))
+	banner.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	banner.offset_left = -220.0
+	banner.offset_right = 220.0
+	banner.offset_top = 22.0
+	banner.offset_bottom = 134.0
+	screen_root.add_child(banner)
+	_levels_title = _label("", 46, Ui.INK, HORIZONTAL_ALIGNMENT_CENTER)
+	_levels_title.position = Vector2(0.0, 8.0)
+	_levels_title.size = Vector2(440.0, 60.0)
+	banner.add_child(_levels_title)
+	_levels_stars = _label("", 24, Ui.MUTED, HORIZONTAL_ALIGNMENT_CENTER)
+	_levels_stars.position = Vector2(0.0, 64.0)
+	_levels_stars.size = Vector2(440.0, 36.0)
+	banner.add_child(_levels_stars)
+	var back: TouchButton = _back_button(screen_root, show_screen.bind(&"worlds"))
+	_map.overlays.assign([back, banner])
 	return screen_root
+
+
+## Opens the card of the level at [param path] over the map.
+func _open_peek(path: String) -> void:
+	_map.frozen = true
+	_peek.open(path)
 
 
 ## Brings the world cards up to date, making the turning previews the
@@ -402,7 +436,7 @@ func _make_preview(picture: TextureRect, path: String) -> Texture2D:
 	var viewport := SubViewport.new()
 	viewport.name = "View"
 	viewport.own_world_3d = true
-	viewport.size = Vector2i.ONE * roundi(PREVIEW * _pixel_scale())
+	viewport.size = Vector2i.ONE * roundi(PREVIEW * Ui.pixel_scale(get_viewport()))
 	viewport.msaa_3d = get_viewport().msaa_3d
 	viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	picture.add_child(viewport)
@@ -416,52 +450,12 @@ func _make_preview(picture: TextureRect, path: String) -> Texture2D:
 	return viewport.get_texture()
 
 
-## Fills the level grid for [member _world].
+## Lays out the level map for [member _world].
 func _fill_levels() -> void:
-	for child: Node in _level_grid.get_children():
-		child.queue_free()
 	_levels_title.text = LevelCatalog.world_name(_world)
 	var stars: Vector2i = LevelCatalog.world_stars(_world)
 	_levels_stars.text = "World %d  ·  %d / %d stars" % [_world, stars.x, stars.y]
-	var next: String = LevelCatalog.next_to_play()
-	var paths: Array[String] = LevelCatalog.levels(_world)
-	var columns: int = 2
-	var width: float = LEVEL_CARD.x * columns + LEVEL_GAP.x * (columns - 1)
-	for i in paths.size():
-		var path: String = paths[i]
-		var open: bool = LevelCatalog.is_unlocked(path)
-		var best: Dictionary = Progress.best(Progress.level_id(path))
-		var card := TouchButton.new(LEVEL_CARD)
-		card.name = "Level_%d" % (i + 1)
-		card.radius = 36
-		card.color = Ui.CREAM if open else Ui.CREAM.darkened(0.08)
-		card.disabled = not open
-		if path == next and open:
-			card.outline = Ui.ACCENT
-		card.position = Vector2(-width * 0.5 + (i % columns) * (LEVEL_CARD.x + LEVEL_GAP.x),
-			floorf(float(i) / columns) * (LEVEL_CARD.y + LEVEL_GAP.y))
-		card.pressed.connect(play.bind(path))
-		_level_grid.add_child(card)
-		var number := _label(str(i + 1), 64, Ui.INK if open else Ui.MUTED, HORIZONTAL_ALIGNMENT_LEFT)
-		number.position = Vector2(26.0, 12.0)
-		number.size = Vector2(120.0, 84.0)
-		card.add_child(number)
-		var name_label := _label(LevelLoader.load_file(path).name, 24, Ui.INK if open else Ui.MUTED, HORIZONTAL_ALIGNMENT_LEFT)
-		name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-		name_label.clip_text = true
-		name_label.position = Vector2(26.0, 104.0)
-		name_label.size = Vector2(LEVEL_CARD.x - 52.0, 40.0)
-		card.add_child(name_label)
-		if open:
-			var row := StarRow.new(20.0, 5.0)
-			row.position = Vector2(LEVEL_CARD.x - 26.0 - row.size.x, 36.0)
-			row.set_lit(int(best.get("stars", 0)), false)
-			card.add_child(row)
-		else:
-			var lock := _Glyph.new(&"lock", Ui.MUTED)
-			lock.position = Vector2(LEVEL_CARD.x - 26.0 - 56.0, 22.0)
-			lock.size = Vector2(56.0, 56.0)
-			card.add_child(lock)
+	_map.show_world(_world)
 
 
 ## "World 1 · Level 3 · First Steps"
@@ -493,18 +487,24 @@ func _screen_root(parent: Control, screen_name: String) -> Control:
 
 ## A back button and a title along the top. Returns the title.
 func _header(screen_root: Control, text: String, back: Callable) -> Label:
-	var button := TouchButton.new(Vector2(96.0, 96.0))
-	button.name = "Back"
-	button.icon = &"back"
-	button.position = Vector2(MARGIN - 8.0, 22.0)
-	button.pressed.connect(back)
-	screen_root.add_child(button)
+	_back_button(screen_root, back)
 	var title := _label(text, 56, Ui.INK, HORIZONTAL_ALIGNMENT_CENTER)
 	title.set_anchors_preset(Control.PRESET_TOP_WIDE)
 	title.offset_top = 26.0
 	title.offset_bottom = 104.0
 	screen_root.add_child(title)
 	return title
+
+
+## A back button at the top left, calling [param back].
+func _back_button(screen_root: Control, back: Callable) -> TouchButton:
+	var button := TouchButton.new(Vector2(96.0, 96.0))
+	button.name = "Back"
+	button.icon = &"back"
+	button.position = Vector2(MARGIN - 8.0, 22.0)
+	button.pressed.connect(back)
+	screen_root.add_child(button)
+	return button
 
 
 func _round_button(parent: Control, icon_name: StringName, caption: String, center: Vector2) -> TouchButton:
@@ -515,12 +515,6 @@ func _round_button(parent: Control, icon_name: StringName, caption: String, cent
 	button.position = center - Vector2(56.0, 0.0)
 	parent.add_child(button)
 	return button
-
-
-func _pixel_scale() -> float:
-	var viewport: Viewport = get_viewport()
-	var pixels: Vector2 = Vector2((viewport as Window).size) if viewport is Window else Vector2((viewport as SubViewport).size)
-	return clampf(pixels.x / maxf(viewport.get_visible_rect().size.x, 1.0), 1.0, 2.0)
 
 
 static func _label(text: String, font_size: int, color: Color, align: HorizontalAlignment) -> Label:

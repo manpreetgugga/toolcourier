@@ -1,0 +1,101 @@
+// The Android side of the statistics and crash reports: a Godot plugin (the
+// TinyCourierFirebase singleton) built as an .aar into
+// addons/tiny_courier_firebase/bin, where the export plugin picks it up.
+// Same Android Gradle plugin and Kotlin as android-plugin/ (the ads), and,
+// like it, Gradle 8.11 needs a JDK 17 to 23.
+//
+// The game's Firebase settings come from google-services.json in this folder
+// (Firebase console, Project settings, the Tiny Courier Android app). They
+// go into the .aar as the string resources Firebase reads at startup, the
+// ones Google's own Gradle plugin would write into the game, which Godot's
+// build can't take. Neither the file nor the .aar is checked in.
+//
+//   ./gradlew copyToAddon
+
+import groovy.json.JsonSlurper
+
+plugins {
+    id 'com.android.library' version '8.6.1'
+    id 'org.jetbrains.kotlin.android' version '2.3.21'
+}
+
+def packageName = 'com.manpreetgugga.tinycourier'
+def generatedRes = layout.buildDirectory.dir('generated/firebase/res')
+
+android {
+    namespace 'com.manpreetgugga.tinycourier.firebase'
+    compileSdk 36
+
+    defaultConfig {
+        minSdk 24
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = '17'
+        // The game's build brings its own Kotlin library (2.1 or newer, for
+        // the ads), so keep to that API.
+        apiVersion = '2.1'
+    }
+
+    sourceSets {
+        main.res.srcDir generatedRes
+    }
+}
+
+dependencies {
+    // The game's build supplies all three: Godot itself, and the Firebase
+    // libraries that addons/tiny_courier_firebase/plugin.gd lists (keep the
+    // versions in step).
+    compileOnly 'org.godotengine:godot:4.7.1.stable'
+    compileOnly 'com.google.firebase:firebase-analytics:24.0.0'
+    compileOnly 'com.google.firebase:firebase-crashlytics:21.0.1'
+}
+
+// Writes the game's Firebase settings as string resources.
+def firebaseValues = tasks.register('firebaseValues') {
+    def source = file('google-services.json')
+    def output = generatedRes.get().file('values/firebase.xml').asFile
+    inputs.file(source)
+    outputs.file(output)
+    doLast {
+        if (!source.exists()) {
+            throw new GradleException("No google-services.json in android-firebase/: download it from the Firebase console (Project settings, the Tiny Courier Android app)")
+        }
+        def json = new JsonSlurper().parse(source)
+        def client = json.client.find { it.client_info.android_client_info.package_name == packageName }
+        if (client == null) {
+            throw new GradleException("google-services.json has no Android app ${packageName}")
+        }
+        def apiKey = client.api_key[0].current_key
+        def values = [
+            google_app_id                  : client.client_info.mobilesdk_app_id,
+            google_api_key                 : apiKey,
+            google_crash_reporting_api_key : apiKey,
+            gcm_defaultSenderId            : json.project_info.project_number,
+            project_id                     : json.project_info.project_id,
+            google_storage_bucket          : json.project_info.storage_bucket,
+            // What Crashlytics' Gradle plugin writes when no mapping file is
+            // uploaded (Godot's build doesn't shrink the code). Without it
+            // Crashlytics stops the game at startup.
+            'com.google.firebase.crashlytics.mapping_file_id': '00000000000000000000000000000000',
+        ]
+        output.parentFile.mkdirs()
+        output.text = '<?xml version="1.0" encoding="utf-8"?>\n<resources>\n' +
+            values.findAll { it.value != null }.collect { name, value ->
+                "    <string name=\"${name}\" translatable=\"false\">${value}</string>"
+            }.join('\n') + '\n</resources>\n'
+    }
+}
+preBuild.dependsOn firebaseValues
+
+tasks.register('copyToAddon', Copy) {
+    dependsOn 'assembleRelease'
+    from layout.buildDirectory.file('outputs/aar/tiny-courier-firebase-release.aar')
+    into '../addons/tiny_courier_firebase/bin'
+    rename { 'tiny-courier-firebase.aar' }
+}

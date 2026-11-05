@@ -1,18 +1,19 @@
 class_name PropFactory
 extends RefCounted
 ## Procedural clay decor: trees, bushes, lamp posts, flags, crates, fences,
-## rocks, pumpkins, leaf piles and snowmen, plus the level's stairs, dry
-## boards and the parcel and pad meshes. Parts are merged into one mesh with
+## rocks, pumpkins, leaf piles, snowmen, sunflowers and hay bales, plus the
+## level's stairs, dry boards, springs and the parcel and pad meshes. Parts are merged into one mesh with
 ## a surface per colour, so a level's decor costs a handful of draw calls.
 ##
 ## Props stand on the floor of their cell, turned by their rotation (degrees
 ## about +Y); fences run along the cell's -Z edge before rotation. The season
-## dresses them: autumn trees and bushes turn orange, red or gold, and in
-## winter pines, bushes, lamps, crates and rocks wear snow.
+## dresses them: spring trees and bushes blossom pink or white, autumn ones
+## turn orange, red or gold, and in winter pines, bushes, lamps, crates and
+## rocks wear snow.
 
 const TYPES: Array[StringName] = [
 	&"tree_small", &"tree_tall", &"bush", &"lamp_post", &"flag", &"crate", &"fence", &"rock",
-	&"pumpkin", &"leaf_pile", &"snowman",
+	&"pumpkin", &"leaf_pile", &"snowman", &"sunflower", &"hay_bale",
 ]
 
 const TRUNK := Color("#8A5A3C")
@@ -28,6 +29,7 @@ const CRATE_BAND := Color("#9C6A3E")
 const TAPE := Color("#FFF1DC")
 const AUTUMN_LEAVES: Array[Color] = [Color("#E07B39"), Color("#C94F3D"), Color("#E6AE45")]
 const PINE := Color("#4F8A6C")
+const BLOSSOMS: Array[Color] = [Color("#F4B3C6"), Color("#F8CFDC"), Color("#E994B0")]
 const SNOW := Color("#F4F7FB")
 const PUMPKIN := Color("#E8822F")
 const STEM := Color("#6B7A3A")
@@ -36,10 +38,22 @@ const SCARF := Color("#D9534A")
 const PLANK := Color("#B07B50")
 const PLANK_DARK := Color("#9A6842")
 const BEAM := Color("#6E4B33")
+const SUNFLOWER := Color("#F6C343")
+const SUNFLOWER_HEART := Color("#7A4E2D")
+const SUNFLOWER_STEM := Color("#6E9E4A")
+const HAY := Color("#E8C468")
+const HAY_CORD := Color("#C99A45")
+const SPRING_BOX := Color("#5B9BD5")
+const COIL := Color("#D5DAE3")
+## How far above its cell's floor a spring's coil stands (see
+## [method spring_top]).
+const SPRING_FOOT: float = 0.6
 
 const BLOB_SHADER: Shader = preload("res://shaders/blob_shadow.gdshader")
 
 static var _parcels: Dictionary = {}
+static var _spring_box: ArrayMesh
+static var _spring_top: ArrayMesh
 
 
 ## Collects parts by colour and bakes one surface per colour. While
@@ -125,6 +139,8 @@ static func build_props(props: Array[Dictionary], season: StringName = &"summer"
 			&"pumpkin": _pumpkin(batch, base)
 			&"leaf_pile": _leaf_pile(batch, base, cell)
 			&"snowman": _snowman(batch, base)
+			&"sunflower": _sunflower(batch, base)
+			&"hay_bale": _hay_bale(batch, base)
 	return batch.commit()
 
 
@@ -148,6 +164,34 @@ static func board(along: Vector3i, cell: Vector3i) -> ArrayMesh:
 		batch.add(_sphere(0.075, 0.03), base * leaf.scaled_local(Vector3(1.0, 1.0, 0.6)),
 			AUTUMN_LEAVES[(i + absi(cell.x + cell.z)) % AUTUMN_LEAVES.size()])
 	return batch.commit()
+
+
+## A spring's box: it fills the bottom of its block cell (the origin is the
+## middle of the cell's floor) up to [constant SPRING_FOOT], with a cream
+## band round the top. Shared by every spring.
+static func spring_box() -> ArrayMesh:
+	if _spring_box == null:
+		var batch := _Batch.new()
+		batch.add(ClayShapes.rounded_box(Vector3(0.98, SPRING_FOOT, 0.98), 0.06), _at(0.0, SPRING_FOOT * 0.5, 0.0), SPRING_BOX)
+		batch.add(ClayShapes.rounded_box(Vector3(1.0, 0.08, 1.0), 0.03), _at(0.0, SPRING_FOOT - 0.09, 0.0), TAPE)
+		_spring_box = batch.commit()
+	return _spring_box
+
+
+## A spring's coil and round pad, from the coil's foot (the origin, on top
+## of [method spring_box]) to the pad, level with the top of the cell.
+## Shared by every spring.
+static func spring_top() -> ArrayMesh:
+	if _spring_top == null:
+		var batch := _Batch.new()
+		for i in 3:
+			batch.add(_torus(0.2, 0.26), _at(0.0, 0.05 + 0.09 * i, 0.0), COIL)
+		var pad_y: float = 1.0 - SPRING_FOOT - 0.04
+		batch.add(_cylinder(0.43, 0.08), _at(0.0, pad_y, 0.0), Palette.block_color(Grid.SPRING))
+		batch.add(_torus(0.39, 0.47), _at(0.0, pad_y, 0.0), TAPE)
+		batch.add(_cylinder(0.15, 0.086), _at(0.0, pad_y, 0.0), TAPE)
+		_spring_top = batch.commit()
+	return _spring_top
 
 
 ## Every stairs block of [param grid] in one mesh, turned to climb along its
@@ -213,10 +257,14 @@ static func blob_shadow(size: float) -> MeshInstance3D:
 	return blob
 
 
-## A tree or bush's leaf colours, [main, top]: green in summer, orange, red
-## or gold by cell in autumn, dark pine in winter.
+## A tree or bush's leaf colours, [main, top]: pink or pale blossom by cell
+## in spring, green in summer, orange, red or gold by cell in autumn, dark
+## pine in winter.
 static func _foliage(season: StringName, cell: Vector3i) -> Array[Color]:
 	match season:
+		&"spring":
+			var blossom: Color = BLOSSOMS[absi(cell.x * 5 + cell.z * 3 + cell.y) % BLOSSOMS.size()]
+			return [blossom, blossom.lerp(Color.WHITE, 0.3)]
 		&"autumn":
 			var leaf: Color = AUTUMN_LEAVES[absi(cell.x * 7 + cell.z * 3 + cell.y) % AUTUMN_LEAVES.size()]
 			return [leaf, leaf.lerp(Color.WHITE, 0.18)]
@@ -323,6 +371,30 @@ static func _snowman(batch: _Batch, base: Transform3D) -> void:
 		batch.add(_sphere(0.018, 0.036), base * _at(0.0, y, 0.142), POST)
 
 
+## A sunflower: a tall stem with two leaves and a big golden head with a
+## brown heart, facing +Z and tipped up a little to the sun.
+static func _sunflower(batch: _Batch, base: Transform3D) -> void:
+	batch.add(_cylinder(0.025, 0.72), base * _at(0.0, 0.36, 0.0), SUNFLOWER_STEM)
+	for side: float in [-1.0, 1.0]:
+		var leaf := _at(side * 0.08, 0.28 + 0.1 * maxf(side, 0.0), 0.0).rotated_local(Vector3.BACK, side * 0.5)
+		batch.add(_sphere(0.08, 0.03), base * leaf.scaled_local(Vector3(1.4, 1.0, 0.8)), LEAVES)
+	# The head is a disc facing up its local +Y, turned to face +Z.
+	var head := _at(0.0, 0.76, 0.03).rotated_local(Vector3.RIGHT, PI * 0.5 - 0.35)
+	for i in 11:
+		var angle: float = TAU * i / 11.0
+		var petal := head * _at(cos(angle) * 0.14, 0.0, sin(angle) * 0.14).rotated_local(Vector3.UP, -angle)
+		batch.add(_sphere(0.075, 0.025), base * petal.scaled_local(Vector3(1.0, 1.0, 0.5)), SUNFLOWER)
+	batch.add(_cylinder(0.1, 0.05), base * head * _at(0.0, 0.01, 0.0), SUNFLOWER_HEART)
+
+
+## A round hay bale lying on its side, bound with two cords.
+static func _hay_bale(batch: _Batch, base: Transform3D) -> void:
+	var lying := Basis(Vector3.BACK, PI * 0.5)
+	batch.add(_cylinder(0.26, 0.44), base * Transform3D(lying, Vector3(0.0, 0.26, 0.0)), HAY)
+	for x: float in [-0.11, 0.11]:
+		batch.add(_cylinder(0.268, 0.035), base * Transform3D(lying, Vector3(x, 0.26, 0.0)), HAY_CORD)
+
+
 ## A steady value in [-1, 1] for a cell.
 static func _hash(cell: Vector3i) -> float:
 	var h: int = (cell.x * 73856093) ^ (cell.y * 19349663) ^ (cell.z * 83492791)
@@ -349,6 +421,15 @@ static func _cylinder(radius: float, height: float) -> CylinderMesh:
 	cylinder.radial_segments = 12
 	cylinder.rings = 1
 	return cylinder
+
+
+static func _torus(inner: float, outer: float) -> TorusMesh:
+	var torus := TorusMesh.new()
+	torus.inner_radius = inner
+	torus.outer_radius = outer
+	torus.rings = 20
+	torus.ring_segments = 8
+	return torus
 
 
 static func _sphere(radius: float, height: float) -> SphereMesh:

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Android 13 and up ask the player before any notification shows. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- A restart clears every alarm; this sets the reminders' again. -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <application>
+        <!-- Registers the plugin with Godot: Engine.get_singleton("TinyCourierReminders"). -->
+        <meta-data
+            android:name="org.godotengine.plugin.v2.TinyCourierReminders"
+            android:value="com.manpreetgugga.tinycourier.reminders.TinyCourierReminders" />
+
+        <!-- Shows each reminder as its alarm goes off, and sets the alarms
+             again after a restart, an update or a change of clock or time
+             zone. Only Android and the game itself can reach it. -->
+        <receiver
+            android:name="com.manpreetgugga.tinycourier.reminders.ReminderReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+            </intent-filter>
+        </receiver>
+    </application>
+</manifest>

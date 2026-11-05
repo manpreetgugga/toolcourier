@@ -1,0 +1,78 @@
+{
+	"name": "Seawall",
+	"world": 2,
+	"palette": "harbor",
+	"blocks": [
+		[5, -6, 3, "dark_stone"],
+
+		[4, -5, 2, "dark_stone"], [5, -5, 2, "dark_stone"],
+		[3, -5, 3, "dark_stone"], [4, -5, 3, "dark_stone"], [5, -5, 3, "dark_stone"], [6, -5, 3, "dark_stone"],
+		[3, -5, 4, "dark_stone"], [6, -5, 4, "dark_stone"],
+
+		[4, -4, 1, "dark_stone"], [6, -4, 1, "dark_stone"],
+		[3, -4, 2, "dark_stone"], [4, -4, 2, "dark_stone"], [5, -4, 2, "dark_stone"], [6, -4, 2, "dark_stone"],
+		[3, -4, 3, "dark_stone"], [4, -4, 3, "dark_stone"], [5, -4, 3, "dark_stone"], [6, -4, 3, "dark_stone"], [7, -4, 3, "dark_stone"],
+		[2, -4, 4, "dark_stone"], [3, -4, 4, "dark_stone"], [4, -4, 4, "dark_stone"], [5, -4, 4, "dark_stone"], [6, -4, 4, "dark_stone"], [7, -4, 4, "dark_stone"],
+
+		[3, -3, 1, "dark_stone"], [4, -3, 1, "dark_stone"], [5, -3, 1, "dark_stone"], [6, -3, 1, "dark_stone"], [7, -3, 1, "dark_stone"],
+		[2, -3, 2, "dark_stone"], [3, -3, 2, "dark_stone"], [4, -3, 2, "dark_stone"], [5, -3, 2, "dark_stone"], [6, -3, 2, "dark_stone"], [7, -3, 2, "dark_stone"],
+		[2, -3, 3, "dark_stone"], [3, -3, 3, "dark_stone"], [4, -3, 3, "dark_stone"], [5, -3, 3, "dark_stone"], [6, -3, 3, "dark_stone"], [7, -3, 3, "dark_stone"], [8, -3, 3, "dark_stone"],
+		[1, -3, 4, "dark_stone"], [2, -3, 4, "dark_stone"], [3, -3, 4, "dark_stone"], [4, -3, 4, "dark_stone"], [5, -3, 4, "dark_stone"], [6, -3, 4, "dark_stone"], [7, -3, 4, "dark_stone"], [8, -3, 4, "dark_stone"],
+		[2, -3, 5, "dark_stone"], [3, -3, 5, "dark_stone"], [5, -3, 5, "dark_stone"], [6, -3, 5, "dark_stone"], [7, -3, 5, "dark_stone"],
+
+		[1, -2, 0, "dark_stone"], [3, -2, 0, "dark_stone"], [4, -2, 0, "dark_stone"], [7, -2, 0, "dark_stone"], [8, -2, 0, "dark_stone"],
+		[1, -2, 1, "dark_stone"], [2, -2, 1, "dark_stone"], [3, -2, 1, "dark_stone"], [4, -2, 1, "dark_stone"], [5, -2, 1, "dark_stone"], [6, -2, 1, "dark_stone"], [7, -2, 1, "dark_stone"], [8, -2, 1, "dark_stone"],
+		[1, -2, 2, "dark_stone"], [2, -2, 2, "dark_stone"], [3, -2, 2, "dark_stone"], [4, -2, 2, "dark_stone"], [5, -2, 2, "dark_stone"], [6, -2, 2, "dark_stone"], [7, -2, 2, "dark_stone"], [8, -2, 2, "dark_stone"],
+		[1, -2, 3, "dark_stone"], [2, -2, 3, "dark_stone"], [3, -2, 3, "dark_stone"], [4, -2, 3, "dark_stone"], [5, -2, 3, "dark_stone"], [6, -2, 3, "dark_stone"], [7, -2, 3, "dark_stone"], [8, -2, 3, "dark_stone"], [9, -2, 3, "dark_stone"],
+		[0, -2, 4, "dark_stone"], [1, -2, 4, "dark_stone"], [2, -2, 4, "dark_stone"], [3, -2, 4, "dark_stone"], [4, -2, 4, "dark_stone"], [5, -2, 4, "dark_stone"], [6, -2, 4, "dark_stone"], [7, -2, 4, "dark_stone"], [8, -2, 4, "dark_stone"], [9, -2, 4, "dark_stone"],
+		[0, -2, 5, "dark_stone"], [1, -2, 5, "dark_stone"], [2, -2, 5, "dark_stone"], [3, -2, 5, "dark_stone"], [4, -2, 5, "dark_stone"], [5, -2, 5, "dark_stone"], [6, -2, 5, "dark_stone"], [7, -2, 5, "dark_stone"], [8, -2, 5, "dark_stone"],
+		[6, -2, 6, "dark_stone"],
+
+		[1, -1, -1, "dark_stone"], [3, -1, -1, "dark_stone"], [4, -1, -1, "dark_stone"], [7, -1, -1, "dark_stone"], [9, -1, -1, "dark_stone"],
+		[0, -1, 0, "water"], [1, -1, 0, "dark_stone"], [2, -1, 0, "water"], [3, -1, 0, "dark_stone"], [4, -1, 0, "dark_stone"], [5, -1, 0, "dark_stone"], [6, -1, 0, "water"], [7, -1, 0, "dark_stone"], [8, -1, 0, "dark_stone"], [9, -1, 0, "dark_stone"],
+		[0, -1, 1, "dark_stone"], [1, -1, 1, "dark_stone"], [2, -1, 1, "dark_stone"], [3, -1, 1, "dark_stone"], [4, -1, 1, "dark_stone"], [5, -1, 1, "dark_stone"], [6, -1, 1, "water"], [7, -1, 1, "dark_stone"], [8, -1, 1, "dark_stone"], [9, -1, 1, "dark_stone"],
+		[0, -1, 2, "dark_stone"], [1, -1, 2, "dark_stone"], [2, -1, 2, "water"], [3, -1, 2, "dark_stone"], [4, -1, 2, "dark_stone"], [5, -1, 2, "dark_stone"], [6, -1, 2, "water"], [7, -1, 2, "dark_stone"], [8, -1, 2, "dark_stone"], [9, -1, 2, "water"],
+		[0, -1, 3, "water"], [1, -1, 3, "dark_stone"], [2, -1, 3, "water"], [3, -1, 3, "dark_stone"], [4, -1, 3, "water"], [5, -1, 3, "water"], [6, -1, 3, "water"], [7, -1, 3, "dark_stone"], [8, -1, 3, "water"], [9, -1, 3, "water"],
+		[0, -1, 4, "dark_stone"], [1, -1, 4, "dark_stone"], [2, -1, 4, "water"], [3, -1, 4, "dark_stone"], [4, -1, 4, "dark_stone"], [5, -1, 4, "dark_stone"], [6, -1, 4, "water"], [7, -1, 4, "dark_stone"], [8, -1, 4, "dark_stone"], [9, -1, 4, "dark_stone"],
+		[0, -1, 5, "dark_stone"], [1, -1, 5, "dark_stone"], [2, -1, 5, "water"], [3, -1, 5, "dark_stone"], [4, -1, 5, "dark_stone"], [5, -1, 5, "dark_stone"], [6, -1, 5, "water"], [7, -1, 5, "dark_stone"], [8, -1, 5, "dark_stone"], [9, -1, 5, "dark_stone"],
+		[0, -1, 6, "dark_stone"], [1, -1, 6, "dark_stone"], [2, -1, 6, "water"], [3, -1, 6, "dark_stone"], [4, -1, 6, "dark_stone"], [5, -1, 6, "water"], [6, -1, 6, "water"], [7, -1, 6, "dark_stone"], [8, -1, 6, "dark_stone"], [9, -1, 6, "dark_stone"],
+
+		[1, 0, -1, "stone"], [3, 0, -1, "stone"], [4, 0, -1, "stone"], [7, 0, -1, "stone"], [9, 0, -1, "stone"],
+		[1, 0, 0, "sand"], [3, 0, 0, "stone"], [4, 0, 0, "stone"], [5, 0, 0, "stone"], [7, 0, 0, "wood"], [8, 0, 0, "wood"], [9, 0, 0, "wood"],
+		[0, 0, 1, "sand"], [1, 0, 1, "sand"], [2, 0, 1, "wood"], [3, 0, 1, "stone"], [4, 0, 1, "stone"], [5, 0, 1, "stone"], [7, 0, 1, "wood"], [8, 0, 1, "wood"], [9, 0, 1, "wood"],
+		[0, 0, 2, "sand"], [1, 0, 2, "sand"], [3, 0, 2, "stone"], [4, 0, 2, "stone"], [5, 0, 2, "stone"], [7, 0, 2, "wood"], [8, 0, 2, "wood"],
+		[1, 0, 3, "wood"], [3, 0, 3, "wood"], [7, 0, 3, "wood"],
+		[0, 0, 4, "wood"], [1, 0, 4, "wood"], [3, 0, 4, "stone"], [4, 0, 4, "stone"], [5, 0, 4, "stone"], [7, 0, 4, "sand"], [8, 0, 4, "sand"], [9, 0, 4, "sand"],
+		[0, 0, 5, "wood"], [1, 0, 5, "wood"], [3, 0, 5, "stone"], [4, 0, 5, "stone"], [5, 0, 5, "stone"], [7, 0, 5, "sand"], [8, 0, 5, "sand"], [9, 0, 5, "sand"],
+		[0, 0, 6, "wood"], [1, 0, 6, "wood"], [3, 0, 6, "stone"], [4, 0, 6, "stone"], [7, 0, 6, "sand"], [8, 0, 6, "sand"], [9, 0, 6, "sand"],
+
+		[1, 1, -1, "stone"], [3, 1, -1, "stone"], [4, 1, -1, "stone"], [7, 1, -1, "stone"], [9, 1, -1, "stone"],
+
+		[1, 2, -1, "stone"], [3, 2, -1, "stone"], [4, 2, -1, "stone"], [7, 2, -1, "stone"], [9, 2, -1, "stone"],
+
+		[1, 3, -1, "stone"], [3, 3, -1, "stone"]
+	],
+	"props": [
+		[4, 3, -1, "lamp_post", 89, true],
+		[7, 3, -1, "flag", 4],
+		[1, 1, 6, "lamp_post", 79, true],
+		[8, 1, 6, "crate", 81, true]
+	],
+	"mechanisms": [
+		{ "id": "belt1", "type": "conveyor", "cells": [[2, 0, 5]], "dir": "+x" },
+		{ "id": "raft2", "type": "slider", "cells": [[6, 0, 0]], "axis": "z", "min": 0, "max": 6, "start": 4 },
+		{ "id": "bell3", "type": "button", "pos": [5, 1, 1], "targets": [] },
+		{ "id": "gate4", "type": "gate", "cells": [[3, 1, 3]], "buttons": ["bell3"] }
+	],
+	"packages": [
+		{ "pos": [4, 1, 6], "color": "red" },
+		{ "pos": [5, 1, 0], "color": "yellow" }
+	],
+	"pads": [
+		{ "pos": [0, 1, 6], "color": "red" },
+		{ "pos": [8, 1, 0], "color": "yellow" }
+	],
+	"start": [7, 1, 6],
+	"exit": [3, 1, 0],
+	"stars": [36, 45, 58]
+}

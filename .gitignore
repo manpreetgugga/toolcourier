@@ -9,7 +9,22 @@ export/
 *.jks
 .DS_Store
 
-# The ads plugin's Gradle build (its .aar is checked in, in addons/)
+# The ads and reminders plugins' Gradle builds (their .aar files are checked
+# in, in addons/)
 /android-plugin/build/
 /android-plugin/.gradle/
+/android-plugin/.kotlin/
 /android-plugin/local.properties
+/android-reminders/build/
+/android-reminders/.gradle/
+/android-reminders/.kotlin/
+/android-reminders/local.properties
+
+# The Firebase plugin's build. Its .aar carries the game's Firebase settings,
+# from google-services.json, so neither is checked in (see README, Statistics).
+/android-firebase/build/
+/android-firebase/.gradle/
+/android-firebase/.kotlin/
+/android-firebase/local.properties
+google-services.json
+/addons/tiny_courier_firebase/bin/

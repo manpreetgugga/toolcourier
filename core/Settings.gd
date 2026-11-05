@@ -1,7 +1,9 @@
 class_name Settings
 extends RefCounted
-## The player's settings: music and sound volumes, tilt-shift, haptics and
-## the graphics quality. Kept as JSON in user://settings.json, written whole
+## The player's settings: music and sound volumes, tilt-shift, haptics, the
+## graphics quality, the daily reminders (see Reminders) and the statistics
+## and crash reports (see Analytics). Kept as JSON in
+## user://settings.json, written whole
 ## to a temporary file and then moved into place (like Progress). Everything
 ## is static; the file is read on first use.
 ##
@@ -26,6 +28,13 @@ static var sfx: float = 0.9
 static var tilt_shift: bool = true
 static var haptics: bool = true
 static var quality: Quality = Quality.HIGH
+## The daily reminders (Android only).
+static var reminders: bool = true
+## Statistics and crash reports (Android only), and whether the player has
+## said either way: on the menu's question, or in Settings. Where the
+## player must be asked first, nothing is sent until they say yes.
+static var statistics: bool = true
+static var statistics_asked: bool = false
 
 static var _loaded: bool = false
 
@@ -54,9 +63,10 @@ static func ensure_loaded() -> void:
 		load_file()
 
 
-## Changes one setting ("music", "sfx", "tilt_shift", "haptics" or
-## "quality"), saves (unless [param persist] is false, as while a slider
-## is still being dragged) and tells everyone.
+## Changes one setting ("music", "sfx", "tilt_shift", "haptics", "quality",
+## "reminders" or "statistics", which also counts as the player's answer),
+## saves (unless [param persist] is false, as while a slider is still being
+## dragged) and tells everyone.
 static func set_value(key: StringName, value: Variant, persist: bool = true) -> void:
 	ensure_loaded()
 	match key:
@@ -70,6 +80,11 @@ static func set_value(key: StringName, value: Variant, persist: bool = true) -> 
 			haptics = bool(value)
 		&"quality":
 			quality = clampi(int(value), Quality.LOW, Quality.HIGH) as Quality
+		&"reminders":
+			reminders = bool(value)
+		&"statistics":
+			statistics = bool(value)
+			statistics_asked = true
 		_:
 			push_warning("Settings: no setting %s" % key)
 			return
@@ -93,6 +108,12 @@ static func get_value(key: StringName) -> Variant:
 			return haptics
 		&"quality":
 			return quality
+		&"reminders":
+			return reminders
+		&"statistics":
+			return statistics
+		&"statistics_asked":
+			return statistics_asked
 	return null
 
 
@@ -155,7 +176,8 @@ static func _fit_render_scale(viewport: Viewport) -> void:
 static func save() -> void:
 	var text: String = JSON.stringify({
 		"music": music, "sfx": sfx, "tilt_shift": tilt_shift, "haptics": haptics,
-		"quality": QUALITY_NAMES[quality].to_lower(),
+		"quality": QUALITY_NAMES[quality].to_lower(), "reminders": reminders,
+		"statistics": statistics, "statistics_asked": statistics_asked,
 	}, "\t")
 	var temporary: String = path + ".tmp"
 	var file := FileAccess.open(temporary, FileAccess.WRITE)
@@ -190,6 +212,12 @@ static func load_file() -> void:
 	var level: int = QUALITY_NAMES.find(str(parsed.get("quality", "")).capitalize())
 	if level >= 0:
 		quality = level as Quality
+	if typeof(parsed.get("reminders")) == TYPE_BOOL:
+		reminders = parsed["reminders"]
+	if typeof(parsed.get("statistics")) == TYPE_BOOL:
+		statistics = parsed["statistics"]
+	if typeof(parsed.get("statistics_asked")) == TYPE_BOOL:
+		statistics_asked = parsed["statistics_asked"]
 
 
 static func _defaults() -> void:
@@ -197,5 +225,8 @@ static func _defaults() -> void:
 	sfx = 0.9
 	tilt_shift = true
 	haptics = true
+	reminders = true
+	statistics = true
+	statistics_asked = false
 	# Phones start on Medium, which a mid-range one runs at 60 fps.
 	quality = Quality.MEDIUM if OS.has_feature("mobile") else Quality.HIGH

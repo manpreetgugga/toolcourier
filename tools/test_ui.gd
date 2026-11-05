@@ -2,7 +2,7 @@ extends SceneTree
 ## Scripted check of the menus and the polish around play: which levels and
 ## worlds are open, the settings file and what follows a change (volumes,
 ## quality, tilt-shift, haptics), the splash, main menu, world select, level
-## grid and settings card driven through the touch path, the back button,
+## map, level card and settings card driven through the touch path, the back button,
 ## a level's build-up, safe area, sounds, haptic ticks, pause card, confetti
 ## and take-down, and moving between the menu and a level. Prints PASS/FAIL
 ## per check, saves screenshots, and exits with status 1 on any failure.
@@ -64,10 +64,10 @@ func _check_unlocking() -> void:
 		"finishing a level opens the one after it, which is next")
 	var world_2: String = LevelCatalog.levels(2)[0]
 	_check(not LevelCatalog.is_unlocked(world_2), "the next world stays shut until the level before it is finished")
-	_check(LevelCatalog.world_stars(1) == Vector2i(3, 30) and LevelCatalog.world_finished(1) == 1,
+	_check(LevelCatalog.world_stars(1) == Vector2i(3, 300) and LevelCatalog.world_finished(1) == 1,
 		"a world counts its stars (%s) and finished levels" % LevelCatalog.world_stars(1))
-	_check(LevelCatalog.world_of(world_2) == 2 and LevelCatalog.world_name(5) == "Frost Peaks",
-		"levels know their world, and worlds their names")
+	_check(LevelCatalog.world_of(world_2) == 2 and LevelCatalog.world_name(6) == "Blossom Valley"
+		and LevelCatalog.world_name(7) == "Sunflower Fields", "levels know their world, and worlds their names")
 
 
 func _check_settings() -> void:
@@ -149,24 +149,79 @@ func _check_menu() -> void:
 		"Levels opens the world select: world 1 open, world 2 locked")
 	_check((world_1.get_node("Preview") as TextureRect).texture is ViewportTexture,
 		"each world card shows a turning diorama")
+	var cards: Control = menu.get_node("Ui/Root/Safe/Worlds/Cards")
+	var last_card: Control = cards.get_child(cards.get_child_count() - 1)
+	_check(last_card.get_global_rect().end.y <= SIZE.y,
+		"all %d world cards fit on a 16:9 screen" % cards.get_child_count())
 	_capture("step9_worlds.png")
 	await _press(world_2)
 	await _wait(0.2)
 	_check(menu.screen() == &"worlds", "a locked world does not open")
 	await _press(world_1)
 	await _wait(0.5)
-	var grid: Node = menu.get_node("Ui/Root/Safe/Levels/Grid")
-	var first: TouchButton = grid.get_node("Level_1")
-	var second: TouchButton = grid.get_node("Level_2")
-	var third: TouchButton = grid.get_node("Level_3")
-	_check(menu.screen() == &"levels" and menu.world() == 1 and grid.get_child_count() == 10,
-		"a world opens its grid of ten levels")
-	_check(not first.disabled and not second.disabled and third.disabled and second.outline == Ui.ACCENT,
-		"finished and next levels are open, the next one ringed; the rest are locked")
+	var map: LevelMap = menu.get_node("Ui/Root/Safe/Levels/Map")
+	var first: TouchButton = map.badge(1)
+	var second: TouchButton = map.badge(2)
+	var third: TouchButton = map.badge(3)
+	_check(menu.screen() == &"levels" and menu.world() == 1 and map.badge_count() == 100 and map.island_count() == 20,
+		"a world opens its map: a hundred levels in world 1 (%d) on twenty islands (%d)" % [map.badge_count(),
+		map.island_count()])
+	_check(not first.disabled and not second.disabled and second.color == Ui.ACCENT and third.disabled
+		and third.badge == &"lock", "finished and next levels are open, the next one orange; the rest are locked")
+	_check(map.get_global_rect().encloses(second.get_global_rect()), "the map opens on the level to play next")
 	_capture("step9_levels.png")
+
+	# The scenery is there to be tapped: a piece wobbles.
+	var tapped: Control = null
+	var piece_at := Vector2.ZERO
+	for island: Control in map.find_children("Island_*", "", true, false):
+		for piece: Dictionary in island.get("pieces"):
+			var at: Vector2 = (piece["at"] as Vector2) - Vector2(0.0, 8.0)
+			if Rect2(40.0, 200.0, SIZE.x - 80.0, SIZE.y - 260.0).has_point(island.get_global_transform() * at):
+				tapped = island
+				piece_at = at
+				break
+		if tapped != null:
+			break
+	if tapped != null:
+		await _press(tapped, piece_at)
+	_check(tapped != null and tapped.is_processing() and not menu.get_node("Ui/Root/Peek").visible,
+		"tapping the scenery on the map wobbles it")
+
+	# A badge opens the level's card, and back closes it again.
+	await _press(second)
+	await _wait(0.2)
+	var peek: LevelPeek = menu.get_node("Ui/Root/Peek")
+	_check(peek.is_open() and peek.path() == LEVEL_2, "a level's badge opens its card")
+	await _wait(1.2)
+	_capture("levels_peek.png")
+	menu.go_back()
+	await _wait(0.3)
+	_check(not peek.is_open() and not peek.visible and menu.screen() == &"levels",
+		"back closes the card and stays on the map")
+
+	# The map scrolls: a drag that starts on a badge moves the map instead of
+	# opening the level, and the wheel reaches the top of a long world.
+	var before: float = map.scroll_offset()
+	await _drag(second, second.size * 0.5, second.size * 0.5 + Vector2(0.0, 400.0))
+	await _wait(0.3)
+	_check(not peek.is_open() and map.scroll_offset() >= before + 399.0,
+		"dragging the map down 400 px scrolls it (by %.0f px) and opens no level" % (map.scroll_offset() - before))
+	menu.open_world(3)
+	await _wait(0.5)
+	_check(map.badge_count() == 70 and map.island_count() == 14,
+		"world 3's map has seventy levels (%d) on fourteen islands (%d)" % [map.badge_count(), map.island_count()])
+	for i in 150:
+		var wheel := InputEventMouseButton.new()
+		wheel.button_index = MOUSE_BUTTON_WHEEL_UP
+		wheel.pressed = true
+		_viewport.push_input(wheel, true)
+	await _frames(2)
+	_check(map.get_global_rect().encloses(map.badge(70).get_global_rect()), "scrolling up the map shows level 70 in full")
+	_capture("levels_scrolled.png")
 	menu.go_back()
 	await _wait(0.4)
-	_check(menu.screen() == &"worlds", "back goes from the grid to the worlds")
+	_check(menu.screen() == &"worlds", "back goes from the map to the worlds")
 	menu.go_back()
 	await _wait(0.4)
 	_check(menu.screen() == &"main" and menu.backdrop.visible, "and from the worlds to the main menu and its diorama")
@@ -277,7 +332,7 @@ func _check_flow() -> void:
 	await _until(func() -> bool: return current_scene is Menu and not Game.is_swapping(), 6.0)
 	var menu := current_scene as Menu
 	_check(menu != null and menu.screen() == &"levels" and menu.world() == 1 and not is_instance_valid(level),
-		"Levels takes the level down and opens its world's grid")
+		"Levels takes the level down and opens its world's map")
 	menu.propagate_notification(Node.NOTIFICATION_WM_GO_BACK_REQUEST)
 	await _wait(0.3)
 	_check(menu.screen() == &"worlds", "the back button goes up a screen")

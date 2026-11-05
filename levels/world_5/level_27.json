@@ -1,0 +1,83 @@
+{
+	"name": "Frosty Morning",
+	"world": 5,
+	"palette": "frost_peaks",
+	"blocks": [
+		[3, -5, 2, "slate"],
+
+		[3, -4, 1, "slate"],
+		[3, -4, 2, "slate"],
+		[3, -4, 3, "slate"],
+
+		[2, -3, 0, "slate"], [3, -3, 0, "slate"],
+		[3, -3, 1, "slate"], [4, -3, 1, "slate"],
+		[2, -3, 2, "slate"], [3, -3, 2, "slate"], [4, -3, 2, "slate"],
+		[2, -3, 3, "slate"], [3, -3, 3, "slate"],
+		[1, -3, 4, "slate"], [2, -3, 4, "slate"], [3, -3, 4, "slate"],
+		[1, -3, 5, "slate"],
+
+		[2, -2, -1, "slate"], [4, -2, -1, "slate"],
+		[1, -2, 0, "slate"], [2, -2, 0, "slate"], [3, -2, 0, "slate"], [4, -2, 0, "slate"],
+		[2, -2, 1, "slate"], [3, -2, 1, "slate"], [4, -2, 1, "slate"], [5, -2, 1, "slate"],
+		[1, -2, 2, "slate"], [2, -2, 2, "slate"], [3, -2, 2, "slate"], [4, -2, 2, "slate"],
+		[1, -2, 3, "slate"], [2, -2, 3, "slate"], [3, -2, 3, "slate"], [4, -2, 3, "slate"],
+		[0, -2, 4, "slate"], [1, -2, 4, "slate"], [2, -2, 4, "slate"], [3, -2, 4, "slate"], [4, -2, 4, "slate"],
+		[1, -2, 5, "slate"], [2, -2, 5, "slate"], [3, -2, 5, "slate"], [4, -2, 5, "slate"],
+		[1, -2, 6, "slate"],
+
+		[0, -1, -1, "slate"], [1, -1, -1, "slate"], [2, -1, -1, "slate"], [3, -1, -1, "slate"], [4, -1, -1, "slate"], [5, -1, -1, "slate"],
+		[0, -1, 0, "slate"], [1, -1, 0, "slate"], [2, -1, 0, "slate"], [3, -1, 0, "slate"], [4, -1, 0, "slate"], [5, -1, 0, "slate"],
+		[1, -1, 1, "slate"], [2, -1, 1, "slate"], [3, -1, 1, "slate"], [4, -1, 1, "slate"], [5, -1, 1, "slate"],
+		[0, -1, 2, "slate"], [1, -1, 2, "slate"], [2, -1, 2, "slate"], [3, -1, 2, "slate"], [4, -1, 2, "slate"], [5, -1, 2, "slate"],
+		[0, -1, 3, "slate"], [1, -1, 3, "slate"], [2, -1, 3, "slate"], [3, -1, 3, "slate"], [4, -1, 3, "slate"], [5, -1, 3, "slate"],
+		[0, -1, 4, "slate"], [1, -1, 4, "slate"], [2, -1, 4, "slate"], [3, -1, 4, "slate"], [4, -1, 4, "slate"], [5, -1, 4, "slate"],
+		[0, -1, 5, "slate"], [1, -1, 5, "slate"], [2, -1, 5, "slate"], [3, -1, 5, "slate"], [4, -1, 5, "slate"], [5, -1, 5, "slate"],
+		[0, -1, 6, "slate"], [1, -1, 6, "slate"], [2, -1, 6, "slate"], [3, -1, 6, "slate"], [4, -1, 6, "slate"], [5, -1, 6, "slate"],
+
+		[0, 0, -1, "slate"], [1, 0, -1, "slate"], [2, 0, -1, "slate"], [3, 0, -1, "slate"], [4, 0, -1, "slate"], [5, 0, -1, "slate"],
+		[0, 0, 0, "ice"], [1, 0, 0, "snow"], [2, 0, 0, "ice"], [3, 0, 0, "ice"], [4, 0, 0, "ice"], [5, 0, 0, "ice"],
+		[1, 0, 1, "ice"], [2, 0, 1, "ice"], [3, 0, 1, "ice"], [4, 0, 1, "ice"], [5, 0, 1, "snow"],
+		[0, 0, 2, "ice"], [1, 0, 2, "ice"], [2, 0, 2, "ice"], [3, 0, 2, "ice"], [4, 0, 2, "ice"], [5, 0, 2, "slate"],
+		[0, 0, 3, "snow"], [1, 0, 3, "slate"], [2, 0, 3, "ice"], [3, 0, 3, "ice"], [4, 0, 3, "ice"], [5, 0, 3, "ice"],
+		[0, 0, 4, "ice"], [1, 0, 4, "ice"], [2, 0, 4, "ice"], [3, 0, 4, "snow"], [4, 0, 4, "ice"], [5, 0, 4, "slate"],
+		[0, 0, 5, "ice"], [1, 0, 5, "ice"], [2, 0, 5, "snow"], [3, 0, 5, "ice"], [4, 0, 5, "ice"], [5, 0, 5, "ice"],
+		[0, 0, 6, "snow"], [1, 0, 6, "snow"], [2, 0, 6, "ice"], [3, 0, 6, "snow"], [4, 0, 6, "ice"], [5, 0, 6, "ice"],
+
+		[0, 1, -1, "slate"], [1, 1, -1, "slate"], [2, 1, -1, "slate"], [3, 1, -1, "slate"], [4, 1, -1, "slate"], [5, 1, -1, "slate"],
+		[5, 1, 2, "slate"],
+		[1, 1, 3, "slate"],
+		[5, 1, 4, "slate"],
+
+		[0, 2, -1, "slate"], [1, 2, -1, "slate"], [2, 2, -1, "slate"],
+
+		[1, 3, -1, "slate"], [2, 3, -1, "slate"],
+
+		[1, 4, -1, "slate"], [2, 4, -1, "slate"]
+	],
+	"props": [
+		[0, 1, 2, "snowman", 24, true],
+		[2, 1, 4, "snowman", 79, true],
+		[1, 1, 1, "tree_tall", 40, true],
+		[4, 1, 0, "snowman", 41, true],
+		[1, 1, 4, "tree_tall", 15, true],
+		[1, 5, -1, "tree_tall", 62, true],
+		[5, 2, -1, "tree_tall", 55, true]
+	],
+	"mechanisms": [
+		{ "id": "bell1", "type": "button", "pos": [2, 1, 5], "targets": [] },
+		{ "id": "gate2", "type": "gate", "cells": [[3, 1, 0]], "buttons": ["bell1"] }
+	],
+	"packages": [
+		{ "pos": [3, 1, 6], "color": "red" },
+		{ "pos": [3, 1, 4], "color": "blue" },
+		{ "pos": [0, 1, 3], "color": "green" }
+	],
+	"pads": [
+		{ "pos": [0, 1, 6], "color": "red" },
+		{ "pos": [1, 1, 6], "color": "blue" },
+		{ "pos": [1, 1, 0], "color": "green" }
+	],
+	"start": [4, 1, 6],
+	"exit": [5, 1, 1],
+	"stars": [19, 24, 30]
+}

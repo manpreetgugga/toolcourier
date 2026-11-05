@@ -1,7 +1,8 @@
 extends SceneTree
 ## Scripted check of undo, restart, hints, stars and saving: the Solver finds
 ## each level's 3-star route, Progress keeps bests and survives a corrupt
-## file, a game in progress comes back after closing, undo and restart
+## file, a save from before world 1's chapters moves its levels to them, a
+## game in progress comes back after closing, undo and restart
 ## rebuild the diorama, the HUD buttons work through the touch path, and
 ## following the hints alone finishes every level with 3 stars. Prints
 ## PASS/FAIL per check, saves screenshots, and exits with status 1 on any
@@ -40,6 +41,7 @@ func _initialize() -> void:
 		_out_dir = ProjectSettings.globalize_path("res://").path_join(_out_dir)
 	_check_solver()
 	_check_save_file()
+	_check_old_save()
 	_check_saved_game()
 	Progress.use_file(SAVE)
 	_viewport = SubViewport.new()
@@ -99,6 +101,36 @@ func _check_save_file() -> void:
 	Progress.record(id, 15, 1)
 	_check(FileAccess.file_exists(SAVE), "the next finish writes a new save")
 	DirAccess.remove_absolute(SAVE + ".bad")
+
+
+## A version 1 save, from when world 1 had ten levels: they move to the
+## openers of its chapters, and levels finished stay open with new ones
+## ahead of them.
+func _check_old_save() -> void:
+	Progress.use_file(SAVE)
+	var file := FileAccess.open(SAVE, FileAccess.WRITE)
+	file.store_string(JSON.stringify({"version": 1, "levels": {
+		"world_1/level_1": {"stars": 3, "moves": 11}, "world_1/level_2": {"stars": 2, "moves": 25},
+		"world_1/level_10": {"stars": 3, "moves": 23}, "world_2/level_1": {"stars": 1, "moves": 40},
+	}, "in_progress": {"level": "world_1/level_3"}}))
+	file.close()
+	Progress.use_file(SAVE, false)
+	_check(Progress.best("world_1/level_1") == {"stars": 3, "moves": 11}
+		and Progress.best("world_1/level_4") == {"stars": 2, "moves": 25}
+		and Progress.best("world_1/level_85") == {"stars": 3, "moves": 23}
+		and Progress.best("world_1/level_2").is_empty() and Progress.best("world_1/level_10").is_empty()
+		and Progress.best("world_2/level_1") == {"stars": 1, "moves": 40} and Progress._resume.get("level") == "world_1/level_8",
+		"an old save's world 1 levels (and its game in progress) move to their chapters' openers")
+	var world_1: Array[String] = LevelCatalog.levels(1)
+	var world_2: Array[String] = LevelCatalog.levels(2)
+	_check(LevelCatalog.is_unlocked(world_2[0]) and LevelCatalog.is_unlocked(world_1[-1])
+		and LevelCatalog.is_unlocked(world_2[1]) and not LevelCatalog.is_unlocked(world_2[2])
+		and LevelCatalog.next_to_play() == world_1[1],
+		"every level up to one past the furthest finished is open, new ones ahead of it too, and the first unfinished is next")
+	Progress.save()
+	Progress.use_file(SAVE, false)
+	_check(Progress.best("world_1/level_4") == {"stars": 2, "moves": 25} and Progress.best("world_1/level_12").is_empty(),
+		"a save written since is not moved again")
 
 
 func _check_saved_game() -> void:

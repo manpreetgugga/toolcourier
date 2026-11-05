@@ -1,0 +1,70 @@
+{
+	"name": "Cowslip Hill",
+	"world": 6,
+	"palette": "blossom_valley",
+	"blocks": [
+		[4, -4, 2, "dark_stone"],
+
+		[3, -3, 1, "dark_stone"], [4, -3, 1, "dark_stone"],
+		[3, -3, 2, "dark_stone"], [4, -3, 2, "dark_stone"],
+		[3, -3, 4, "dark_stone"], [4, -3, 4, "dark_stone"],
+
+		[4, -2, -1, "dark_stone"],
+		[0, -2, 0, "dark_stone"], [1, -2, 0, "dark_stone"], [3, -2, 0, "dark_stone"], [4, -2, 0, "dark_stone"],
+		[1, -2, 1, "dark_stone"], [2, -2, 1, "dark_stone"], [3, -2, 1, "dark_stone"], [4, -2, 1, "dark_stone"], [5, -2, 1, "dark_stone"],
+		[2, -2, 2, "dark_stone"], [3, -2, 2, "dark_stone"], [4, -2, 2, "dark_stone"], [5, -2, 2, "dark_stone"],
+		[3, -2, 3, "dark_stone"], [4, -2, 3, "dark_stone"],
+		[2, -2, 4, "dark_stone"], [3, -2, 4, "dark_stone"], [4, -2, 4, "dark_stone"], [5, -2, 4, "dark_stone"],
+		[4, -2, 5, "dark_stone"],
+
+		[0, -1, -1, "dark_stone"], [1, -1, -1, "dark_stone"], [3, -1, -1, "dark_stone"], [4, -1, -1, "dark_stone"], [5, -1, -1, "dark_stone"],
+		[0, -1, 0, "dark_stone"], [1, -1, 0, "dark_stone"], [2, -1, 0, "water"], [3, -1, 0, "dark_stone"], [4, -1, 0, "dark_stone"], [5, -1, 0, "dark_stone"],
+		[0, -1, 1, "dark_stone"], [1, -1, 1, "dark_stone"], [2, -1, 1, "water"], [3, -1, 1, "dark_stone"], [4, -1, 1, "dark_stone"], [5, -1, 1, "dark_stone"],
+		[0, -1, 2, "water"], [1, -1, 2, "water"], [2, -1, 2, "water"], [3, -1, 2, "water"], [4, -1, 2, "water"], [5, -1, 2, "water"],
+		[2, -1, 3, "water"], [3, -1, 3, "water"], [4, -1, 3, "dark_stone"], [5, -1, 3, "dark_stone"],
+		[2, -1, 4, "water"], [3, -1, 4, "dark_stone"], [4, -1, 4, "dark_stone"], [5, -1, 4, "dark_stone"],
+		[2, -1, 5, "water"], [3, -1, 5, "dark_stone"], [4, -1, 5, "dark_stone"], [5, -1, 5, "dark_stone"],
+
+		[0, 0, -1, "dirt"], [1, 0, -1, "dirt"], [3, 0, -1, "dirt"], [4, 0, -1, "dirt"], [5, 0, -1, "dirt"],
+		[0, 0, 0, "dirt"], [1, 0, 0, "dirt"], [3, 0, 0, "grass"], [4, 0, 0, "grass"], [5, 0, 0, "grass"],
+		[0, 0, 1, "dirt"], [1, 0, 1, "dirt"], [3, 0, 1, "grass"], [4, 0, 1, "grass"], [5, 0, 1, "grass"],
+		[4, 0, 3, "grass"], [5, 0, 3, "grass"],
+		[3, 0, 4, "grass"], [4, 0, 4, "grass"], [5, 0, 4, "grass"],
+		[3, 0, 5, "grass"], [4, 0, 5, "grass"], [5, 0, 5, "grass"],
+
+		[0, 1, -1, "dirt"], [1, 1, -1, "dirt"], [3, 1, -1, "dirt"], [4, 1, -1, "dirt"], [5, 1, -1, "dirt"],
+		[0, 1, 0, "grass"], [1, 1, 0, "grass"],
+		[0, 1, 1, "grass"], [1, 1, 1, "grass"],
+
+		[0, 2, -1, "grass"], [1, 2, -1, "dirt"], [3, 2, -1, "dirt"], [4, 2, -1, "grass"], [5, 2, -1, "grass"],
+
+		[1, 3, -1, "grass"], [3, 3, -1, "grass"]
+	],
+	"props": [
+		[0, 3, -1, "bush", 58, true],
+		[1, 4, -1, "tree_small", 80, true],
+		[5, 3, -1, "tree_small", 25, true],
+		[0, 2, 0, "rock", 84, true]
+	],
+	"mechanisms": [
+		{ "id": "lift1", "type": "elevator", "cells": [[2, 0, 0]], "travel": 1 },
+		{ "id": "bell2", "type": "button", "pos": [5, 1, 3], "targets": ["lift1"] },
+		{ "id": "belt3", "type": "conveyor", "cells": [[4, 0, 2]], "dir": "+z" },
+		{ "id": "bell4", "type": "button", "pos": [0, 2, 1], "targets": ["belt3"] }
+	],
+	"packages": [
+		{ "pos": [4, 1, 3], "color": "blue" },
+		{ "pos": [1, 2, 0], "color": "yellow" },
+		{ "pos": [1, 2, 1], "color": "green" },
+		{ "pos": [4, 1, 5], "color": "red" }
+	],
+	"pads": [
+		{ "pos": [3, 1, 0], "color": "blue" },
+		{ "pos": [5, 1, 4], "color": "yellow" },
+		{ "pos": [3, 1, 1], "color": "green" },
+		{ "pos": [5, 1, 0], "color": "red" }
+	],
+	"start": [4, 1, 0],
+	"exit": [3, 1, 4],
+	"stars": [31, 39, 50]
+}

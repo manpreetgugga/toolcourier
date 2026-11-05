@@ -10,8 +10,9 @@ extends RefCounted
 ## order: dry boards it steps off drop away, a parcel matching an empty pad
 ## is dropped, a parcel lying there is picked up if there is room, a button
 ## is toggled, an elevator underfoot sets off, and reaching the open exit
-## completes the level. A slide over ice is one [method enter] at its end
-## (the Pathfinder links the cell before the ice to it). [method slide]
+## completes the level. A slide over ice or a bounce off a spring is one
+## [method enter] at its end (the Pathfinder links the cell before the ice
+## or the spring to it). [method slide]
 ## and [method rotate] are the player working a mechanism. Every change is
 ## reported as events, in order, for the scene to animate:
 ## {"event": Event, "cell": Vector3i, "color": StringName} for parcels and

@@ -25,7 +25,7 @@ const TAIL: float = 6.0
 
 const CUES: Array[StringName] = [
 	&"step", &"tap", &"slide", &"rotate", &"snap", &"pickup", &"drop", &"pad_complete",
-	&"level_complete", &"ui_click", &"error", &"glide", &"creak", &"fall", &"whoosh",
+	&"level_complete", &"ui_click", &"error", &"glide", &"creak", &"fall", &"whoosh", &"bounce",
 ]
 
 var _rate: int = SFX_RATE
@@ -231,12 +231,28 @@ func _sfx_whoosh() -> PackedFloat32Array:
 	return buf
 
 
+## A spring throwing the courier: a soft thump into the pad and a bright
+## boing that rises out of the squash with the coil's wobble on it.
+func _sfx_bounce() -> PackedFloat32Array:
+	var length: float = 0.55
+	var buf: PackedFloat32Array = _buffer(length + 0.05)
+	_sweep(buf, 0.0, 180.0, 90.0, 0.04, 0.5, 0.06)
+	var phase: float = 0.0
+	for i in int(length * _rate):
+		var t: float = float(i) / _rate
+		var freq: float = 520.0 - 300.0 * exp(-t / 0.06) + 60.0 * exp(-t / 0.18) * sin(TAU * 14.0 * t)
+		phase += TAU * freq / _rate
+		var envelope: float = minf(t / 0.005, 1.0) * exp(-t / 0.16)
+		buf[i] += envelope * (0.6 * sin(phase) + 0.25 * sin(2.0 * phase) + 0.1 * sin(3.0 * phase))
+	return buf
+
+
 # --- Music -------------------------------------------------------------------
 
 func _make_music() -> void:
 	_rate = MUSIC_RATE
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(OUT.path_join("music")))
-	for world in range(1, 6):
+	for world in range(1, 8):
 		_rng.seed = 1000 + world
 		_notes.clear()
 		var started: int = Time.get_ticks_msec()
@@ -364,6 +380,56 @@ func _music_5() -> Dictionary:
 	_melody(buf, scale, &"bell", beat, 32, 0.3, 0.12, [14, 15, 30, 31])
 	_wind(buf, length)
 	return {"buffer": buf, "length": length, "reverb": 0.45, "room": 0.88}
+
+
+## Blossom valley: D major, a music-box melody on bells over rippling
+## marimba and light pads, with birds about in the blossom.
+func _music_6() -> Dictionary:
+	var beat: float = 60.0 / 80.0
+	var length: float = 32.0 * beat
+	var buf: PackedFloat32Array = _buffer(length + TAIL)
+	var chords: Array = [["D3", "A3", "F#4"], ["B2", "F#3", "D4"], ["G2", "D3", "B3"], ["A2", "E3", "C#4"]]
+	_pads(buf, chords, 8.0 * beat, 0.08)
+	var arpeggios: Array = [["D4", "F#4", "A4", "F#4"], ["B3", "D4", "F#4", "D4"], ["G3", "B3", "D4", "B3"], ["A3", "C#4", "E4", "C#4"]]
+	for bar in 8:
+		var notes: Array = arpeggios[bar >> 1]
+		for k in 8:
+			if _rng.randf() < (0.8 if k % 2 == 0 else 0.35):
+				_mix(buf, _note(&"marimba", _freq(notes[k % 4])), (bar * 4.0 + k * 0.5) * beat + _rng.randf_range(0.0, 0.01),
+					_rng.randf_range(0.12, 0.18) * (1.0 if k % 4 == 0 else 0.7))
+		_mix(buf, _note(&"bass", _freq(chords[bar >> 1][0])), bar * 4.0 * beat, 0.24)
+	var scale: Array[String] = ["D5", "E5", "F#5", "A5", "B5", "D6", "E6"]
+	_melody(buf, scale, &"bell", beat, 32, 0.35, 0.1, [7, 15, 23, 31])
+	for at: float in [3.2, 11.6, 21.4, 27.8]:
+		_bird(buf, at * beat)
+	return {"buffer": buf, "length": length, "reverb": 0.28}
+
+
+## Sunflower fields: A major, a bouncing bass and a sunny kalimba tune over
+## a marimba ripple and warm pads, with birds about the field.
+func _music_7() -> Dictionary:
+	var beat: float = 60.0 / 84.0
+	var length: float = 32.0 * beat
+	var buf: PackedFloat32Array = _buffer(length + TAIL)
+	var chords: Array = [["A2", "E3", "C#4"], ["F#2", "C#3", "A3"], ["D3", "A3", "F#4"], ["E2", "B2", "G#3"]]
+	_pads(buf, chords, 8.0 * beat, 0.08)
+	var arpeggios: Array = [["A3", "C#4", "E4", "C#4"], ["F#3", "A3", "C#4", "A3"], ["D4", "F#4", "A4", "F#4"], ["E3", "G#3", "B3", "G#3"]]
+	for bar in 8:
+		var chord: Array = chords[bar >> 1]
+		var notes: Array = arpeggios[bar >> 1]
+		for k in 8:
+			if _rng.randf() < (0.75 if k % 2 == 0 else 0.3):
+				_mix(buf, _note(&"marimba", _freq(notes[k % 4])), (bar * 4.0 + k * 0.5) * beat + _rng.randf_range(0.0, 0.01),
+					_rng.randf_range(0.1, 0.15) * (1.0 if k % 4 == 0 else 0.7))
+		# The bass bounces: root, fifth, then the root an octave up.
+		_mix(buf, _note(&"bass", _freq(chord[0])), bar * 4.0 * beat, 0.26)
+		_mix(buf, _note(&"bass", _freq(chord[1])), (bar * 4.0 + 1.5) * beat, 0.16)
+		_mix(buf, _note(&"bass", _freq(chord[0]) * 2.0), (bar * 4.0 + 2.0) * beat, 0.14)
+	var scale: Array[String] = ["A4", "B4", "C#5", "E5", "F#5", "A5", "B5"]
+	_melody(buf, scale, &"kalimba", beat, 32, 0.45, 0.22, [7, 15, 23, 31])
+	for at: float in [2.6, 13.4, 22.2]:
+		_bird(buf, at * beat)
+	return {"buffer": buf, "length": length, "reverb": 0.24}
 
 
 ## Soft detuned pads, one chord per [param span] seconds, overlapping a

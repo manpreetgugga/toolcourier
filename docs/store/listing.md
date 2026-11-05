@@ -16,12 +16,16 @@ Each level is a small floating island made of soft clay. Drag to turn it around,
 
 The orange parts move. Slide a bridge into place, ride a lift, press a button to open a gate, hop on a conveyor belt or turn a crank to swing a turntable around. Work out the order, and the way opens.
 
-FIVE WORLDS, 50 LEVELS
+SEVEN WORLDS, 520 LEVELS
 • Meadow: hills, stairs, sliding bridges and rafts
 • Harbour: lifts, gates, buttons and conveyor belts
 • Old Town: two parcels at once and turning bridges
 • Orchard: wooden planks that hold for just one crossing
 • Frost Peaks: ice you slide across until something stops you
+• Blossom Valley: spring gardens where every moving part comes together
+• Sunflower Fields: springs that bounce you over walls and gaps
+
+Each world's levels wind up a map of floating islands, with windmills, a lighthouse and a hot-air balloon to tap along the way.
 
 Every level has been checked by a solver, so there is always a way through.
 
@@ -38,6 +42,6 @@ A GENTLE LOOK AND SOUND
 • Graphics settings for older phones
 
 ADS, KEPT CALM
-The first world has no ads at all. From the second world on, you can choose to watch a short video to turn on hints for a level, and now and then a short ad plays between levels. Never in the middle of a puzzle, and never banners.
+The first 20 levels have no ads at all. After that, you can choose to watch a short video to turn on hints for a level, and now and then a short ad plays between levels. Never in the middle of a puzzle, and never banners.
 
 No account needed, and the puzzles play offline.

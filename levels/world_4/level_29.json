@@ -1,0 +1,56 @@
+{
+	"name": "Straw Bales",
+	"world": 4,
+	"palette": "orchard",
+	"blocks": [
+		[2, -3, 0, "dark_stone"],
+
+		[1, -2, -1, "dark_stone"],
+		[1, -2, 0, "dark_stone"], [2, -2, 0, "dark_stone"],
+		[5, -2, 1, "dark_stone"],
+
+		[0, -1, -1, "dark_stone"], [1, -1, -1, "dark_stone"], [2, -1, -1, "dark_stone"], [4, -1, -1, "dark_stone"], [5, -1, -1, "dark_stone"], [6, -1, -1, "dark_stone"],
+		[0, -1, 0, "dark_stone"], [1, -1, 0, "dark_stone"], [2, -1, 0, "dark_stone"], [5, -1, 0, "dark_stone"],
+		[0, -1, 1, "dark_stone"], [1, -1, 1, "dark_stone"], [2, -1, 1, "dark_stone"], [4, -1, 1, "dark_stone"], [5, -1, 1, "dark_stone"], [6, -1, 1, "dark_stone"],
+		[0, -1, 4, "dark_stone"], [1, -1, 4, "dark_stone"], [4, -1, 4, "dark_stone"], [6, -1, 4, "dark_stone"],
+		[0, -1, 5, "dark_stone"], [2, -1, 5, "dark_stone"], [4, -1, 5, "dark_stone"], [5, -1, 5, "dark_stone"], [6, -1, 5, "dark_stone"],
+
+		[0, 0, -1, "dirt"], [1, 0, -1, "dirt"], [2, 0, -1, "dirt"], [4, 0, -1, "dirt"], [5, 0, -1, "dirt"], [6, 0, -1, "dirt"],
+		[0, 0, 0, "dirt"], [1, 0, 0, "dirt"], [2, 0, 0, "dirt"], [4, 0, 0, "boards"], [5, 0, 0, "autumn_grass"], [6, 0, 0, "boards"],
+		[0, 0, 1, "dirt"], [1, 0, 1, "dirt"], [2, 0, 1, "dirt"], [3, 0, 1, "wood"], [4, 0, 1, "autumn_grass"], [5, 0, 1, "autumn_grass"], [6, 0, 1, "autumn_grass"],
+		[1, 0, 2, "boards"], [4, 0, 2, "boards"],
+		[1, 0, 3, "boards"], [4, 0, 3, "boards"],
+		[0, 0, 4, "autumn_grass"], [1, 0, 4, "autumn_grass"], [4, 0, 4, "autumn_grass"], [5, 0, 4, "boards"], [6, 0, 4, "autumn_grass"],
+		[0, 0, 5, "autumn_grass"], [1, 0, 5, "boards"], [2, 0, 5, "autumn_grass"], [3, 0, 5, "wood"], [4, 0, 5, "autumn_grass"], [5, 0, 5, "autumn_grass"], [6, 0, 5, "autumn_grass"],
+
+		[0, 1, -1, "dirt"], [1, 1, -1, "dirt"], [2, 1, -1, "dirt"], [4, 1, -1, "dirt"], [5, 1, -1, "dirt"], [6, 1, -1, "dirt"],
+
+		[0, 2, -1, "autumn_grass"], [1, 2, -1, "autumn_grass"], [2, 2, -1, "autumn_grass"], [4, 2, -1, "autumn_grass"], [5, 2, -1, "autumn_grass"], [6, 2, -1, "autumn_grass"]
+	],
+	"props": [
+		[0, 3, -1, "tree_small", 29, true],
+		[5, 3, -1, "tree_tall", 77, true],
+		[6, 3, -1, "tree_tall", 42, true],
+		[2, 1, 0, "pumpkin", 37, true],
+		[0, 1, 0, "tree_small", 27, true],
+		[0, 1, 1, "bush", 61, true],
+		[1, 1, 0, "leaf_pile", 36],
+		[0, 1, 4, "leaf_pile", 32]
+	],
+	"mechanisms": [
+		{ "id": "bell1", "type": "button", "pos": [5, 1, 5], "targets": [] },
+		{ "id": "bell2", "type": "button", "pos": [6, 1, 1], "targets": [] },
+		{ "id": "gate3", "type": "gate", "cells": [[3, 1, 5]], "buttons": ["bell1", "bell2"] }
+	],
+	"packages": [
+		{ "pos": [6, 1, 4], "color": "green" },
+		{ "pos": [5, 1, 1], "color": "yellow" }
+	],
+	"pads": [
+		{ "pos": [4, 1, 1], "color": "green" },
+		{ "pos": [2, 1, 1], "color": "yellow" }
+	],
+	"start": [5, 1, 0],
+	"exit": [1, 1, 1],
+	"stars": [25, 31, 40]
+}

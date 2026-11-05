@@ -1,22 +1,28 @@
 class_name SettingsCard
 extends Control
 ## The settings, as a card over a shaded screen: music and sound volumes,
-## haptics, the tilt-shift blur and the graphics quality, then Google's ad
-## privacy options where the law gives the player a say (see Ads), with the
-## version number and a link to the privacy policy at the foot. Each change
-## goes to Settings at once (a volume slider saves when let go), so the
-## sound and picture follow while the card is up. Sizes are in the 720 x
-## 1280 base viewport.
+## haptics, the tilt-shift blur and the graphics quality, then the daily
+## reminders and the statistics on phones that have them (see Reminders and
+## Analytics) and Google's ad privacy options where the law gives the
+## player a say (see Ads), with the version number and a link to the
+## privacy policy at the foot. Each change goes to Settings at once (a
+## volume slider saves when let go), so the sound and picture follow while
+## the card is up. Sizes are in the 720 x 1280 base viewport.
 
 signal closed
 
-## Without the ad privacy row, which adds a row's height.
+## Without the reminders, statistics and ad privacy rows, each of which adds
+## a row's height.
 const SIZE := Vector2(600.0, 860.0)
 const ROW_TOP: float = 150.0
 const ROW_HEIGHT: float = 108.0
-const AD_ROW: int = 5
+## Where the reminders, statistics and ad privacy rows go, one under the
+## other.
+const EXTRA_ROW: int = 5
 
 var _card: Control
+var _reminder_row: Array[Control] = []
+var _statistics_row: Array[Control] = []
 var _ad_row: Array[Control] = []
 var _done: TouchButton
 var _foot: Array[Control] = []
@@ -59,14 +65,16 @@ func _ready() -> void:
 	_quality.size = Vector2(330.0, 64.0)
 	_quality.picked.connect(func(index: int) -> void: Settings.set_value(&"quality", index))
 	_card.add_child(_quality)
-	var ad_label: Label = _row_label(AD_ROW, "Ad privacy")
+	_reminder_row.assign(_add_toggle(EXTRA_ROW, "Reminders", &"reminders"))
+	_statistics_row.assign(_add_toggle(EXTRA_ROW, "Statistics", &"statistics"))
+	var ad_label: Label = _row_label(EXTRA_ROW, "Ad privacy")
 	_card.add_child(ad_label)
 	var ad_options := TouchButton.new(Vector2(200.0, 68.0))
 	ad_options.name = "AdPrivacy"
 	ad_options.text = "Options"
 	ad_options.font_size = 28
 	ad_options.color = Ui.CREAM.darkened(0.06)
-	ad_options.position = Vector2(SIZE.x - 48.0 - 200.0, _row_y(AD_ROW) + 2.0)
+	ad_options.position = Vector2(SIZE.x - 48.0 - 200.0, _row_y(EXTRA_ROW) + 2.0)
 	ad_options.pressed.connect(func() -> void: Ads.show_privacy_options())
 	_card.add_child(ad_options)
 	_ad_row.assign([ad_label, ad_options])
@@ -95,6 +103,14 @@ func _ready() -> void:
 	_foot.assign([version, policy])
 	_layout()
 	Ads.events.changed.connect(_layout)
+	Reminders.events.changed.connect(_show_reminders)
+	Analytics.events.changed.connect(_show_statistics)
+
+
+func _notification(what: int) -> void:
+	# Back from Android's notification settings, which may have changed.
+	if what == NOTIFICATION_APPLICATION_FOCUS_IN and visible:
+		_show_reminders()
 
 
 ## Shows the card with the current settings.
@@ -103,9 +119,10 @@ func open() -> void:
 	for key: StringName in _sliders:
 		(_sliders[key] as _Slider).set_value(Settings.get_value(key))
 	for key: StringName in _toggles:
-		(_toggles[key] as _Toggle).set_on(Settings.get_value(key), false)
+		(_toggles[key] as _Toggle).set_on(_shows_on(key), false)
 	_quality.set_index(Settings.quality)
 	_layout()
+	Analytics.screen("settings")
 	visible = true
 	modulate.a = 0.0
 	_card.scale = Vector2(0.9, 0.9)
@@ -138,8 +155,10 @@ func _add_slider(row: int, text: String, key: StringName) -> void:
 	_sliders[key] = slider
 
 
-func _add_toggle(row: int, text: String, key: StringName) -> void:
-	_card.add_child(_row_label(row, text))
+## Adds a switch for [param key] and returns it with its label.
+func _add_toggle(row: int, text: String, key: StringName) -> Array[Control]:
+	var label: Label = _row_label(row, text)
+	_card.add_child(label)
 	var toggle := _Toggle.new()
 	toggle.name = text
 	toggle.position = Vector2(SIZE.x - 48.0 - 120.0, _row_y(row) + 6.0)
@@ -150,15 +169,45 @@ func _add_toggle(row: int, text: String, key: StringName) -> void:
 			Haptics.snap())
 	_card.add_child(toggle)
 	_toggles[key] = toggle
+	return [label, toggle]
 
 
-## Shows the ad privacy row only where it is needed, and sizes the card to
-## fit.
+## Whether the switch for [param key] shows on. The reminders switch shows
+## whether reminders will come, which Android (its question, or its
+## settings) can change after a tap, and the statistics switch whether
+## they're collected.
+static func _shows_on(key: StringName) -> bool:
+	match key:
+		&"reminders":
+			return Reminders.is_on()
+		&"statistics":
+			return Analytics.is_collecting()
+	return Settings.get_value(key)
+
+
+func _show_reminders() -> void:
+	if _toggles.has(&"reminders"):
+		(_toggles[&"reminders"] as _Toggle).set_on(_shows_on(&"reminders"))
+
+
+func _show_statistics() -> void:
+	if _toggles.has(&"statistics"):
+		(_toggles[&"statistics"] as _Toggle).set_on(_shows_on(&"statistics"))
+
+
+## Shows the reminders and statistics rows only on phones that have them
+## and the ad privacy row only where it is needed, one under the other, and
+## sizes the card to fit.
 func _layout() -> void:
-	var with_ads: bool = Ads.privacy_options_required()
-	for control: Control in _ad_row:
-		control.visible = with_ads
-	var height: float = SIZE.y + (ROW_HEIGHT if with_ads else 0.0)
+	var extra: int = 0
+	for row: Array in [[_reminder_row, Reminders.is_supported()], [_statistics_row, Analytics.is_supported()],
+			[_ad_row, Ads.privacy_options_required()]]:
+		for control: Control in row[0]:
+			control.visible = row[1]
+			control.position.y = _row_y(EXTRA_ROW + extra) + _row_offset(control)
+		if row[1]:
+			extra += 1
+	var height: float = SIZE.y + ROW_HEIGHT * extra
 	_card.offset_left = -SIZE.x * 0.5
 	_card.offset_right = SIZE.x * 0.5
 	_card.offset_top = -height * 0.5
@@ -195,6 +244,13 @@ func _row_label(row: int, text: String) -> Label:
 
 static func _row_y(row: int) -> float:
 	return ROW_TOP + ROW_HEIGHT * row
+
+
+## How far below its row's top [param control] sits.
+static func _row_offset(control: Control) -> float:
+	if control is _Toggle:
+		return 6.0
+	return 2.0 if control is TouchButton else 0.0
 
 
 static func _label(text: String, font_size: int, align: HorizontalAlignment, rect: Rect2) -> Label:

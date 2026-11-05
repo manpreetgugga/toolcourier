@@ -9,6 +9,8 @@ extends RefCounted
 const ICE: StringName = &"ice"
 ## Autumn dry boards: they drop away once the courier steps off them.
 const BOARDS: StringName = &"boards"
+## Summer springs: stepping onto one bounces the courier on two cells.
+const SPRING: StringName = &"spring"
 
 ## Vector3i -> block type (StringName).
 var cells: Dictionary
@@ -41,9 +43,10 @@ static func has_walkable_top(block_type: StringName) -> bool:
 
 
 ## Whether this type is a whole cube (meshed by BlockMesher and hiding the
-## faces it touches); stairs, cranks and dry boards have their own meshes.
+## faces it touches); stairs, cranks, dry boards and springs have their own
+## meshes.
 static func is_full_block(block_type: StringName) -> bool:
-	return block_type != &"crank" and block_type != BOARDS and not is_stairs(block_type)
+	return block_type != &"crank" and block_type != BOARDS and block_type != SPRING and not is_stairs(block_type)
 
 
 func get_block(cell: Vector3i) -> StringName:

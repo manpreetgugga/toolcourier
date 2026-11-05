@@ -1,0 +1,60 @@
+{
+	"name": "Jam Kitchen",
+	"world": 4,
+	"palette": "orchard",
+	"blocks": [
+		[3, -4, 5, "dark_stone"],
+
+		[2, -3, 4, "dark_stone"], [3, -3, 4, "dark_stone"], [5, -3, 4, "dark_stone"],
+		[2, -3, 5, "dark_stone"], [3, -3, 5, "dark_stone"], [4, -3, 5, "dark_stone"], [5, -3, 5, "dark_stone"],
+
+		[5, -2, 3, "dark_stone"],
+		[1, -2, 4, "dark_stone"], [2, -2, 4, "dark_stone"], [3, -2, 4, "dark_stone"], [4, -2, 4, "dark_stone"], [5, -2, 4, "dark_stone"],
+		[1, -2, 5, "dark_stone"], [2, -2, 5, "dark_stone"], [3, -2, 5, "dark_stone"], [4, -2, 5, "dark_stone"], [5, -2, 5, "dark_stone"],
+		[1, -2, 6, "dark_stone"], [2, -2, 6, "dark_stone"], [3, -2, 6, "dark_stone"], [4, -2, 6, "dark_stone"], [5, -2, 6, "dark_stone"], [6, -2, 6, "dark_stone"],
+
+		[0, -1, -1, "dark_stone"], [1, -1, -1, "dark_stone"], [2, -1, -1, "dark_stone"],
+		[0, -1, 3, "water"], [1, -1, 3, "water"], [2, -1, 3, "water"], [3, -1, 3, "water"], [4, -1, 3, "water"], [5, -1, 3, "water"], [6, -1, 3, "water"],
+		[0, -1, 4, "dark_stone"], [1, -1, 4, "dark_stone"], [2, -1, 4, "dark_stone"], [3, -1, 4, "water"], [4, -1, 4, "dark_stone"], [5, -1, 4, "dark_stone"], [6, -1, 4, "dark_stone"],
+		[0, -1, 5, "dark_stone"], [1, -1, 5, "dark_stone"], [2, -1, 5, "dark_stone"], [3, -1, 5, "water"], [4, -1, 5, "dark_stone"], [5, -1, 5, "dark_stone"], [6, -1, 5, "dark_stone"],
+		[0, -1, 6, "dark_stone"], [1, -1, 6, "dark_stone"], [2, -1, 6, "dark_stone"], [3, -1, 6, "water"], [4, -1, 6, "dark_stone"], [5, -1, 6, "dark_stone"], [6, -1, 6, "dark_stone"],
+		[0, -1, 7, "dark_stone"], [1, -1, 7, "dark_stone"], [2, -1, 7, "dark_stone"], [3, -1, 7, "water"], [4, -1, 7, "dark_stone"], [5, -1, 7, "dark_stone"], [6, -1, 7, "dark_stone"],
+
+		[0, 0, -1, "dirt"], [1, 0, -1, "dirt"], [2, 0, -1, "dirt"],
+		[0, 0, 0, "stone"], [2, 0, 0, "stone"], [4, 0, 0, "stone"], [6, 0, 0, "stone"],
+		[0, 0, 2, "stone"], [2, 0, 2, "stone"], [4, 0, 2, "stone"], [6, 0, 2, "stone"],
+		[1, 0, 3, "dirt"], [4, 0, 3, "dirt"],
+		[0, 0, 4, "dirt"], [1, 0, 4, "autumn_grass"], [2, 0, 4, "autumn_grass"], [4, 0, 4, "autumn_grass"], [5, 0, 4, "autumn_grass"], [6, 0, 4, "autumn_grass"],
+		[0, 0, 5, "autumn_grass"], [1, 0, 5, "autumn_grass"], [2, 0, 5, "autumn_grass"], [4, 0, 5, "autumn_grass"], [5, 0, 5, "autumn_grass"], [6, 0, 5, "autumn_grass"],
+		[0, 0, 6, "autumn_grass"], [1, 0, 6, "autumn_grass"], [2, 0, 6, "autumn_grass"], [4, 0, 6, "dirt"], [5, 0, 6, "autumn_grass"], [6, 0, 6, "autumn_grass"],
+		[0, 0, 7, "autumn_grass"], [1, 0, 7, "autumn_grass"], [2, 0, 7, "autumn_grass"], [4, 0, 7, "autumn_grass"], [5, 0, 7, "autumn_grass"], [6, 0, 7, "autumn_grass"],
+
+		[0, 1, -1, "dirt"], [1, 1, -1, "dirt"], [2, 1, -1, "dirt"],
+		[0, 1, 0, "wood"], [1, 1, 0, "wood"], [2, 1, 0, "wood"], [4, 1, 0, "wood"], [5, 1, 0, "boards"], [6, 1, 0, "wood"],
+		[0, 1, 1, "wood"], [1, 1, 1, "boards"], [2, 1, 1, "wood"], [4, 1, 1, "boards"], [5, 1, 1, "wood"], [6, 1, 1, "wood"],
+		[0, 1, 2, "wood"], [1, 1, 2, "wood"], [2, 1, 2, "wood"], [4, 1, 2, "wood"], [5, 1, 2, "boards"], [6, 1, 2, "wood"],
+
+		[0, 2, -1, "autumn_grass"], [1, 2, -1, "autumn_grass"], [2, 2, -1, "autumn_grass"],
+
+		[1, 1, 3, "stairs_wood", "-z"], [4, 1, 3, "stairs_wood", "-z"]
+	],
+	"props": [
+		[1, 3, -1, "tree_tall", 54, true],
+		[6, 1, 7, "pumpkin", 2, true],
+		[4, 1, 7, "bush", 6, true]
+	],
+	"mechanisms": [
+		{ "id": "bridge", "type": "slider", "cells": [[3, 1, 0]], "axis": "z", "min": 0, "max": 1, "start": 1 }
+	],
+	"packages": [
+		{ "pos": [5, 1, 4], "color": "blue" },
+		{ "pos": [6, 2, 1], "color": "red" }
+	],
+	"pads": [
+		{ "pos": [1, 1, 6], "color": "blue" },
+		{ "pos": [0, 2, 2], "color": "red" }
+	],
+	"start": [5, 1, 5],
+	"exit": [5, 2, 1],
+	"stars": [30, 38, 48]
+}

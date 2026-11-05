@@ -1,0 +1,67 @@
+{
+	"name": "Over the Wall",
+	"world": 7,
+	"palette": "sunflower_fields",
+	"blocks": [
+		[2, -5, 1, "dark_stone"],
+
+		[2, -4, 1, "dark_stone"], [3, -4, 1, "dark_stone"],
+
+		[2, -3, 0, "dark_stone"],
+		[1, -3, 1, "dark_stone"], [2, -3, 1, "dark_stone"], [3, -3, 1, "dark_stone"], [4, -3, 1, "dark_stone"],
+		[2, -3, 2, "dark_stone"], [3, -3, 2, "dark_stone"],
+		[2, -3, 3, "dark_stone"],
+
+		[0, -2, 0, "dark_stone"], [1, -2, 0, "dark_stone"], [2, -2, 0, "dark_stone"], [3, -2, 0, "dark_stone"], [4, -2, 0, "dark_stone"],
+		[0, -2, 1, "dark_stone"], [1, -2, 1, "dark_stone"], [2, -2, 1, "dark_stone"], [3, -2, 1, "dark_stone"], [4, -2, 1, "dark_stone"],
+		[1, -2, 2, "dark_stone"], [2, -2, 2, "dark_stone"], [3, -2, 2, "dark_stone"], [4, -2, 2, "dark_stone"],
+		[1, -2, 3, "dark_stone"], [2, -2, 3, "dark_stone"], [3, -2, 3, "dark_stone"], [4, -2, 3, "dark_stone"], [5, -2, 3, "dark_stone"],
+		[2, -2, 4, "dark_stone"],
+
+		[0, -1, -1, "dark_stone"], [1, -1, -1, "dark_stone"], [2, -1, -1, "dark_stone"], [3, -1, -1, "dark_stone"], [4, -1, -1, "dark_stone"], [5, -1, -1, "dark_stone"],
+		[0, -1, 0, "dark_stone"], [1, -1, 0, "dark_stone"], [2, -1, 0, "dark_stone"], [3, -1, 0, "dark_stone"], [4, -1, 0, "dark_stone"], [5, -1, 0, "dark_stone"],
+		[0, -1, 1, "dark_stone"], [1, -1, 1, "dark_stone"], [2, -1, 1, "dark_stone"], [3, -1, 1, "dark_stone"], [4, -1, 1, "dark_stone"], [5, -1, 1, "dark_stone"],
+		[0, -1, 2, "water"], [1, -1, 2, "water"], [2, -1, 2, "dark_stone"], [3, -1, 2, "dark_stone"], [4, -1, 2, "dark_stone"], [5, -1, 2, "dark_stone"],
+		[0, -1, 3, "water"], [1, -1, 3, "water"], [2, -1, 3, "dark_stone"], [3, -1, 3, "dark_stone"], [4, -1, 3, "dark_stone"], [5, -1, 3, "dark_stone"],
+		[0, -1, 4, "water"], [1, -1, 4, "dark_stone"], [2, -1, 4, "dark_stone"], [3, -1, 4, "dark_stone"], [4, -1, 4, "dark_stone"], [5, -1, 4, "dark_stone"],
+
+		[0, 0, -1, "dirt"], [1, 0, -1, "dirt"], [2, 0, -1, "dirt"], [3, 0, -1, "dirt"], [4, 0, -1, "dirt"], [5, 0, -1, "dirt"],
+		[0, 0, 0, "grass"], [1, 0, 0, "grass"], [2, 0, 0, "grass"], [3, 0, 0, "brick"], [4, 0, 0, "grass"], [5, 0, 0, "grass"],
+		[0, 0, 1, "grass"], [1, 0, 1, "grass"], [2, 0, 1, "grass"], [3, 0, 1, "brick"], [4, 0, 1, "grass"], [5, 0, 1, "grass"],
+		[2, 0, 2, "grass"], [3, 0, 2, "brick"], [4, 0, 2, "grass"], [5, 0, 2, "grass"],
+		[2, 0, 3, "grass"], [3, 0, 3, "brick"], [4, 0, 3, "grass"], [5, 0, 3, "grass"],
+		[1, 0, 4, "grass"], [2, 0, 4, "spring"], [3, 0, 4, "brick"], [4, 0, 4, "grass"], [5, 0, 4, "grass"],
+
+		[0, 1, -1, "dirt"], [1, 1, -1, "dirt"], [2, 1, -1, "dirt"], [3, 1, -1, "dirt"], [4, 1, -1, "dirt"], [5, 1, -1, "dirt"],
+		[3, 1, 0, "brick"],
+		[3, 1, 1, "brick"],
+		[3, 1, 2, "brick"],
+		[3, 1, 3, "brick"],
+		[3, 1, 4, "brick"],
+
+		[0, 2, -1, "dirt"], [1, 2, -1, "grass"], [2, 2, -1, "dirt"], [3, 2, -1, "dirt"], [4, 2, -1, "dirt"], [5, 2, -1, "grass"],
+
+		[0, 3, -1, "grass"], [2, 3, -1, "grass"], [3, 3, -1, "grass"], [4, 3, -1, "grass"]
+	],
+	"props": [
+		[0, 1, 0, "sunflower", 35, true],
+		[4, 1, 0, "hay_bale", 0, true],
+		[0, 4, -1, "sunflower", 0, true],
+		[1, 3, -1, "sunflower", 50, true],
+		[2, 4, -1, "tree_tall", 10, true],
+		[3, 4, -1, "fence", 0, true],
+		[4, 4, -1, "sunflower", 70, true],
+		[5, 3, -1, "hay_bale", 90, true]
+	],
+	"mechanisms": [
+	],
+	"packages": [
+		{ "pos": [1, 1, 0], "color": "red" }
+	],
+	"pads": [
+		{ "pos": [5, 1, 3], "color": "red" }
+	],
+	"start": [0, 1, 1],
+	"exit": [5, 1, 1],
+	"stars": [13, 16, 21]
+}

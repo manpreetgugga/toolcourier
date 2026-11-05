@@ -1,0 +1,53 @@
+{
+	"name": "Bridge Shuffle",
+	"world": 1,
+	"palette": "meadow",
+	"blocks": [
+		[2, -4, 1, "dark_stone"],
+
+		[2, -3, 0, "dark_stone"],
+		[1, -3, 1, "dark_stone"], [2, -3, 1, "dark_stone"], [3, -3, 1, "dark_stone"],
+		[2, -3, 2, "dark_stone"],
+
+		[1, -2, 0, "dark_stone"], [2, -2, 0, "dark_stone"], [3, -2, 0, "dark_stone"],
+		[0, -2, 1, "dark_stone"], [1, -2, 1, "dark_stone"], [2, -2, 1, "dark_stone"], [3, -2, 1, "dark_stone"], [4, -2, 1, "dark_stone"],
+		[1, -2, 2, "dark_stone"], [2, -2, 2, "dark_stone"], [3, -2, 2, "dark_stone"],
+		[2, -2, 3, "dark_stone"],
+
+		[1, -1, -1, "dark_stone"],
+		[0, -1, 0, "dark_stone"], [1, -1, 0, "dark_stone"], [2, -1, 0, "water"], [3, -1, 0, "dark_stone"], [4, -1, 0, "dark_stone"],
+		[0, -1, 1, "dark_stone"], [1, -1, 1, "dark_stone"], [2, -1, 1, "water"], [3, -1, 1, "dark_stone"], [4, -1, 1, "dark_stone"],
+		[0, -1, 2, "dark_stone"], [1, -1, 2, "dark_stone"], [2, -1, 2, "water"], [3, -1, 2, "dark_stone"], [4, -1, 2, "dark_stone"],
+		[1, -1, 3, "dark_stone"], [2, -1, 3, "water"], [3, -1, 3, "dark_stone"],
+
+		[0, 0, -1, "dirt"], [1, 0, -1, "dirt"], [2, 0, -1, "dirt"], [4, 0, -1, "dirt"],
+		[0, 0, 0, "grass"], [1, 0, 0, "grass"], [3, 0, 0, "grass"], [4, 0, 0, "grass"],
+		[0, 0, 1, "grass"], [1, 0, 1, "grass"], [3, 0, 1, "grass"], [4, 0, 1, "grass"],
+		[0, 0, 2, "grass"], [1, 0, 2, "grass"], [3, 0, 2, "grass"], [4, 0, 2, "grass"],
+		[0, 0, 3, "grass"], [1, 0, 3, "grass"], [3, 0, 3, "grass"], [4, 0, 3, "grass"],
+
+		[0, 1, -1, "grass"], [1, 1, -1, "dirt"], [2, 1, -1, "grass"], [4, 1, -1, "dirt"],
+
+		[1, 2, -1, "grass"], [4, 2, -1, "grass"]
+	],
+	"props": [
+		[0, 2, -1, "bush", 29, true],
+		[1, 3, -1, "tree_tall", 66, true],
+		[4, 1, 0, "tree_small", 58, true],
+		[3, 1, 1, "rock", 82, true],
+		[4, 1, 1, "tree_tall", 29, true],
+		[1, 1, 2, "bush", 69, true]
+	],
+	"mechanisms": [
+		{ "id": "bridge", "type": "slider", "cells": [[2, 0, 0]], "axis": "z", "min": 0, "max": 3, "start": 2 }
+	],
+	"packages": [
+		{ "pos": [3, 1, 0], "color": "red" }
+	],
+	"pads": [
+		{ "pos": [0, 1, 2], "color": "red" }
+	],
+	"start": [0, 1, 0],
+	"exit": [4, 1, 3],
+	"stars": [14, 18, 22]
+}

@@ -53,3 +53,14 @@ their own dependencies. They are © Google LLC and used under the
 [Google Mobile Ads SDK terms](https://developers.google.com/admob/terms)
 and Google's AdMob policies. The plugin that drives them
 (`android-plugin/`) is part of this game.
+
+## Firebase libraries
+
+The Android build also adds Google's Firebase libraries for the statistics
+and crash reports, downloaded the same way: **Google Analytics for
+Firebase** (`firebase-analytics` 24.0.0) and **Firebase Crashlytics**
+(`firebase-crashlytics` and `firebase-crashlytics-ndk` 21.0.1), with their
+own dependencies. They are © Google LLC and used under the
+[Firebase terms](https://firebase.google.com/terms) and the
+[Google Analytics terms](https://marketingplatform.google.com/about/analytics/terms/us/).
+The plugin that drives them (`android-firebase/`) is part of this game.

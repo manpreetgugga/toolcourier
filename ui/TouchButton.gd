@@ -56,6 +56,13 @@ func _ready() -> void:
 	_update_look()
 
 
+## Lets go of a press without firing (a list scrolling under the finger).
+func cancel() -> void:
+	if _held:
+		_held = false
+		_update_look()
+
+
 func _gui_input(event: InputEvent) -> void:
 	if event is InputEventScreenTouch:
 		var touch := event as InputEventScreenTouch

@@ -9,8 +9,11 @@ extends RefCounted
 ## extension, e.g. "world_1/level_1". Everything is static; the file is read
 ## on first use.
 
-const VERSION: int = 1
+const VERSION: int = 2
 const DEFAULT_PATH: String = "user://progress.json"
+## Saves before version 2 had world 1 as ten levels, which are now the
+## openers of its ten chapters, at these numbers.
+const WORLD_1_V1: Array[int] = [1, 4, 8, 12, 16, 21, 37, 53, 69, 85]
 
 static var path: String = DEFAULT_PATH
 
@@ -127,8 +130,8 @@ static func save() -> void:
 		push_warning("Progress: cannot replace %s (%s)" % [path, error_string(error)])
 
 
-## Reads the save file. A file that cannot be read is kept as .bad and
-## progress starts empty.
+## Reads the save file, moving an older one's levels to where they are now.
+## A file that cannot be read is kept as .bad and progress starts empty.
 static func load_file() -> void:
 	_loaded = true
 	_levels.clear()
@@ -149,6 +152,20 @@ static func load_file() -> void:
 			_levels[str(id)] = {"stars": clampi(int(entry["stars"]), 0, 3), "moves": int(entry["moves"])}
 	if typeof(parsed.get("in_progress")) == TYPE_DICTIONARY:
 		_resume = parsed["in_progress"]
+	if typeof(parsed.get("version")) in [TYPE_INT, TYPE_FLOAT] and int(parsed["version"]) >= 2:
+		return
+	var moved: Dictionary = {}
+	for id: String in _levels:
+		moved[_v1_id(id)] = _levels[id]
+	_levels = moved
+	if _resume.has("level"):
+		_resume["level"] = _v1_id(str(_resume["level"]))
+
+
+## Where version 1's [param id] is now (see [constant WORLD_1_V1]).
+static func _v1_id(id: String) -> String:
+	var number: int = id.trim_prefix("world_1/level_").to_int() if id.begins_with("world_1/level_") else 0
+	return "world_1/level_%d" % WORLD_1_V1[number - 1] if number >= 1 and number <= WORLD_1_V1.size() else id
 
 
 static func _load_once() -> void:

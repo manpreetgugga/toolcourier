@@ -12,9 +12,10 @@ extends RefCounted
 ## its direction, so paths over belts are one-way. Stepping onto ice slides
 ## the courier on in the same direction until the next cell is not open
 ## ground at the same level (it stops on the ice) or it slides off onto
-## ground (it stops there), so the graph links the cell before the ice
-## straight to where the slide ends. Call [method set_grid] whenever the
-## grid changes.
+## ground (it stops there), and stepping onto a spring bounces it on two
+## cells (see [method bounce]), so the graph links the cell before the ice
+## or the spring straight to where the courier ends up. Call
+## [method set_grid] whenever the grid changes.
 
 ## Height of the middle tread above the bottom of a stairs cell.
 const STAIRS_FLOOR: float = 2.0 / 3.0
@@ -104,28 +105,71 @@ func is_ice(cell: Vector3i) -> bool:
 	return _grid.get_block(cell - Vector3i.UP) == Grid.ICE and not _grid.is_stairs_at(cell)
 
 
+## Whether standing in [param cell] means standing on a spring.
+func is_spring(cell: Vector3i) -> bool:
+	return _grid.get_block(cell - Vector3i.UP) == Grid.SPRING and not _grid.is_stairs_at(cell)
+
+
 ## The cells the courier passes through moving into [param cell] heading
-## [param dir]: that cell, and on ice every cell it slides on to, until the
-## next one is not open ground at the same level or it has slid off the
-## ice. The last cell is where it stops.
+## [param dir]: that cell, then each one it is carried on to from there
+## (see [method carried_on]). The last cell is where it stops.
 func glide(cell: Vector3i, dir: Vector3i) -> Array[Vector3i]:
 	var cells: Array[Vector3i] = [cell]
-	while dir != Vector3i.ZERO and is_ice(cells[-1]):
-		var onward: Vector3i = cells[-1] + dir
-		if not is_walkable(onward) or _grid.is_stairs_at(onward):
-			break
+	var onward: Vector3i = carried_on(cell, dir)
+	# Each step on goes one or two cells further along [param dir], so it ends.
+	while onward != cells[-1]:
 		cells.append(onward)
+		onward = carried_on(onward, dir)
 	return cells
 
 
+## Where the courier goes on its own from [param cell], having come into it
+## heading [param dir]: on ice, the next cell while that is open ground at
+## the same level; on a spring, where it bounces to. [param cell] itself
+## when it stops there (off ice, at the end of a slide, or when a spring
+## has nowhere to throw it).
+func carried_on(cell: Vector3i, dir: Vector3i) -> Vector3i:
+	if dir == Vector3i.ZERO:
+		return cell
+	if is_ice(cell):
+		var onward: Vector3i = cell + dir
+		if is_walkable(onward) and not _grid.is_stairs_at(onward):
+			return onward
+	elif is_spring(cell):
+		return bounce(cell, dir)
+	return cell
+
+
+## Where the spring under [param cell] throws the courier that came onto it
+## heading [param dir]: two cells on, onto the highest ground it can stand
+## on there from one level up to one level down. It flies a level above
+## the spring, so the cell it passes may be a wall or a gap but not a prop
+## or a closed gate. [param cell] itself when something is in the way or
+## there is nowhere to land.
+func bounce(cell: Vector3i, dir: Vector3i) -> Vector3i:
+	var over: Vector3i = cell + dir
+	if dir == Vector3i.ZERO or not is_spring(cell) or _grid.obstacles.has(over) \
+			or not _is_open(cell + Vector3i.UP) or not _is_open(over + Vector3i.UP):
+		return cell
+	for rise: int in [1, 0, -1]:
+		var landing: Vector3i = over + dir + Vector3i.UP * rise
+		if is_walkable(landing) and not _grid.is_stairs_at(landing):
+			return landing
+		# It comes down through the cells above where it lands.
+		if not _is_open(landing):
+			break
+	return cell
+
+
 ## Whether the step from [param from] to [param to] is free: carried by a
-## belt, or sliding on over ice the way the courier came onto it
-## ([param came], its heading into [param from]). The step that starts a
-## slide is a move, and so is one onto stairs, where a slide stops.
+## belt, or carried on over ice or off a spring the way the courier came
+## onto [param from] ([param came], its heading into it; see
+## [method carried_on]). The step that starts a slide or lands on a spring
+## is a move, and so is one onto stairs, where a slide stops.
 func is_ride_step(from: Vector3i, to: Vector3i, came: Vector3i) -> bool:
 	if is_belt(from):
 		return true
-	return came != Vector3i.ZERO and is_ice(from) and heading(from, to) == came and not _grid.is_stairs_at(to)
+	return to != from and carried_on(from, came) == to
 
 
 ## Whether the step into [param path] [param i] is free (see
@@ -135,9 +179,16 @@ func is_ride(path: Array[Vector3i], i: int) -> bool:
 	return is_ride_step(path[i - 1], path[i], came)
 
 
-## The horizontal direction of a step from [param from] to [param to].
+## The horizontal direction of a step from [param from] to [param to] (a
+## bounce skips a cell, so its step spans two).
 static func heading(from: Vector3i, to: Vector3i) -> Vector3i:
-	return Vector3i(to.x - from.x, 0, to.z - from.z)
+	return Vector3i(signi(to.x - from.x), 0, signi(to.z - from.z))
+
+
+## Whether the step from [param from] to [param to] is a bounce off a
+## spring (it skips the cell in between).
+static func is_bounce(from: Vector3i, to: Vector3i) -> bool:
+	return absi(to.x - from.x) + absi(to.z - from.z) > 1
 
 
 ## Whether standing in [param cell] means riding a running belt.
@@ -216,6 +267,11 @@ func _add_node(cell: Vector3i) -> void:
 	var id: int = _id(cell)
 	_astar.add_point(id, floor_position(cell))
 	_cells_by_id[id] = cell
+
+
+## Whether nothing fills [param cell]: no block, solid prop or closed gate.
+func _is_open(cell: Vector3i) -> bool:
+	return not _grid.has_block(cell) and not _grid.obstacles.has(cell)
 
 
 ## Packs a cell into a non-negative point id (11 bits per axis, ±1024).

@@ -98,6 +98,23 @@ func _run() -> void:
 	_check(courier.cell == SAND_CORNER and is_equal_approx(courier.position.y, 1.0),
 		"walking back down the stairs to the sand corner (now at %s)" % [courier.cell])
 
+	# Tapping the courier itself plays an emote; it is not a walk or a move.
+	var body: Vector2 = _scene.camera.unproject_position(courier.global_position + Vector3.UP * Courier.TAP_HEIGHT)
+	_check(_scene.taps_courier(body), "a tap on the courier's body counts as a tap on the courier")
+	_check(not _scene.taps_courier(_scene.camera.unproject_position(Vector3(4.5, 1.0, 4.5))),
+		"a tap on a block across the level does not")
+	var moves: int = _scene.state.moves
+	var emotes: Array[StringName] = []
+	for i in Courier.EMOTES.size():
+		var next: StringName = Courier.EMOTES[courier._next_emote]
+		_tap_screen(body)
+		await _wait(0.2)
+		if courier._emote_tween != null and courier._emote_tween.is_valid() and courier.cell == SAND_CORNER:
+			emotes.append(next)
+		await _wait(1.6)
+	_check(emotes.size() == Courier.EMOTES.size() and _scene.state.moves == moves and not courier.is_moving(),
+		"four taps on the courier play its four emotes in turn (%s), with no move" % [emotes])
+
 	courier.place(SAND_CORNER)
 	courier.set_carried([&"red"])
 	courier.celebrate()
@@ -106,6 +123,15 @@ func _run() -> void:
 
 	print("%d check(s) failed" % _failures if _failures > 0 else "All checks passed")
 	quit(1 if _failures > 0 else 0)
+
+
+## Taps [param at] on the screen through the real input path.
+func _tap_screen(at: Vector2) -> void:
+	for pressed: bool in [true, false]:
+		var event := InputEventScreenTouch.new()
+		event.position = at
+		event.pressed = pressed
+		_viewport.push_input(event, true)
 
 
 ## Taps the centre of the top face of [param block] through the camera.

@@ -1,0 +1,57 @@
+{
+	"name": "Pinwheel",
+	"world": 7,
+	"palette": "sunflower_fields",
+	"blocks": [
+		[4, -3, 2, "dark_stone"],
+
+		[0, -2, 0, "dark_stone"], [3, -2, 0, "dark_stone"], [4, -2, 0, "dark_stone"],
+		[4, -2, 1, "dark_stone"],
+		[4, -2, 2, "dark_stone"],
+		[4, -2, 3, "dark_stone"],
+		[1, -2, 4, "dark_stone"], [4, -2, 4, "dark_stone"],
+
+		[0, -1, -1, "dark_stone"], [1, -1, -1, "dark_stone"], [3, -1, -1, "dark_stone"], [4, -1, -1, "dark_stone"], [5, -1, -1, "dark_stone"],
+		[0, -1, 0, "dark_stone"], [1, -1, 0, "dark_stone"], [3, -1, 0, "dark_stone"], [4, -1, 0, "dark_stone"], [5, -1, 0, "dark_stone"],
+		[0, -1, 1, "dark_stone"], [1, -1, 1, "dark_stone"], [3, -1, 1, "dark_stone"], [4, -1, 1, "dark_stone"], [5, -1, 1, "dark_stone"],
+		[0, -1, 2, "dark_stone"], [1, -1, 2, "dark_stone"], [3, -1, 2, "dark_stone"], [4, -1, 2, "dark_stone"], [5, -1, 2, "dark_stone"],
+		[0, -1, 3, "dark_stone"], [1, -1, 3, "dark_stone"], [3, -1, 3, "dark_stone"], [4, -1, 3, "dark_stone"], [5, -1, 3, "dark_stone"],
+		[0, -1, 4, "dark_stone"], [1, -1, 4, "dark_stone"], [3, -1, 4, "dark_stone"], [4, -1, 4, "dark_stone"], [5, -1, 4, "dark_stone"],
+		[0, -1, 5, "dark_stone"], [1, -1, 5, "dark_stone"], [3, -1, 5, "dark_stone"], [4, -1, 5, "dark_stone"], [5, -1, 5, "dark_stone"],
+
+		[0, 0, -1, "dirt"], [1, 0, -1, "dirt"], [3, 0, -1, "dirt"], [4, 0, -1, "dirt"], [5, 0, -1, "dirt"],
+		[0, 0, 0, "grass"], [1, 0, 0, "grass"], [3, 0, 0, "grass"], [4, 0, 0, "grass"], [5, 0, 0, "grass"],
+		[0, 0, 1, "grass"], [1, 0, 1, "grass"], [3, 0, 1, "grass"], [4, 0, 1, "dirt"], [5, 0, 1, "grass"],
+		[0, 0, 2, "grass"], [1, 0, 2, "grass"], [3, 0, 2, "sand"], [4, 0, 2, "grass"], [5, 0, 2, "grass"],
+		[0, 0, 3, "grass"], [1, 0, 3, "grass"], [3, 0, 3, "spring"], [4, 0, 3, "grass"], [5, 0, 3, "grass"],
+		[0, 0, 4, "dirt"], [1, 0, 4, "grass"], [3, 0, 4, "dirt"], [4, 0, 4, "dirt"], [5, 0, 4, "dirt"],
+		[0, 0, 5, "grass"], [1, 0, 5, "spring"], [3, 0, 5, "grass"], [4, 0, 5, "grass"], [5, 0, 5, "dirt"],
+
+		[0, 1, -1, "dirt"], [1, 1, -1, "dirt"], [3, 1, -1, "dirt"], [4, 1, -1, "dirt"], [5, 1, -1, "dirt"],
+
+		[0, 2, -1, "grass"], [1, 2, -1, "dirt"], [3, 2, -1, "dirt"], [4, 2, -1, "grass"], [5, 2, -1, "dirt"],
+
+		[1, 3, -1, "grass"], [3, 3, -1, "grass"], [5, 3, -1, "grass"]
+	],
+	"props": [
+		[4, 1, 0, "sunflower", 31, true],
+		[4, 1, 1, "tree_small", 11, true],
+		[1, 4, -1, "sunflower", 80, true],
+		[3, 4, -1, "sunflower", 84, true],
+		[5, 4, -1, "tree_small", 23, true]
+	],
+	"mechanisms": [
+		{ "id": "bridge", "type": "slider", "cells": [[2, 0, 0]], "axis": "z", "min": 0, "max": 1, "start": 1 }
+	],
+	"packages": [
+		{ "pos": [3, 1, 5], "color": "blue" },
+		{ "pos": [3, 1, 0], "color": "green" }
+	],
+	"pads": [
+		{ "pos": [0, 1, 4], "color": "blue" },
+		{ "pos": [5, 1, 0], "color": "green" }
+	],
+	"start": [0, 1, 0],
+	"exit": [4, 1, 4],
+	"stars": [25, 31, 40]
+}

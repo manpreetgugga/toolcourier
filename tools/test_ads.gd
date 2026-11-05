@@ -1,13 +1,13 @@
 extends SceneTree
 ## Scripted check of where and when ads may show (see Ads), with Ads.Preview
 ## answering at once in place of the Android plugin: the one switch turns
-## everything off; world 1 never starts the ads; from world 2 on the first
-## Hint in a level offers a video (Not now and back turn it down, a video
+## everything off; world 1's first 20 levels never start the ads; from its
+## level 21 on the first Hint in a level offers a video (Not now and back turn it down, a video
 ## closed early gives no hint, one watched to the end turns hints on for
 ## that level); a level break comes every 3 or 4 levels finished, only as
 ## the finish card is left by Next or back, never on Replay, after a
-## restart, after a finish with no star or within 4 minutes of another ad,
-## and the count survives a restart of the game (and a hint video watched
+## restart, after a finish with no star or within 4 minutes of another ad
+## or of the game opening, and the count survives a restart of the game (and a hint video watched
 ## first thing after one); an ad on screen doesn't
 ## pause the level; Settings offers the ad privacy options only when they
 ## are required. Levels are finished through their own completion event (the
@@ -19,7 +19,10 @@ extends SceneTree
 
 const SIZE := Vector2i(720, 1280)
 const SAVE := "user://test_ads.json"
-const WORLD_1 := "res://levels/world_1/level_1.json"
+## World 1's first and last levels without ads, and its first with them.
+const QUIET_FIRST := "res://levels/world_1/level_1.json"
+const QUIET_LAST := "res://levels/world_1/level_20.json"
+const WORLD_1_ADS := "res://levels/world_1/level_21.json"
 const WORLD_2 := "res://levels/world_2/level_1.json"
 const WORLD_2_NEXT := "res://levels/world_2/level_2.json"
 
@@ -74,15 +77,17 @@ func _check_rules() -> void:
 		and _preview.shown.is_empty(), "with the switch off nothing starts, hints are free and no finish counts")
 	Ads.enabled = true
 
-	Ads.start_for(WORLD_1)
-	for i in 5:
-		Ads.level_finished(WORLD_1, true)
-	_check(not Ads.privacy_options_required() and not Ads.hint_needs_video(WORLD_1) and Ads.break_count().x == 0,
-		"world 1 starts no ads (no consent form either), its hints are free and its finishes never count")
-	Ads.start_for(WORLD_2)
+	for path: String in [QUIET_FIRST, QUIET_LAST]:
+		Ads.start_for(path)
+		for i in 5:
+			Ads.level_finished(path, true)
+	_check(not Ads.privacy_options_required() and not Ads.hint_needs_video(QUIET_FIRST)
+		and not Ads.hint_needs_video(QUIET_LAST) and Ads.break_count().x == 0,
+		"world 1's first 20 levels start no ads (no consent form either), their hints are free and their finishes never count")
+	Ads.start_for(WORLD_1_ADS)
 	await _frames(2)
-	_check(Ads.hint_needs_video(WORLD_2) and Ads.privacy_options_required() and not Ads.hint_needs_video(WORLD_1),
-		"world 2 starts them: a hint there needs a video first")
+	_check(Ads.hint_needs_video(WORLD_1_ADS) and Ads.hint_needs_video(WORLD_2) and Ads.privacy_options_required()
+		and not Ads.hint_needs_video(QUIET_LAST), "world 1's level 21 starts them: a hint there, and in every later world, needs a video first")
 
 	var gap: int = Ads.break_count().y
 	_check(gap in Ads.BREAK_GAPS, "the next break waits for 3 or 4 levels (%d)" % gap)
@@ -94,7 +99,9 @@ func _check_rules() -> void:
 	_check(not early and Ads.break_count().x == gap and not Ads.break_due(),
 		"no break before then, nor after a finish that was restarted along the way or got no star (it still counts)")
 	Ads.level_finished(WORLD_2, true)
-	_check(Ads.break_due(), "the next clean finish brings it")
+	var held: bool = not Ads.break_due()
+	Ads._opened -= Ads.QUIET_SECONDS
+	_check(held and Ads.break_due(), "the next clean finish brings it, once the game has been open 4 minutes")
 	Ads.enabled = false
 	_check(not Ads.break_due(), "the switch holds a due break off")
 	Ads.enabled = true
@@ -243,13 +250,13 @@ func _check_quiet_places() -> void:
 	_preview.shown.clear()
 	for i in 6:
 		Ads.level_finished(WORLD_2, true)
-	var level: Level = await _open(WORLD_1)
+	var level: Level = await _open(QUIET_LAST)
 	var hint: TouchButton = level.hud.get_node("Root/Safe/Buttons/Hint")
 	await _wait(Hud.BADGE_CHECK + 0.1)
 	await _press(hint)
 	await _wait(0.2)
 	_check(hint.badge == &"" and not level.hud.is_offer_showing() and level.has_hint(),
-		"in world 1 Hint gives hints straight away")
+		"in world 1's first 20 levels Hint gives hints straight away")
 	await _finish(level, level.data.stars[0])
 	level = await _press_next(level)
 	_check(_preview.shown.is_empty(), "and no break plays there, however many levels came before")

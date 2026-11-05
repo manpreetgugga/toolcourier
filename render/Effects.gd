@@ -10,6 +10,7 @@ const CONFETTI: Array[Color] = [
 
 static var _dot: GradientTexture2D
 static var _puff: GradientTexture2D
+static var _seed: ImageTexture
 
 
 ## Bright sparkles that shoot up and fade to [param tint] (pads filling).
@@ -96,6 +97,27 @@ static func soft_dot() -> GradientTexture2D:
 	if _dot == null:
 		_dot = _radial([0.0, 0.6, 1.0], [Color.WHITE, Color.WHITE, Color(1.0, 1.0, 1.0, 0.0)], 32)
 	return _dot
+
+
+## A dandelion seed's clock: a soft heart with fine filaments all round,
+## fluffed out at their tips.
+static func seed_texture() -> ImageTexture:
+	if _seed == null:
+		var size: int = 32
+		var image := Image.create(size, size, false, Image.FORMAT_RGBA8)
+		var centre := Vector2(size, size) * 0.5
+		for y in size:
+			for x in size:
+				var offset := Vector2(x + 0.5, y + 0.5) - centre
+				var reach: float = offset.length() / (size * 0.5)
+				# Twelve filaments, thinning out towards their tips.
+				var filament: float = clampf(1.0 - absf(sin(offset.angle() * 6.0)) * 8.0, 0.0, 1.0) * clampf(1.2 - reach, 0.0, 1.0)
+				var heart: float = clampf(1.0 - reach / 0.3, 0.0, 1.0)
+				var fluff: float = clampf(1.0 - absf(reach - 0.82) / 0.14, 0.0, 1.0) * 0.55
+				image.set_pixel(x, y, Color(1.0, 1.0, 1.0, clampf(maxf(heart, maxf(filament, fluff)), 0.0, 1.0)))
+		image.generate_mipmaps()
+		_seed = ImageTexture.create_from_image(image)
+	return _seed
 
 
 ## A cloudy puff, dense in the middle and fading all the way out.

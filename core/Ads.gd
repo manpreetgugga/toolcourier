@@ -1,7 +1,8 @@
 class_name Ads
 extends RefCounted
-## Google AdMob, kept calm. World 1 has no ads at all (they don't even start
-## there), there are no banners, and from world 2 on only two kinds play:
+## Google AdMob, kept calm. World 1's first 20 levels (its first five
+## chapters) have no ads at all (they don't even start there), there are no
+## banners, and from its level 21 on only two kinds play:
 ##
 ## - **Hint video** (rewarded), only when the player asks for one: the first
 ##   Hint in a level offers a short video that turns hints on for the rest of
@@ -11,7 +12,7 @@ extends RefCounted
 ##   player moves on from it (Next, Levels or back), and at most once every 3
 ##   or 4 levels finished. Never on Replay, never after a level that was
 ##   restarted along the way or finished without a star, never within 4
-##   minutes of another ad, and never mid-puzzle.
+##   minutes of another ad or of the game opening, and never mid-puzzle.
 ##
 ## [member enabled] is the one switch for every ad: off, Google's consent
 ## form never shows, the ads SDK never starts, hints are free and no break
@@ -27,11 +28,14 @@ extends RefCounted
 ## Shown in Settings, and given to Play Console.
 const PRIVACY_URL: String = "https://github.com/manpreetgugga/toolcourier/blob/main/PRIVACY.md"
 const DEFAULT_PATH: String = "user://ads.json"
-## World 1 has no ads.
-const FIRST_WORLD: int = 2
+## The first level with ads: world 1's level 21, where the sliding bridges
+## come in.
+const FIRST_WORLD: int = 1
+const FIRST_LEVEL: int = 21
 ## Levels finished between breaks: one of these, picked afresh after each break.
 const BREAK_GAPS: Array[int] = [3, 4]
-## Seconds after any ad before a break may play.
+## Seconds after any ad, or after the game opens, before a break may play
+## (so coming back to the game never starts with one).
 const QUIET_SECONDS: int = 240
 
 ## The one switch (see the class description).
@@ -49,12 +53,14 @@ static var _started: bool = false
 static var _showing: bool = false
 ## Levels whose hints a video has turned on, this launch.
 static var _hint_levels: Dictionary = {}
-## Levels finished (world 2 on) since the last break, and how many the next
+## Levels finished (with ads) since the last break, and how many the next
 ## break waits for.
 static var _finished: int = 0
 static var _gap: int = 0
 ## Unix time of the last ad of any kind.
 static var _last_ad: int = 0
+## Unix time the game opened (as this script loaded).
+static var _opened: int = int(Time.get_unix_time_from_system())
 ## Whether the latest finish may be followed by a break.
 static var _break_allowed: bool = false
 static var _loaded: bool = false
@@ -94,9 +100,9 @@ static func use_provider(provider: Object) -> void:
 			_provider.call(&"start")
 
 
-## Starts the ads for a player who has reached [param level_path]'s world,
-## from world 2 on: Google's consent form where the law needs it, then the
-## ads SDK, which loads one ad of each kind. Once a launch.
+## Starts the ads for a player who has reached [param level_path], from
+## world 1's level 21 on: Google's consent form where the law needs it, then
+## the ads SDK, which loads one ad of each kind. Once a launch.
 static func start_for(level_path: String) -> void:
 	if _started or not _active_in(level_path):
 		return
@@ -131,9 +137,9 @@ static func watch_hint_video(level_path: String) -> Dictionary:
 	return {"earned": result["ok"], "reason": result["reason"]}
 
 
-## Counts a finish of [param level_path] towards the next break (from world
-## 2 on). Only a [param clean] finish (with a star, and no restart along the
-## way) may be followed by one.
+## Counts a finish of [param level_path] towards the next break (in levels
+## with ads). Only a [param clean] finish (with a star, and no restart along
+## the way) may be followed by one.
 static func level_finished(level_path: String, clean: bool) -> void:
 	_break_allowed = false
 	if not _active_in(level_path):
@@ -217,10 +223,13 @@ static func load_file() -> void:
 
 
 ## Ads can play in [param level_path]: the switch is on, there is something
-## to show them, and the level is in world 2 or later.
+## to show them, and the level is world 1's level 21 or a later one.
 static func _active_in(level_path: String) -> bool:
 	_find_provider_once()
-	return enabled and _provider != null and LevelCatalog.world_of(level_path) >= FIRST_WORLD
+	if not enabled or _provider == null:
+		return false
+	var world: int = LevelCatalog.world_of(level_path)
+	return world > FIRST_WORLD or (world == FIRST_WORLD and LevelCatalog.number_of(level_path) >= FIRST_LEVEL)
 
 
 static func _can_show(kind: StringName) -> bool:
@@ -230,7 +239,7 @@ static func _can_show(kind: StringName) -> bool:
 static func _quiet() -> bool:
 	var now: int = int(Time.get_unix_time_from_system())
 	# A clock put back counts as quiet rather than holding the breaks off.
-	return now - _last_ad >= QUIET_SECONDS or now < _last_ad
+	return (now - _last_ad >= QUIET_SECONDS or now < _last_ad) and (now - _opened >= QUIET_SECONDS or now < _opened)
 
 
 ## Shows an ad of [param kind] ("rewarded" or "interstitial") and waits for

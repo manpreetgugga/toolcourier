@@ -2,10 +2,10 @@ extends SceneTree
 ## Scripted check of every mechanism, each on its own small test level in
 ## dev/mechanisms/: a slider dragged into place, an elevator ridden up, a
 ## button calling an elevator down, a belt carrying the courier one way, a
-## crank turning a bridge, a gate opened by two buttons, a slide over ice
-## and dry boards dropping away. Input goes through the real touch path. Prints PASS/FAIL per check, saves a
-## screenshot per mechanism, and exits with status 1 on any failure. Needs a
-## renderer.
+## crank turning a bridge, a gate opened by two buttons, a slide over ice,
+## dry boards dropping away and a bounce off a spring. Input goes through
+## the real touch path. Prints PASS/FAIL per check, saves a screenshot per
+## mechanism, and exits with status 1 on any failure. Needs a renderer.
 ##
 ##   godot --path . --resolution 405x720 -s res://tools/test_mechanisms.gd -- --out=docs/screenshots
 
@@ -39,7 +39,7 @@ func _initialize() -> void:
 
 
 func _check_loader() -> void:
-	for name: String in ["slider", "elevator", "button", "conveyor", "rotator", "gate", "ice", "boards"]:
+	for name: String in ["slider", "elevator", "button", "conveyor", "rotator", "gate", "ice", "boards", "spring"]:
 		var level: LevelData = LevelLoader.load_file("res://dev/mechanisms/%s.json" % name)
 		_check(level.is_valid(), "the %s test level loads %s" % [name, level.errors])
 	var broken: LevelData = LevelLoader.parse(JSON.stringify({
@@ -58,11 +58,18 @@ func _check_loader() -> void:
 		"packages": [{"pos": [1, 1, 0], "color": "red"}], "pads": [{"pos": [2, 1, 0], "color": "red"}],
 		"start": [0, 1, 0], "exit": [0, 1, 0], "stars": [1, 2, 3],
 	}))
-	report = "
-".join(slippery.errors)
+	report = "\n".join(slippery.errors)
 	_check(report.contains("exit: (0, 1, 0) is on ice") and report.contains("is on boards"),
 		"an exit on ice and a parcel on dry boards are reported %s" % [slippery.errors])
 	_check(not report.contains("start:"), "the courier may start on ice")
+	var bouncy: LevelData = LevelLoader.parse(JSON.stringify({
+		"name": "Bouncy", "blocks": [[0, 0, 0, "spring"], [1, 0, 0, "spring"], [2, 0, 0, "stone"]],
+		"packages": [{"pos": [2, 1, 0], "color": "red"}], "pads": [{"pos": [1, 1, 0], "color": "red"}],
+		"start": [0, 1, 0], "exit": [2, 1, 0], "stars": [1, 2, 3],
+	}))
+	report = "\n".join(bouncy.errors)
+	_check(report.contains("(1, 1, 0) is on spring") and not report.contains("start:"),
+		"a pad on a spring is reported, and the courier may start on one %s" % [bouncy.errors])
 
 
 func _run() -> void:
@@ -74,6 +81,7 @@ func _run() -> void:
 	await _gate()
 	await _ice()
 	await _boards()
+	await _spring()
 	print("%d check(s) failed" % _failures if _failures > 0 else "All checks passed")
 	quit(1 if _failures > 0 else 0)
 
@@ -235,6 +243,51 @@ func _boards() -> void:
 	await _settle()
 	await _walk_to_exit(Vector3i(4, 0, 1))
 	_check(_level.state.completed and _level.state.moves == 5, "over the boards to the exit in 5 moves (%d)" % _level.state.moves)
+
+
+func _spring() -> void:
+	await _open("spring")
+	var solver := Solver.new(_level.data)
+	var plan: Array[Dictionary] = solver.solve(_level.state.snapshot())
+	_check(not plan.is_empty() and plan[-1]["moves"] == 3, "the solver counts a bounce off a spring as free (best %d)"
+		% (plan[-1]["moves"] if not plan.is_empty() else -1))
+	# Onto the spring from the side, where it has nowhere to throw the courier.
+	var spring := Vector3i(2, 1, 0)
+	_tap_top(Vector3i(2, 0, 0))
+	await _settle()
+	_check(_level.courier.cell == spring and _level.state.moves == 4,
+		"a spring with nowhere to land leaves the courier standing on it (at %s, %d)" % [_level.courier.cell, _level.state.moves])
+
+	# Back off and onto it again, towards the wall: over the wall onto the ledge.
+	var passed: Array[Vector3i] = []
+	_level.courier.step_finished.connect(func(cell: Vector3i) -> void: passed.append(cell))
+	var top: Node3D = _level.get_node("Springs").get_child(0).get_node("Top")
+	var squash: float = 1.0
+	var over_wall: float = INF
+	var shot: bool = false
+	_tap_top(Vector3i(4, 1, 0))
+	var started: int = Time.get_ticks_msec()
+	while _level.courier.cell != Vector3i(4, 2, 0) and Time.get_ticks_msec() - started < 5000:
+		await process_frame
+		squash = minf(squash, top.scale.y)
+		var at: Vector3 = _level.courier.position
+		if at.x >= 3.0 and at.x <= 4.0:
+			over_wall = minf(over_wall, at.y)
+			if not shot and at.x >= 3.4:
+				shot = true
+				_capture("seasons_spring.png")
+	await _settle()
+	_check(passed == [Vector3i(1, 1, 0), spring, Vector3i(4, 2, 0)] and _level.state.moves == 6,
+		"stepping onto the spring bounces the courier two cells on and a level up, for one move (%s, %d)"
+		% [passed, _level.state.moves])
+	_check(squash < 0.6 and over_wall > 2.0,
+		"the spring squashes under it and it flies clear over the wall (%.2f, lowest %.2f)" % [squash, over_wall])
+	_level.undo()
+	await _settle()
+	_check(_level.courier.cell == spring and _level.state.moves == 4 and is_equal_approx(top.scale.y, 1.0),
+		"undo puts it back on the spring, at rest")
+	await _walk_to_exit(Vector3i(5, 1, 0))
+	_check(_level.state.completed and _level.state.moves == 7, "then over the wall to the exit in 7 moves (%d)" % _level.state.moves)
 
 
 func _open(name: String) -> void:

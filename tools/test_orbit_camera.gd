@@ -160,7 +160,7 @@ func _check_zoom() -> void:
 	_touch(0, Vector2(100, 640), false)
 	_touch(1, Vector2(620, 640), false)
 	await _wait(1.0)
-	_check(absf(_camera.zoom - OrbitCamera.ZOOM_MAX) < SETTLED * 0.1, "pinching out zooms to %.2f (max 1.4)" % _camera.zoom)
+	_check(absf(_camera.zoom - OrbitCamera.ZOOM_MAX) < SETTLED * 0.1, "pinching out zooms to %.2f (max 2.5)" % _camera.zoom)
 	_check(_taps == taps_before, "a pinch is never a tap")
 
 	_touch(0, Vector2(100, 640), true)
@@ -170,7 +170,7 @@ func _check_zoom() -> void:
 	_touch(0, Vector2(330, 640), false)
 	_touch(1, Vector2(390, 640), false)
 	await _wait(1.0)
-	_check(absf(_camera.zoom - OrbitCamera.ZOOM_MIN) < SETTLED * 0.1, "pinching in zooms to %.2f (min 0.7)" % _camera.zoom)
+	_check(absf(_camera.zoom - OrbitCamera.ZOOM_MIN) < SETTLED * 0.1, "pinching in zooms to %.2f (min 0.5)" % _camera.zoom)
 
 	var wheel := InputEventMouseButton.new()
 	wheel.button_index = MOUSE_BUTTON_WHEEL_UP
@@ -178,6 +178,26 @@ func _check_zoom() -> void:
 	_viewport.push_input(wheel, true)
 	_check(is_equal_approx(_camera._target_zoom, OrbitCamera.ZOOM_MIN * OrbitCamera.WHEEL_ZOOM_STEP), "the mouse wheel zooms in")
 	await _wait(0.8)
+
+	# Two fingers moving together pan the view, but never off the diorama.
+	var yaw_before: float = _camera.yaw
+	_touch(0, Vector2(300, 640), true)
+	_touch(1, Vector2(420, 640), true)
+	_drag(0, Vector2(300, 520))
+	_drag(1, Vector2(420, 520))
+	await _wait(0.6)
+	var panned: Vector3 = _camera.pan
+	for i in 6:
+		_drag(0, Vector2(300 + 400 * (i % 2), 520 - 300 * i))
+		_drag(1, Vector2(420 + 400 * (i % 2), 520 - 300 * i))
+	_touch(0, Vector2(300, -1000), false)
+	_touch(1, Vector2(420, -1000), false)
+	await _wait(1.0)
+	var half: Vector3 = _camera._bounds.size * 0.5
+	_check(panned.length() > 0.2 and absf(wrapf(_camera.yaw - yaw_before, -180.0, 180.0)) < 0.5,
+		"two fingers moving together pan the view (%.2f m) without turning it" % panned.length())
+	_check(absf(_camera.pan.x) <= half.x + 0.01 and _camera.pan.y == 0.0 and absf(_camera.pan.z) <= half.z + 0.01,
+		"the pan slides over the ground and stops at the diorama's edge (%s)" % [_camera.pan])
 
 
 func _check_reset() -> void:
@@ -206,8 +226,8 @@ func _check_reset() -> void:
 	await _wait(1.5)
 	_check(absf(wrapf(_camera.yaw - _camera.default_yaw, -180.0, 180.0)) < SETTLED
 			and absf(_camera.pitch - _camera.default_pitch) < SETTLED
-			and absf(_camera.zoom - 1.0) < SETTLED * 0.1,
-		"a double tap on empty space resets the view (yaw %.1f, pitch %.1f, zoom %.2f)" % [_camera.yaw, _camera.pitch, _camera.zoom])
+			and absf(_camera.zoom - 1.0) < SETTLED * 0.1 and _camera.pan.length() < 0.05,
+		"a double tap on empty space resets the view (yaw %.1f, pitch %.1f, zoom %.2f, pan %.2f m)" % [_camera.yaw, _camera.pitch, _camera.zoom, _camera.pan.length()])
 
 
 ## Largest distance of a bounds corner from the screen centre, as a fraction
@@ -230,6 +250,8 @@ func _set_view(yaw: float, pitch: float, zoom: float) -> void:
 	_camera._target_pitch = pitch
 	_camera.zoom = zoom
 	_camera._target_zoom = zoom
+	_camera.pan = Vector3.ZERO
+	_camera._target_pan = Vector3.ZERO
 	_camera._update_transform()
 
 

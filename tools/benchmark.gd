@@ -1,10 +1,11 @@
 extends SceneTree
 ## Measures what each graphics quality costs. Renders the main menu, the
-## world select and a few of the heaviest levels offscreen at a phone's size
-## (1080 x 2400 by default) with each quality in turn, and prints for each:
-## GPU time per frame, the whole frame time (vsync off), draw calls and
-## triangles (all, and those for the shadow maps), the 3D render size, and
-## memory. Also saves the first level at every quality side
+## world select, the first level and the two heaviest (6-49 has the most
+## draw calls of all the levels, 5-104 the most triangles) offscreen at a
+## phone's size (1080 x 2400 by default) with each quality in turn, and
+## prints for each: GPU time per frame, the whole frame time (vsync off),
+## draw calls and triangles (all, and those for the shadow maps), the 3D
+## render size, and memory. Also saves the first level at every quality side
 ## by side (step10_quality.png) to compare how each looks.
 ##
 ## Desktop GPUs are far faster than phones, so read the GPU times as ratios
@@ -17,8 +18,8 @@ const SCENES: Array[Array] = [
 	["menu", ""],
 	["worlds", ""],
 	["level 1-1", "res://levels/world_1/level_1.json"],
-	["level 4-10", "res://levels/world_4/level_10.json"],
-	["level 5-10", "res://levels/world_5/level_10.json"],
+	["level 6-49", "res://levels/world_6/level_49.json"],
+	["level 5-104", "res://levels/world_5/level_104.json"],
 ]
 const WARM_UP: int = 90
 const SAMPLES: int = 120
@@ -47,7 +48,7 @@ func _initialize() -> void:
 
 func _run() -> void:
 	print("%s at %dx%d on %s" % [Engine.get_version_info().string, _size.x, _size.y, RenderingServer.get_video_adapter_name()])
-	print("quality | scene      |  GPU ms | frame ms | draws (shadow) | triangles (shadow) | 3D size   | static MB | video MB")
+	print("quality | scene       |  GPU ms | frame ms | draws (shadow) | triangles (shadow) | 3D size   | static MB | video MB")
 	for quality: int in [Settings.Quality.LOW, Settings.Quality.MEDIUM, Settings.Quality.HIGH]:
 		Settings.set_value(&"quality", quality, false)
 		for scene: Array in SCENES:
@@ -101,7 +102,7 @@ func _measure(quality: int, label: String, level_path: String) -> void:
 				RenderingServer.VIEWPORT_RENDER_INFO_PRIMITIVES_IN_FRAME)
 	var frame_ms: float = (Time.get_ticks_usec() - started) / 1000.0 / SAMPLES
 	var size_3d := Vector2i(Vector2(_size) * viewport.scaling_3d_scale)
-	print("%-7s | %-10s | %7.2f | %8.2f | %5d (%5d) | %8d (%8d) | %4dx%-4d | %9.1f | %8.1f" % [
+	print("%-7s | %-11s | %7.2f | %8.2f | %5d (%5d) | %8d (%8d) | %4dx%-4d | %9.1f | %8.1f" % [
 		Settings.QUALITY_NAMES[quality], label, gpu / SAMPLES, frame_ms,
 		draws / SAMPLES, shadow_draws / SAMPLES, triangles / SAMPLES, shadow_triangles / SAMPLES,
 		size_3d.x, size_3d.y,

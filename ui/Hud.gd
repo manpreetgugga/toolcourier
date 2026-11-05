@@ -8,8 +8,8 @@ extends CanvasLayer
 ## keeps to the screen's safe area. Sizes are in the 720 x 1280 base
 ## viewport. It keeps running while the game is paused.
 ##
-## The ads (see Ads) show in two places only. From world 2 on, the first
-## Hint in a level offers a short video that turns hints on for the rest of
+## The ads (see Ads) show in two places only. From world 1's level 21 on,
+## the first Hint in a level offers a short video that turns hints on for the rest of
 ## it (a play mark on Hint says so); and moving on from the finish card
 ## (Next, Levels or back, never Replay) may play a level break first.
 ##
@@ -250,6 +250,7 @@ func _give_hint(lead: String = "") -> void:
 func _on_watch() -> void:
 	_close_offer()
 	var result: Dictionary = await Ads.watch_hint_video(level.level_path)
+	Analytics.hint_video(level.level_path, "earned" if result["earned"] else str(result["reason"]))
 	if _faded or not is_inside_tree():
 		return
 	_badge_left = 0.0
@@ -564,7 +565,9 @@ func _build_offer(root: Control) -> void:
 	var later := _pill_button(card, "Not now", Vector2((OFFER_SIZE.x - 240.0) * 0.5, 376.0), Ui.CREAM.darkened(0.06),
 		Vector2(240.0, 88.0))
 	later.font_size = 30
-	later.pressed.connect(_close_offer)
+	later.pressed.connect(func() -> void:
+		Analytics.hint_video(level.level_path, "declined")
+		_close_offer())
 
 
 func _round_button(bar: Control, icon_name: StringName, caption: String, offset_x: float, color: Color) -> TouchButton:

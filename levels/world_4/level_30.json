@@ -1,0 +1,71 @@
+{
+	"name": "Threshing Floor",
+	"world": 4,
+	"palette": "orchard",
+	"blocks": [
+		[3, -5, 3, "dark_stone"],
+
+		[2, -4, 2, "dark_stone"],
+		[3, -4, 3, "dark_stone"],
+
+		[1, -3, 0, "dark_stone"], [2, -3, 0, "dark_stone"],
+		[1, -3, 1, "dark_stone"], [2, -3, 1, "dark_stone"],
+		[2, -3, 2, "dark_stone"], [3, -3, 2, "dark_stone"],
+		[2, -3, 3, "dark_stone"], [3, -3, 3, "dark_stone"], [4, -3, 3, "dark_stone"], [5, -3, 3, "dark_stone"],
+		[1, -3, 4, "dark_stone"], [2, -3, 4, "dark_stone"], [3, -3, 4, "dark_stone"], [4, -3, 4, "dark_stone"],
+
+		[0, -2, 0, "dark_stone"], [1, -2, 0, "dark_stone"], [2, -2, 0, "dark_stone"], [3, -2, 0, "dark_stone"],
+		[0, -2, 1, "dark_stone"], [1, -2, 1, "dark_stone"], [2, -2, 1, "dark_stone"], [3, -2, 1, "dark_stone"],
+		[1, -2, 2, "dark_stone"], [2, -2, 2, "dark_stone"], [3, -2, 2, "dark_stone"], [4, -2, 2, "dark_stone"], [7, -2, 2, "dark_stone"], [8, -2, 2, "dark_stone"],
+		[1, -2, 3, "dark_stone"], [2, -2, 3, "dark_stone"], [3, -2, 3, "dark_stone"], [4, -2, 3, "dark_stone"], [5, -2, 3, "dark_stone"], [6, -2, 3, "dark_stone"], [7, -2, 3, "dark_stone"],
+		[0, -2, 4, "dark_stone"], [1, -2, 4, "dark_stone"], [2, -2, 4, "dark_stone"], [3, -2, 4, "dark_stone"], [4, -2, 4, "dark_stone"], [5, -2, 4, "dark_stone"], [7, -2, 4, "dark_stone"], [8, -2, 4, "dark_stone"],
+		[1, -2, 5, "dark_stone"], [2, -2, 5, "dark_stone"], [3, -2, 5, "dark_stone"], [4, -2, 5, "dark_stone"], [7, -2, 5, "dark_stone"],
+		[1, -2, 6, "dark_stone"],
+
+		[0, -1, -1, "dark_stone"], [3, -1, -1, "dark_stone"], [4, -1, -1, "dark_stone"], [7, -1, -1, "dark_stone"], [8, -1, -1, "dark_stone"],
+		[0, -1, 0, "dark_stone"], [1, -1, 0, "dark_stone"], [2, -1, 0, "water"], [3, -1, 0, "dark_stone"], [4, -1, 0, "dark_stone"], [7, -1, 0, "dark_stone"],
+		[0, -1, 1, "dark_stone"], [1, -1, 1, "dark_stone"], [2, -1, 1, "water"], [3, -1, 1, "dark_stone"], [4, -1, 1, "dark_stone"], [7, -1, 1, "dark_stone"], [8, -1, 1, "dark_stone"],
+		[0, -1, 2, "water"], [1, -1, 2, "water"], [2, -1, 2, "water"], [3, -1, 2, "water"], [4, -1, 2, "water"], [5, -1, 2, "water"], [6, -1, 2, "water"], [7, -1, 2, "water"], [8, -1, 2, "water"],
+		[0, -1, 3, "water"], [1, -1, 3, "water"], [2, -1, 3, "water"], [3, -1, 3, "water"], [4, -1, 3, "water"], [5, -1, 3, "water"], [6, -1, 3, "water"], [7, -1, 3, "water"], [8, -1, 3, "water"],
+		[0, -1, 4, "water"], [1, -1, 4, "water"], [2, -1, 4, "water"], [3, -1, 4, "water"], [4, -1, 4, "water"], [5, -1, 4, "water"], [6, -1, 4, "water"], [7, -1, 4, "water"], [8, -1, 4, "water"],
+		[0, -1, 5, "dark_stone"], [1, -1, 5, "dark_stone"], [2, -1, 5, "water"], [3, -1, 5, "dark_stone"], [4, -1, 5, "dark_stone"], [7, -1, 5, "dark_stone"], [8, -1, 5, "dark_stone"],
+		[0, -1, 6, "dark_stone"], [1, -1, 6, "dark_stone"], [2, -1, 6, "water"], [4, -1, 6, "dark_stone"], [7, -1, 6, "dark_stone"],
+
+		[0, 0, -1, "dirt"], [3, 0, -1, "dirt"], [4, 0, -1, "dirt"], [7, 0, -1, "dirt"], [8, 0, -1, "dirt"],
+		[0, 0, 0, "dirt"], [1, 0, 0, "dirt"], [2, 0, 0, "boards"], [3, 0, 0, "dirt"], [4, 0, 0, "dirt"], [5, 0, 0, "wood"], [6, 0, 0, "wood"], [7, 0, 0, "dirt"], [8, 0, 0, "boards"],
+		[0, 0, 1, "dirt"], [1, 0, 1, "dirt"], [3, 0, 1, "dirt"], [4, 0, 1, "dirt"], [7, 0, 1, "dirt"], [8, 0, 1, "dirt"],
+		[0, 0, 2, "boards"],
+		[0, 0, 3, "boards"],
+		[0, 0, 4, "boards"],
+		[0, 0, 5, "dirt"], [1, 0, 5, "dirt"], [2, 0, 5, "wood"], [3, 0, 5, "dirt"], [4, 0, 5, "dirt"], [5, 0, 5, "boards"], [6, 0, 5, "boards"], [7, 0, 5, "autumn_grass"], [8, 0, 5, "autumn_grass"],
+		[0, 0, 6, "dirt"], [1, 0, 6, "dirt"], [3, 0, 6, "boards"], [4, 0, 6, "dirt"], [7, 0, 6, "autumn_grass"], [8, 0, 6, "boards"],
+
+		[0, 1, -1, "dirt"], [3, 1, -1, "dirt"], [4, 1, -1, "dirt"], [7, 1, -1, "dirt"], [8, 1, -1, "dirt"],
+
+		[0, 2, -1, "autumn_grass"], [3, 2, -1, "autumn_grass"], [4, 2, -1, "autumn_grass"], [7, 2, -1, "dirt"], [8, 2, -1, "autumn_grass"],
+
+		[7, 3, -1, "autumn_grass"]
+	],
+	"props": [
+		[3, 3, -1, "tree_small", 25, true],
+		[7, 4, -1, "bush", 51, true],
+		[8, 1, 5, "tree_small", 37, true],
+		[4, 1, 6, "pumpkin", 20, true],
+		[0, 1, 0, "leaf_pile", 4],
+		[8, 1, 1, "leaf_pile", 69]
+	],
+	"mechanisms": [
+		{ "id": "mill1", "type": "rotator", "cells": [[7, 0, 2], [7, 0, 3], [7, 0, 4]], "pivot": [7, 0, 3], "handle": [3, 1, 1], "start": 1 }
+	],
+	"packages": [
+		{ "pos": [4, 1, 5], "color": "green" },
+		{ "pos": [1, 1, 1], "color": "yellow" }
+	],
+	"pads": [
+		{ "pos": [1, 1, 6], "color": "green" },
+		{ "pos": [0, 1, 5], "color": "yellow" }
+	],
+	"start": [3, 1, 5],
+	"exit": [0, 1, 6],
+	"stars": [25, 31, 40]
+}
