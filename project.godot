@@ -12,7 +12,7 @@ config_version=5
 
 config/name="Tiny Courier"
 config/description="A calm 3D diorama puzzle game about a little walking mailbox delivering parcels."
-config/version="1.1.0"
+config/version="1.2.0"
 run/main_scene="res://ui/Menu.tscn"
 config/quit_on_go_back=false
 config/features=PackedStringArray("4.7", "Mobile")

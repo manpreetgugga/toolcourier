@@ -3,6 +3,25 @@
 Play Console takes up to 500 characters per language, between the
 language's tags; paste each block as it is.
 
+## 1.2.0 (version code 3): closed testing
+
+Bump `version/code` to 3 and `version/name` to "1.2.0" in both presets of
+`export_presets.cfg` (and `config/version` in `project.godot`) before
+building it.
+
+```
+<en-US>
+Frost Peaks is rebuilt as the final world.
+• 50 new mountain levels over thin ice that cracks and breaks behind you
+• Igloos, ice crystals, cable cars and a glowing evening sky
+• Each world now opens with stars: hints help you collect them
+• A grid of worlds, a spinning menu island and gentler zoom
+Stars from the old Frost Peaks levels are reset.
+This build shows test ads from level 21 on.
+Please send private feedback on the Play page if a level feels stuck or looks wrong.
+</en-US>
+```
+
 ## 1.1.0 (version code 2): closed testing
 
 Bump `version/code` to 2 and `version/name` to "1.1.0" in both presets of
