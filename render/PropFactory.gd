@@ -1,7 +1,9 @@
 class_name PropFactory
 extends RefCounted
 ## Procedural clay decor: trees, bushes, lamp posts, flags, crates, fences,
-## rocks, pumpkins, leaf piles, snowmen, sunflowers and hay bales, plus the
+## rocks, pumpkins, leaf piles, snowmen, sunflowers and hay bales, Frost
+## Peaks' igloos, ice crystals, sleds, ice lanterns, signposts, cable-car
+## gondolas and bunting, plus the
 ## level's stairs, dry boards, springs and the parcel and pad meshes. Parts are merged into one mesh with
 ## a surface per colour, so a level's decor costs a handful of draw calls.
 ##
@@ -14,6 +16,7 @@ extends RefCounted
 const TYPES: Array[StringName] = [
 	&"tree_small", &"tree_tall", &"bush", &"lamp_post", &"flag", &"crate", &"fence", &"rock",
 	&"pumpkin", &"leaf_pile", &"snowman", &"sunflower", &"hay_bale",
+	&"igloo", &"ice_crystal", &"sled", &"ice_lantern", &"signpost", &"gondola", &"bunting",
 ]
 
 const TRUNK := Color("#8A5A3C")
@@ -43,6 +46,18 @@ const SUNFLOWER_HEART := Color("#7A4E2D")
 const SUNFLOWER_STEM := Color("#6E9E4A")
 const HAY := Color("#E8C468")
 const HAY_CORD := Color("#C99A45")
+const THIN_ICE := Color("#A6E3EC")
+const THIN_ICE_DEEP := Color("#7CC7DA")
+const ICE_CRACK := Color("#E9FBFF")
+const SNOW_SHADE := Color("#DCE1F0")
+const DOORWAY := Color("#3E4270")
+const CRYSTAL := Color("#8EE6F2")
+const CRYSTAL_DEEP := Color("#4DB3D6")
+const RUNNER := Color("#C8443B")
+const BLANKET := Color("#5E7FC4")
+const STEEL := Color("#5D6283")
+const GONDOLA := Color("#E0564A")
+const BUNTING: Array[Color] = [Color("#F27D6B"), Color("#F6C445"), Color("#6CC3A0"), Color("#6FA8DC"), Color("#B48ED8")]
 const SPRING_BOX := Color("#5B9BD5")
 const COIL := Color("#D5DAE3")
 ## How far above its cell's floor a spring's coil stands (see
@@ -141,6 +156,13 @@ static func build_props(props: Array[Dictionary], season: StringName = &"summer"
 			&"snowman": _snowman(batch, base)
 			&"sunflower": _sunflower(batch, base)
 			&"hay_bale": _hay_bale(batch, base)
+			&"igloo": _igloo(batch, base)
+			&"ice_crystal": _ice_crystal(batch, base, cell)
+			&"sled": _sled(batch, base)
+			&"ice_lantern": _ice_lantern(batch, base)
+			&"signpost": _signpost(batch, base, snowy)
+			&"gondola": _gondola(batch, base, snowy)
+			&"bunting": _bunting(batch, base)
 	return batch.commit()
 
 
@@ -163,6 +185,39 @@ static func board(along: Vector3i, cell: Vector3i) -> ArrayMesh:
 		var leaf := _at(spot.x, 1.0, spot.y).rotated_local(Vector3.UP, _hash(cell + Vector3i(i, 3, 1)) * PI)
 		batch.add(_sphere(0.075, 0.03), base * leaf.scaled_local(Vector3(1.0, 1.0, 0.6)),
 			AUTUMN_LEAVES[(i + absi(cell.x + cell.z)) % AUTUMN_LEAVES.size()])
+	return batch.commit()
+
+
+## A thin ice slab: a pale glassy sheet across the top of a block cell (the
+## origin is the middle of the cell's floor) with a deeper rim, white crack
+## lines, a drift of snow at one corner and icicles hanging under its edge.
+## [param cell] varies the cracks, the snow and the icicles.
+static func thin_ice(cell: Vector3i) -> ArrayMesh:
+	var batch := _Batch.new()
+	batch.add(ClayShapes.rounded_box(Vector3(0.98, 0.1, 0.98), 0.04), _at(0.0, 0.9, 0.0), THIN_ICE_DEEP)
+	batch.add(ClayShapes.rounded_box(Vector3(0.9, 0.06, 0.9), 0.03), _at(0.0, 0.95, 0.0), THIN_ICE, 0.15)
+	# Cracks fan out from a point near the middle.
+	var centre := Vector2(_hash(cell + Vector3i(2, 0, 0)), _hash(cell + Vector3i(0, 0, 2))) * 0.12
+	var turn: float = _hash(cell + Vector3i(1, 1, 1)) * PI
+	for i in 4:
+		var angle: float = turn + TAU * i / 4.0 + 0.35 * _hash(cell + Vector3i(i, 5, 0))
+		var reach: float = 0.2 + 0.08 * _hash(cell + Vector3i(0, 5, i))
+		var mid := Vector2(cos(angle), sin(angle)) * reach * 0.5 + centre
+		var crack := _at(mid.x, 0.985, mid.y).rotated_local(Vector3.UP, -angle)
+		batch.add(ClayShapes.rounded_box(Vector3(reach, 0.014, 0.022), 0.006), crack, ICE_CRACK)
+		# A short fork off each crack.
+		var fork_at := Vector2(cos(angle), sin(angle)) * reach * 0.8 + centre
+		var fork := _at(fork_at.x, 0.985, fork_at.y).rotated_local(Vector3.UP, -angle - 0.7)
+		batch.add(ClayShapes.rounded_box(Vector3(0.12, 0.014, 0.018), 0.006), fork * _at(0.05, 0.0, 0.0), ICE_CRACK)
+	var corner := Vector2(signf(_hash(cell + Vector3i(4, 0, 0)) + 0.01), signf(_hash(cell + Vector3i(0, 4, 0)) + 0.01)) * 0.3
+	batch.add(_sphere(0.16, 0.07), _at(corner.x, 0.97, corner.y).scaled_local(Vector3(1.3, 1.0, 1.0)), SNOW)
+	for i in 3:
+		var side: float = -0.36 + 0.36 * i + 0.06 * _hash(cell + Vector3i(i, 9, 0))
+		var length: float = 0.12 + 0.07 * absf(_hash(cell + Vector3i(0, 9, i)))
+		var spot := Vector3(side, 0.85 - length * 0.5, 0.42) if (cell.x + i) % 2 == 0 else Vector3(0.42, 0.85 - length * 0.5, side)
+		if (cell.z + i) % 3 == 0:
+			spot = Vector3(-spot.x, spot.y, -spot.z)
+		batch.add(_cone(0.035, length), Transform3D(Basis(Vector3.RIGHT, PI), spot), THIN_ICE_DEEP)
 	return batch.commit()
 
 
@@ -393,6 +448,118 @@ static func _hay_bale(batch: _Batch, base: Transform3D) -> void:
 	batch.add(_cylinder(0.26, 0.44), base * Transform3D(lying, Vector3(0.0, 0.26, 0.0)), HAY)
 	for x: float in [-0.11, 0.11]:
 		batch.add(_cylinder(0.268, 0.035), base * Transform3D(lying, Vector3(x, 0.26, 0.0)), HAY_CORD)
+
+
+## A snow-block dome with its rows picked out and a low entrance tunnel,
+## facing +Z.
+static func _igloo(batch: _Batch, base: Transform3D) -> void:
+	batch.add(_sphere(0.4, 0.8), base * _at(0.0, 0.0, -0.02).scaled_local(Vector3(1.0, 1.05, 1.0)), SNOW)
+	for row: Vector2 in [Vector2(0.13, 0.385), Vector2(0.26, 0.335)]:
+		batch.add(_torus(row.y - 0.012, row.y + 0.01), base * _at(0.0, row.x, -0.02), SNOW_SHADE)
+	batch.add(_sphere(0.11, 0.08), base * _at(0.0, 0.42, -0.02), SNOW_SHADE)
+	var tunnel := Transform3D(Basis(Vector3.RIGHT, PI * 0.5), Vector3(0.0, 0.12, 0.34))
+	batch.add(_cylinder(0.15, 0.24), base * tunnel, SNOW)
+	batch.add(_cylinder(0.1, 0.25), base * tunnel.translated_local(Vector3(0.0, 0.006, -0.02)), DOORWAY)
+
+
+## A cluster of glowing ice crystals, tall in the middle, leaning out.
+static func _ice_crystal(batch: _Batch, base: Transform3D, cell: Vector3i) -> void:
+	batch.add(_sphere(0.2, 0.1), base * _at(0.0, 0.02, 0.0).scaled_local(Vector3(1.2, 1.0, 1.0)), SNOW)
+	for i in 5:
+		var angle: float = TAU * i / 5.0 + _hash(cell) * 0.6
+		var lean: float = 0.0 if i == 0 else 0.42
+		var spot := Vector3(cos(angle), 0.0, sin(angle)) * (0.0 if i == 0 else 0.1)
+		var height: float = 0.62 if i == 0 else 0.3 + 0.08 * absf(_hash(cell + Vector3i(i, 0, 0)))
+		var shard := _at(spot.x, 0.0, spot.z).rotated_local(Vector3.UP, -angle).rotated_local(Vector3.BACK, -lean)
+		var prism := _cylinder(0.065 if i == 0 else 0.05, height * 0.75)
+		prism.radial_segments = 6
+		var tip := _cone(0.065 if i == 0 else 0.05, height * 0.25)
+		tip.radial_segments = 6
+		var color: Color = CRYSTAL if i % 2 == 0 else CRYSTAL_DEEP
+		batch.add(prism, base * shard * _at(0.0, height * 0.375, 0.0), color, 0.5)
+		batch.add(tip, base * shard * _at(0.0, height * 0.875, 0.0), color, 0.5)
+
+
+## A wooden sled with curled red runners and a rolled blue blanket, along X.
+static func _sled(batch: _Batch, base: Transform3D) -> void:
+	for z: float in [-0.15, 0.15]:
+		batch.add(ClayShapes.rounded_box(Vector3(0.62, 0.035, 0.035), 0.012), base * _at(-0.02, 0.02, z), RUNNER)
+		batch.add(_torus(0.04, 0.075), base * Transform3D(Basis(Vector3.RIGHT, PI * 0.5), Vector3(0.3, 0.075, z)), RUNNER)
+		for x: float in [-0.2, 0.14]:
+			batch.add(_cylinder(0.018, 0.1), base * _at(x, 0.08, z), RUNNER)
+	for i in 4:
+		batch.add(ClayShapes.rounded_box(Vector3(0.12, 0.035, 0.38), 0.012), base * _at(-0.24 + 0.135 * i, 0.145, 0.0),
+			PLANK if i % 2 == 0 else PLANK_DARK)
+	var roll := Transform3D(Basis(Vector3.RIGHT, PI * 0.5), Vector3(-0.08, 0.23, 0.0))
+	batch.add(_cylinder(0.075, 0.32), base * roll, BLANKET)
+	batch.add(_cylinder(0.078, 0.03), base * roll.translated_local(Vector3(0.0, 0.08, 0.0)), TAPE)
+	batch.add(_cylinder(0.078, 0.03), base * roll.translated_local(Vector3(0.0, -0.08, 0.0)), TAPE)
+
+
+## Blocks of ice stacked round a warm candle glow, with a snow cap.
+static func _ice_lantern(batch: _Batch, base: Transform3D) -> void:
+	batch.add(_cylinder(0.07, 0.16), base * _at(0.0, 0.12, 0.0), LAMP, 1.6)
+	for i in 4:
+		var angle: float = TAU * i / 4.0
+		var wall := _at(cos(angle) * 0.12, 0.13, sin(angle) * 0.12).rotated_local(Vector3.UP, -angle)
+		batch.add(ClayShapes.rounded_box(Vector3(0.06, 0.26, 0.2), 0.025), base * wall, THIN_ICE, 0.35)
+	batch.add(ClayShapes.rounded_box(Vector3(0.3, 0.05, 0.3), 0.02), base * _at(0.0, 0.285, 0.0), THIN_ICE, 0.35)
+	batch.add(_sphere(0.13, 0.07), base * _at(0.0, 0.32, 0.0), SNOW)
+
+
+## A trail signpost with two arrow boards pointing different ways.
+static func _signpost(batch: _Batch, base: Transform3D, snowy: bool) -> void:
+	batch.add(_cylinder(0.035, 0.8), base * _at(0.0, 0.4, 0.0), TRUNK)
+	for arrow: Vector2 in [Vector2(0.66, 0.2), Vector2(0.5, -2.6)]:
+		var board := _at(0.0, arrow.x, 0.0).rotated_local(Vector3.UP, arrow.y)
+		batch.add(ClayShapes.rounded_box(Vector3(0.34, 0.09, 0.03), 0.012), base * board * _at(0.15, 0.0, 0.03), PLANK)
+		var point := _cone(0.065, 0.07)
+		point.radial_segments = 4
+		batch.add(point, base * board * Transform3D(Basis(Vector3.BACK, -PI * 0.5), Vector3(0.355, 0.0, 0.03)), PLANK)
+		if snowy:
+			batch.add(ClayShapes.rounded_box(Vector3(0.3, 0.025, 0.04), 0.01), base * board * _at(0.14, 0.055, 0.03), SNOW)
+	if snowy:
+		batch.add(_sphere(0.05, 0.04), base * _at(0.0, 0.81, 0.0), SNOW)
+
+
+## A cable-car pylon with a red gondola hanging from the cable, which runs
+## along X.
+static func _gondola(batch: _Batch, base: Transform3D, snowy: bool) -> void:
+	batch.add(ClayShapes.rounded_box(Vector3(0.2, 0.08, 0.2), 0.03), base * _at(-0.3, 0.04, 0.0), STEEL)
+	batch.add(_cylinder(0.04, 1.3), base * _at(-0.3, 0.68, 0.0), STEEL)
+	batch.add(ClayShapes.rounded_box(Vector3(0.08, 0.06, 0.34), 0.02), base * _at(-0.3, 1.32, 0.0), STEEL)
+	var cable := Transform3D(Basis(Vector3.BACK, PI * 0.5), Vector3(0.0, 1.31, 0.13))
+	batch.add(_cylinder(0.012, 1.0), base * cable, POST)
+	batch.add(_cylinder(0.012, 0.34), base * _at(0.18, 1.14, 0.13), STEEL)
+	batch.add(ClayShapes.rounded_box(Vector3(0.3, 0.26, 0.24), 0.06), base * _at(0.18, 0.84, 0.13), GONDOLA)
+	batch.add(ClayShapes.rounded_box(Vector3(0.31, 0.08, 0.25), 0.03), base * _at(0.18, 0.88, 0.13), LAMP, 0.6)
+	batch.add(ClayShapes.rounded_box(Vector3(0.32, 0.04, 0.26), 0.02), base * _at(0.18, 0.98, 0.13), STEEL)
+	if snowy:
+		batch.add(ClayShapes.rounded_box(Vector3(0.28, 0.035, 0.22), 0.015), base * _at(0.18, 1.0, 0.13), SNOW)
+		batch.add(ClayShapes.rounded_box(Vector3(0.07, 0.03, 0.3), 0.012), base * _at(-0.3, 1.36, 0.0), SNOW)
+
+
+## Two poles with a sagging string of bright pennants between them, along X.
+static func _bunting(batch: _Batch, base: Transform3D) -> void:
+	for x: float in [-0.44, 0.44]:
+		batch.add(_cylinder(0.025, 0.78), base * _at(x, 0.39, 0.0), TRUNK)
+		batch.add(_sphere(0.035, 0.07), base * _at(x, 0.79, 0.0), TRUNK)
+	for i in 8:
+		var t0: float = i / 8.0
+		var t1: float = (i + 1) / 8.0
+		var a := Vector2(lerpf(-0.44, 0.44, t0), 0.74 - 0.14 * sin(PI * t0))
+		var b := Vector2(lerpf(-0.44, 0.44, t1), 0.74 - 0.14 * sin(PI * t1))
+		var mid: Vector2 = (a + b) * 0.5
+		var span: Vector2 = b - a
+		var piece := Transform3D(Basis(Vector3.BACK, atan2(span.y, span.x) - PI * 0.5), Vector3(mid.x, mid.y, 0.0))
+		batch.add(_cylinder(0.008, span.length()), base * piece, POST)
+	for i in 6:
+		var t: float = (i + 0.75) / 7.5
+		var top := Vector2(lerpf(-0.44, 0.44, t), 0.74 - 0.14 * sin(PI * t))
+		var pennant := _cone(0.07, 0.15)
+		pennant.radial_segments = 3
+		var hang := Transform3D(Basis(Vector3.RIGHT, PI), Vector3(top.x, top.y - 0.08, 0.0)).scaled_local(Vector3(1.0, 1.0, 0.25))
+		batch.add(pennant, base * hang, BUNTING[i % BUNTING.size()])
 
 
 ## A steady value in [-1, 1] for a cell.

@@ -51,6 +51,8 @@ var _finish_card: Control
 var _finish_stars: StarRow
 var _finish_moves: Label
 var _finish_best: Label
+## Says the next world wants more stars, in place of Next.
+var _finish_gate: Label
 var _replay: TouchButton
 var _next: TouchButton
 var _next_path: String = ""
@@ -310,6 +312,13 @@ func _on_completed(moves: int, stars: int) -> void:
 		_finish_best.text = "Best: %d moves, %d %s" % [best["moves"], best["stars"], "star" if best["stars"] == 1 else "stars"]
 		_finish_best.label_settings.font_color = Ui.MUTED
 	_next_path = level.next_level_path()
+	var gated: bool = not _next_path.is_empty() and not LevelCatalog.is_unlocked(_next_path)
+	_finish_gate.visible = gated
+	if gated:
+		var world: int = LevelCatalog.world_of(_next_path)
+		_finish_gate.text = "%d / %d stars to open %s.\nReplay with a Hint for three stars." \
+			% [Progress.total_stars(), LevelCatalog.stars_needed(world), LevelCatalog.world_name(world)]
+		_next_path = ""
 	_next.visible = not _next_path.is_empty()
 	_replay.position.x = 50.0 if _next.visible else (FINISH_SIZE.x - _replay.size.x) * 0.5
 	_finish_stars.set_lit(0, false)
@@ -463,6 +472,10 @@ func _build_finish(root: Control) -> void:
 	var limits: Array[int] = level.data.stars
 	card.add_child(_label("3 stars in %d  ·  2 in %d  ·  1 in %d" % [limits[0], limits[1], limits[2]], 22, Ui.MUTED,
 		Rect2(0.0, 362.0, FINISH_SIZE.x, 34.0)))
+	_finish_gate = _label("", 20, Ui.ACCENT.darkened(0.2), Rect2(20.0, 392.0, FINISH_SIZE.x - 40.0, 50.0))
+	_finish_gate.name = "Gate"
+	_finish_gate.visible = false
+	card.add_child(_finish_gate)
 
 	_replay = _pill_button(card, "Replay", Vector2(50.0, 450.0), Ui.CREAM.darkened(0.06))
 	_next = _pill_button(card, "Next", Vector2(310.0, 450.0), Ui.ACCENT)

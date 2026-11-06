@@ -3,11 +3,12 @@ extends RefCounted
 ## What stands about on the islands of the level map (see LevelMap), drawn
 ## in code in the colours of the props in the levels. Pieces: trees and
 ## bushes in the season's colours, pines, rocks, flowers, sunflowers,
-## houses, lamps, flags, crates, pumpkins, hay, snowmen, ponds and fences.
+## houses, lamps, flags, crates, pumpkins, hay, snowmen, igloos, ice
+## crystals, ponds and fences.
 ## Landmarks, one to an island, move a little: a windmill's sails turn, a
 ## lighthouse's light sweeps round, a clock tower keeps the phone's time, a
-## barn's weathervane swings, smoke curls up from a cabin and a hot-air
-## balloon bobs on its rope; the flag at the end of the trail waves. Each stands on (0, 0), drawn [param size] times as
+## barn's weathervane swings, smoke curls up from a cabin, a cable car rides
+## its cable and a hot-air balloon bobs on its rope; the flag at the end of the trail waves. Each stands on (0, 0), drawn [param size] times as
 ## big as at size 1, where a piece is 20 to 75 px tall and a landmark 100 to
 ## 130.
 
@@ -36,9 +37,9 @@ const LOOKS: Dictionary = {
 		"landmarks": [&"barn", &"windmill"],
 	},
 	&"frost_peaks": {
-		"ground": Color("#F3F6FA"), "cliff": Color("#8E98B0"), "trail": Color("#DDE7F2"),
-		"pieces": {&"pine": 7, &"snowman": 2, &"rock": 2, &"pond": 1},
-		"landmarks": [&"cabin"],
+		"ground": Color("#F7F4FA"), "cliff": Color("#7479A6"), "trail": Color("#E6DCEF"),
+		"pieces": {&"pine": 6, &"snowman": 1, &"igloo": 2, &"crystal": 2, &"rock": 1, &"pond": 1},
+		"landmarks": [&"gondola", &"cabin"],
 	},
 	&"blossom_valley": {
 		"ground": Color("#AADB8E"), "cliff": Color("#A3968C"), "trail": Color("#FFF3EF"),
@@ -61,6 +62,7 @@ const EXTENTS: Dictionary = {
 	&"pond": Vector2(38.0, 22.0), &"fence": Vector2(24.0, 22.0), &"sunflower": Vector2(24.0, 76.0),
 	&"windmill": Vector2(52.0, 126.0), &"lighthouse": Vector2(30.0, 120.0), &"tower": Vector2(24.0, 132.0),
 	&"barn": Vector2(38.0, 86.0), &"cabin": Vector2(34.0, 110.0), &"balloon": Vector2(30.0, 124.0),
+	&"igloo": Vector2(26.0, 30.0), &"crystal": Vector2(16.0, 40.0), &"gondola": Vector2(56.0, 120.0),
 	&"goal": Vector2(58.0, 112.0),
 }
 const FLOWERS: Array[Color] = [Color("#F4B3C6"), Color("#FFFFFF"), Color("#F6C343"), Color("#C9B8E8")]
@@ -124,6 +126,10 @@ static func draw_piece(canvas: CanvasItem, kind: StringName, size: float, season
 			_fence(canvas, size)
 		&"sunflower":
 			_sunflowers(canvas, size, variant)
+		&"igloo":
+			_igloo(canvas, size)
+		&"crystal":
+			_crystal(canvas, size, variant)
 
 
 ## Draws landmark [param kind] on [param canvas], standing on (0, 0), as it
@@ -142,6 +148,8 @@ static func draw_landmark(canvas: CanvasItem, kind: StringName, size: float, sea
 			_cabin(canvas, size, time)
 		&"balloon":
 			_balloon(canvas, size, time)
+		&"gondola":
+			_gondola(canvas, size, time)
 		&"goal":
 			_goal(canvas, size, time)
 
@@ -163,8 +171,10 @@ static func shed(kind: StringName, season: StringName, variant: int) -> Array[Co
 			colors.assign([PropFactory.SUNFLOWER, PropFactory.SUNFLOWER.lightened(0.25)])
 		&"hay":
 			colors.assign([HAY, HAY.lightened(0.2)])
-		&"snowman":
+		&"snowman", &"igloo":
 			colors.append(PropFactory.SNOW)
+		&"crystal":
+			colors.assign([PropFactory.CRYSTAL, PropFactory.CRYSTAL.lightened(0.4)])
 		&"pond":
 			colors.append(Palette.block_color(&"ice" if season == &"winter" else &"water").lightened(0.35))
 	return colors
@@ -335,6 +345,66 @@ static func _snowman(canvas: CanvasItem, s: float) -> void:
 	_shape(canvas, [Vector2(0.0, -39.5), Vector2(11.0, -37.5), Vector2(0.0, -35.5)], s, PropFactory.CARROT)
 	for spot: Vector2 in [Vector2(-4.0, -42.0), Vector2(4.0, -42.0), Vector2(0.0, -18.0), Vector2(0.0, -10.0)]:
 		_dot(canvas, spot, 1.6, s, Ui.INK)
+
+
+## A snow-block dome with a dark doorway.
+static func _igloo(canvas: CanvasItem, s: float) -> void:
+	_shadow(canvas, 26.0 * s)
+	var dome := PackedVector2Array()
+	for i in 17:
+		var angle: float = PI + PI * i / 16.0
+		dome.append(Vector2(cos(angle) * 24.0, sin(angle) * 27.0 - 1.0))
+	_shape(canvas, Array(dome), s, PropFactory.SNOW)
+	for row: float in [-10.0, -19.0]:
+		var half: float = 24.0 * sqrt(1.0 - pow((row + 1.0) / 27.0, 2.0))
+		_box(canvas, Rect2(-half, row, half * 2.0, 1.5), s, PropFactory.SNOW_SHADE)
+	_box(canvas, Rect2(-1.0, -18.0, 1.5, 8.0), s, PropFactory.SNOW_SHADE)
+	_box(canvas, Rect2(10.0, -9.5, 1.5, 8.0), s, PropFactory.SNOW_SHADE)
+	_dot(canvas, Vector2(-9.0, -9.0), 7.5, s, PropFactory.SNOW)
+	_box(canvas, Rect2(-16.5, -9.0, 15.0, 8.0), s, PropFactory.SNOW)
+	_dot(canvas, Vector2(-9.0, -8.0), 5.0, s, PropFactory.DOORWAY)
+	_box(canvas, Rect2(-14.0, -8.0, 10.0, 7.0), s, PropFactory.DOORWAY)
+
+
+## A glowing cluster of ice crystals on a snow mound.
+static func _crystal(canvas: CanvasItem, s: float, variant: int) -> void:
+	_shadow(canvas, 16.0 * s)
+	ellipse(canvas, Vector2(0.0, -2.0) * s, Vector2(15.0, 4.0) * s, PropFactory.SNOW)
+	var lean: float = 1.0 if variant % 2 == 0 else -1.0
+	for shard: Vector4 in [Vector4(-8.0 * lean, -22.0, -0.35 * lean, 4.0), Vector4(7.0 * lean, -26.0, 0.3 * lean, 4.5),
+			Vector4(0.0, -38.0, 0.0, 5.5)]:
+		var base := Vector2(shard.x, -2.0)
+		var up := Vector2(sin(shard.z), -cos(shard.z))
+		var side := Vector2(-up.y, up.x) * shard.w
+		var top: Vector2 = base + up * -shard.y
+		var color: Color = PropFactory.CRYSTAL if shard.x <= 0.0 else PropFactory.CRYSTAL_DEEP
+		_shape(canvas, [base - side, base + side, top + side - up * -2.0 + up * 4.0, top + up * 6.0, top - side + up * 4.0],
+			s, color)
+		_shape(canvas, [base - side * 0.2, base + side * 0.4, top + up * 3.0], s, color.lightened(0.4))
+
+
+## Two pylons with a cable between and a red car riding to and fro.
+static func _gondola(canvas: CanvasItem, s: float, time: float) -> void:
+	_shadow(canvas, 54.0 * s)
+	var steel: Color = PropFactory.STEEL
+	for x: float in [-46.0, 46.0]:
+		_shape(canvas, [Vector2(x - 6.0, 0.0), Vector2(x + 6.0, 0.0), Vector2(x + 2.0, -104.0), Vector2(x - 2.0, -104.0)], s, steel)
+		_box(canvas, Rect2(x - 9.0, -108.0, 18.0, 5.0), s, steel)
+		_box(canvas, Rect2(x - 7.0, -111.0, 14.0, 3.0), s, PropFactory.SNOW)
+	var cable := PackedVector2Array()
+	for i in 13:
+		var t: float = i / 12.0
+		cable.append(Vector2(lerpf(-46.0, 46.0, t), -104.0 + 10.0 * sin(PI * t)) * s)
+	canvas.draw_polyline(cable, Ui.INK.lerp(steel, 0.5), 1.6 * s, true)
+	var t_car: float = 0.5 + 0.38 * sin(time * 0.5)
+	var hook := Vector2(lerpf(-46.0, 46.0, t_car), -104.0 + 10.0 * sin(PI * t_car))
+	var sway: float = 2.0 * sin(time * 1.3)
+	_box(canvas, Rect2(hook.x - 0.8, hook.y, 1.6, 14.0), s, steel)
+	var car := Rect2(hook.x - 13.0 + sway, hook.y + 13.0, 26.0, 24.0)
+	_box(canvas, Rect2(car.position.x + 1.0, car.position.y - 3.0, 24.0, 4.0), s, steel)
+	canvas.draw_rect(Rect2(car.position * s, car.size * s), PropFactory.GONDOLA)
+	_box(canvas, Rect2(car.position.x + 3.0, car.position.y + 4.0, 20.0, 8.0), s, PropFactory.LAMP)
+	_box(canvas, Rect2(car.position.x + 12.2, car.position.y + 4.0, 1.6, 8.0), s, PropFactory.GONDOLA)
 
 
 static func _pond(canvas: CanvasItem, s: float, icy: bool, boat: bool) -> void:

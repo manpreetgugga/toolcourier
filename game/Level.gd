@@ -40,6 +40,10 @@ const EMOTE_SOUNDS: Dictionary = {&"wave": &"pickup", &"hop": &"whoosh", &"chatt
 @export var intro: bool = false
 ## Answers taps and drags; a menu backdrop turns it off.
 @export var interactive: bool = true
+## With [member interactive] off, a drag still turns the diorama and a tap on
+## the courier still gets a wave (the main menu's backdrop: it keeps turning
+## by itself between drags). No zoom, no walking, no parts to move.
+@export var orbit_only: bool = false
 ## How much of the screen's short side the diorama fills.
 @export_range(0.3, 1.0) var view_fill: float = 0.75
 ## Seconds the build-up waits (with nothing showing) before it starts.
@@ -176,7 +180,8 @@ func _ready() -> void:
 	camera.grab_filter = _try_grab
 	add_child(camera)
 	camera.make_current()
-	camera.set_process_unhandled_input(interactive)
+	camera.set_process_unhandled_input(interactive or orbit_only)
+	camera.zoom_enabled = interactive
 	_bounds = _view_bounds()
 	var weather: CPUParticles3D = Weather.create(Palette.weather(data.palette), _bounds)
 	if weather:
@@ -402,6 +407,7 @@ func _replace_with(path: String) -> void:
 	next.show_hud = show_hud
 	next.intro = intro
 	next.interactive = interactive
+	next.orbit_only = orbit_only
 	var parent: Node = get_parent()
 	var was_current: bool = get_tree().current_scene == self
 	parent.remove_child(self)
@@ -449,11 +455,13 @@ func _end_go(finished: bool, stars: int) -> void:
 
 
 func _on_tapped(screen_position: Vector2) -> void:
-	if _busy > 0 or not interactive:
+	if _busy > 0 or not (interactive or orbit_only):
 		return
 	if not courier.is_moving() and taps_courier(screen_position):
 		Haptics.tap()
 		AudioManager.play(EMOTE_SOUNDS[courier.emote(camera.global_position)])
+		return
+	if not interactive:
 		return
 	if state.completed:
 		return
@@ -490,7 +498,7 @@ func _on_tapped(screen_position: Vector2) -> void:
 
 
 func _on_double_tapped(screen_position: Vector2) -> void:
-	if pick(screen_position).is_empty():
+	if interactive and pick(screen_position).is_empty():
 		camera.reset_view()
 
 
@@ -524,8 +532,11 @@ func _on_courier_step(cell: Vector3i) -> void:
 		AudioManager.play(&"glide")
 	else:
 		AudioManager.play(&"step")
-	if grid.get_block(cell - Vector3i.UP) == Grid.BOARDS:
+	var ground: StringName = grid.get_block(cell - Vector3i.UP)
+	if ground == Grid.BOARDS:
 		AudioManager.play(&"creak")
+	elif ground == Grid.THIN_ICE:
+		AudioManager.play(&"crackle")
 	if pathfinder.is_spring(cell):
 		var throws: bool = pathfinder.bounce(cell, heading) != cell
 		_springs.press(cell - Vector3i.UP, throws)
@@ -607,7 +618,7 @@ func _play(events: Array[Dictionary]) -> void:
 			LevelState.Event.CARRIED:
 				_mover(movers, event["id"])["riders"].append({"node": courier, "to": event["to"]})
 			LevelState.Event.FELL:
-				AudioManager.play(&"fall")
+				AudioManager.play(&"shatter" if data.cells.get(event["cell"]) == Grid.THIN_ICE else &"fall")
 				_boards.fall(event["cell"])
 			LevelState.Event.PARCEL_MOVED:
 				var package: Package = _packages[event["from"]]

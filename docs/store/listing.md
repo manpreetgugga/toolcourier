@@ -16,14 +16,14 @@ Each level is a small floating island made of soft clay. Drag to turn it around,
 
 The orange parts move. Slide a bridge into place, ride a lift, press a button to open a gate, hop on a conveyor belt or turn a crank to swing a turntable around. Work out the order, and the way opens.
 
-SEVEN WORLDS, 520 LEVELS
+SEVEN WORLDS, 460 LEVELS
 • Meadow: hills, stairs, sliding bridges and rafts
 • Harbour: lifts, gates, buttons and conveyor belts
 • Old Town: two parcels at once and turning bridges
 • Orchard: wooden planks that hold for just one crossing
-• Frost Peaks: ice you slide across until something stops you
 • Blossom Valley: spring gardens where every moving part comes together
 • Sunflower Fields: springs that bounce you over walls and gaps
+• Frost Peaks: the final climb, over thin ice that cracks and breaks behind you
 
 Each world's levels wind up a map of floating islands, with windmills, a lighthouse and a hot-air balloon to tap along the way.
 

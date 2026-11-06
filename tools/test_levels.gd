@@ -51,7 +51,7 @@ func _initialize() -> void:
 	Progress.use_file(SAVE)
 	# No ads: Hint gives hints straight away, and no level break plays.
 	Ads.enabled = false
-	_check(not sheet or paths.size() == 520, "the catalog has 520 levels (%d)" % paths.size())
+	_check(not sheet or paths.size() == 460, "the catalog has 460 levels (%d)" % paths.size())
 	for path: String in paths:
 		_check_solution(path)
 	_viewport = SubViewport.new()

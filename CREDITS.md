@@ -25,7 +25,9 @@ third-party sounds are used.
 | `world_2.wav` Harbour | G mixolydian marimba over a low pad, waves and a far-off buoy bell |
 | `world_3.wav` Old Town | Raga Bhupali on D: a tanpura drone with santoor phrases |
 | `world_4.wav` Orchard | F major finger-picked guitar over a warm pad |
-| `world_5.wav` Frost Peaks | E minor airy pads, sparse bells and the wind |
+| `world_5.wav` Blossom Valley | D major music-box melody on bells over rippling pads |
+| `world_6.wav` Sunflower Fields | A major bouncing bass and a sunny kalimba tune |
+| `world_7.wav` Frost Peaks | E minor airy pads, sparse bells and the wind |
 
 ## Art
 

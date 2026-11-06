@@ -19,6 +19,8 @@ const ROW_HEIGHT: float = 108.0
 ## Where the reminders, statistics and ad privacy rows go, one under the
 ## other.
 const EXTRA_ROW: int = 5
+## Seconds the privacy policy link is held to open every level.
+const EXPLORE_HOLD: float = 3.0
 
 var _card: Control
 var _reminder_row: Array[Control] = []
@@ -31,6 +33,11 @@ var _toggles: Dictionary = {}
 var _quality: _Segmented
 var _taps: int = 0
 var _last_tap: int = 0
+## Presses and releases of the privacy policy link so far (a hold's timer
+## only counts for the press that started it), and whether the last press
+## was a hold.
+var _policy_press: int = 0
+var _policy_held: bool = false
 
 
 func _init() -> void:
@@ -218,10 +225,35 @@ func _layout() -> void:
 		control.position.y = height - 44.0
 
 
+## A tap opens the privacy policy; holding it for [constant EXPLORE_HOLD]
+## seconds instead opens (or closes again) every world and level (see
+## [member Settings.explore]), and the link says so for a moment.
 func _on_policy_input(event: InputEvent) -> void:
-	if event is InputEventScreenTouch and not event.is_pressed():
-		AudioManager.play(&"ui_click")
-		OS.shell_open(Ads.PRIVACY_URL)
+	if not event is InputEventScreenTouch:
+		return
+	var policy: Label = _card.get_node("Policy")
+	if event.is_pressed():
+		_policy_press += 1
+		_policy_held = false
+		var press: int = _policy_press
+		get_tree().create_timer(EXPLORE_HOLD).timeout.connect(func() -> void:
+			if not is_instance_valid(policy) or press != _policy_press or not policy.is_visible_in_tree():
+				return
+			_policy_held = true
+			Settings.set_value(&"explore", not Settings.explore)
+			Haptics.snap()
+			AudioManager.play(&"pad_complete" if Settings.explore else &"ui_click")
+			policy.text = "All levels open" if Settings.explore else "Levels locked again"
+			get_tree().create_timer(2.0).timeout.connect(func() -> void:
+				if is_instance_valid(policy):
+					policy.text = "Privacy policy"))
+		return
+	_policy_press += 1
+	if _policy_held:
+		_policy_held = false
+		return
+	AudioManager.play(&"ui_click")
+	OS.shell_open(Ads.PRIVACY_URL)
 
 
 ## Five quick taps on the version number turn the performance readout on or

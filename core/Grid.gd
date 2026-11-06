@@ -11,6 +11,9 @@ const ICE: StringName = &"ice"
 const BOARDS: StringName = &"boards"
 ## Summer springs: stepping onto one bounces the courier on two cells.
 const SPRING: StringName = &"spring"
+## Frost Peaks' thin ice: it cracks under the courier and breaks away once
+## the courier steps off, like dry boards.
+const THIN_ICE: StringName = &"thin_ice"
 
 ## Vector3i -> block type (StringName).
 var cells: Dictionary
@@ -43,10 +46,16 @@ static func has_walkable_top(block_type: StringName) -> bool:
 
 
 ## Whether this type is a whole cube (meshed by BlockMesher and hiding the
-## faces it touches); stairs, cranks, dry boards and springs have their own
-## meshes.
+## faces it touches); stairs, cranks, dry boards, thin ice and springs have
+## their own meshes.
 static func is_full_block(block_type: StringName) -> bool:
-	return block_type != &"crank" and block_type != BOARDS and block_type != SPRING and not is_stairs(block_type)
+	return block_type != &"crank" and not is_fragile(block_type) and block_type != SPRING and not is_stairs(block_type)
+
+
+## Whether a block of this type breaks away once the courier steps off it
+## (dry boards, thin ice).
+static func is_fragile(block_type: StringName) -> bool:
+	return block_type == BOARDS or block_type == THIN_ICE
 
 
 func get_block(cell: Vector3i) -> StringName:

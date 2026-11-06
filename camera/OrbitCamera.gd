@@ -27,7 +27,10 @@ const PITCH_MIN: float = 15.0
 const PITCH_MAX: float = 70.0
 const ZOOM_MIN: float = 0.5
 const ZOOM_MAX: float = 2.5
-const WHEEL_ZOOM_STEP: float = 1.1
+const WHEEL_ZOOM_STEP: float = 1.06
+## How strongly a pinch zooms: the zoom follows the fingers' spread raised to
+## this power, so doubling the spread zooms about 1.5x rather than 2x.
+const PINCH_RESPONSE: float = 0.6
 ## Degrees turned by a drag across the shorter screen axis.
 const YAW_PER_SCREEN: float = 270.0
 const PITCH_PER_SCREEN: float = 140.0
@@ -52,6 +55,8 @@ const FIT_YAW_SAMPLES: int = 16
 ## true hands the gesture to [signal grab_moved] / [signal grab_released]
 ## (for dragging a slider) instead of orbiting.
 var grab_filter: Callable
+## Pinch, wheel and two-finger pan; off, a drag only turns the view.
+var zoom_enabled: bool = true
 
 ## Current (smoothed) view, in degrees and zoom factor.
 var yaw: float
@@ -169,6 +174,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		_on_touch(event)
 	elif event is InputEventScreenDrag:
 		_on_drag(event)
+	elif not zoom_enabled:
+		return
 	elif event is InputEventMouseButton and event.pressed:
 		var button: MouseButton = (event as InputEventMouseButton).button_index
 		if button == MOUSE_BUTTON_WHEEL_UP:
@@ -176,7 +183,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		elif button == MOUSE_BUTTON_WHEEL_DOWN:
 			_set_zoom(_target_zoom / WHEEL_ZOOM_STEP)
 	elif event is InputEventMagnifyGesture:
-		_set_zoom(_target_zoom * (event as InputEventMagnifyGesture).factor)
+		_set_zoom(_target_zoom * pow((event as InputEventMagnifyGesture).factor, PINCH_RESPONSE))
 
 
 func _on_touch(event: InputEventScreenTouch) -> void:
@@ -225,7 +232,8 @@ func _on_drag(event: InputEventScreenDrag) -> void:
 		grab_moved.emit(event.position)
 		return
 	if _touches.size() >= 2:
-		_update_pinch()
+		if zoom_enabled:
+			_update_pinch()
 		return
 	if not _gesture_is_drag:
 		if event.position.distance_to(_press_position) < TAP_SLOP_PX:
@@ -262,7 +270,7 @@ func _begin_pinch() -> void:
 func _update_pinch() -> void:
 	var points: Array = _touches.values()
 	var spread: float = (points[0] as Vector2).distance_to(points[1])
-	_set_zoom(_pinch_start_zoom * spread / _pinch_start_distance)
+	_set_zoom(_pinch_start_zoom * pow(spread / _pinch_start_distance, PINCH_RESPONSE))
 	var midpoint: Vector2 = ((points[0] as Vector2) + (points[1] as Vector2)) * 0.5
 	_pan_by(midpoint - _pinch_midpoint)
 	_pinch_midpoint = midpoint

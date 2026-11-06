@@ -42,6 +42,7 @@ func _initialize() -> void:
 	_check_solver()
 	_check_save_file()
 	_check_old_save()
+	_check_v2_save()
 	_check_saved_game()
 	Progress.use_file(SAVE)
 	_viewport = SubViewport.new()
@@ -131,6 +132,38 @@ func _check_old_save() -> void:
 	Progress.use_file(SAVE, false)
 	_check(Progress.best("world_1/level_4") == {"stars": 2, "moves": 25} and Progress.best("world_1/level_12").is_empty(),
 		"a save written since is not moved again")
+
+
+## A version 2 save, from when Frost Peaks was world 5 before Blossom Valley
+## and Sunflower Fields: those two follow their worlds to their new numbers,
+## and the old Frost Peaks levels (since rebuilt) are dropped.
+func _check_v2_save() -> void:
+	Progress.use_file(SAVE)
+	var file := FileAccess.open(SAVE, FileAccess.WRITE)
+	file.store_string(JSON.stringify({"version": 2, "levels": {
+		"world_4/level_70": {"stars": 3, "moves": 30}, "world_5/level_110": {"stars": 2, "moves": 60},
+		"world_6/level_3": {"stars": 1, "moves": 41}, "world_7/level_12": {"stars": 3, "moves": 22},
+	}, "in_progress": {"level": "world_7/level_13"}}))
+	file.close()
+	Progress.use_file(SAVE, false)
+	_check(Progress.best("world_4/level_70") == {"stars": 3, "moves": 30}
+		and Progress.best("world_7/level_110").is_empty()
+		and Progress.best("world_5/level_3") == {"stars": 1, "moves": 41}
+		and Progress.best("world_6/level_12") == {"stars": 3, "moves": 22}
+		and Progress.best("world_5/level_110").is_empty() and Progress._resume.get("level") == "world_6/level_13"
+		and Progress.total_stars() == 7,
+		"a version 2 save's Blossom Valley and Sunflower Fields levels move to worlds 5 and 6, its old Frost Peaks ones are dropped")
+	Progress.save()
+	Progress.use_file(SAVE, false)
+	_check(Progress.best("world_5/level_3") == {"stars": 1, "moves": 41} and Progress.best("world_6/level_12") == {"stars": 3, "moves": 22},
+		"a version 3 save is not moved again")
+	file = FileAccess.open(SAVE, FileAccess.WRITE)
+	file.store_string(JSON.stringify({"version": 2, "levels": {"world_5/level_9": {"stars": 3, "moves": 20}},
+		"in_progress": {"level": "world_5/level_10"}}))
+	file.close()
+	Progress.use_file(SAVE, false)
+	_check(Progress.total_stars() == 0 and not Progress._resume.has("level"),
+		"an old Frost Peaks game in progress is dropped with the rest")
 
 
 func _check_saved_game() -> void:

@@ -9,11 +9,16 @@ extends RefCounted
 ## extension, e.g. "world_1/level_1". Everything is static; the file is read
 ## on first use.
 
-const VERSION: int = 2
+const VERSION: int = 3
 const DEFAULT_PATH: String = "user://progress.json"
 ## Saves before version 2 had world 1 as ten levels, which are now the
 ## openers of its ten chapters, at these numbers.
 const WORLD_1_V1: Array[int] = [1, 4, 8, 12, 16, 21, 37, 53, 69, 85]
+## Saves before version 3 had Frost Peaks as world 5, before Blossom Valley
+## (6) and Sunflower Fields (7). Frost Peaks is now the last world, rebuilt
+## with new levels, so what was saved for its old ones is dropped (""). Old
+## world folder -> new.
+const WORLDS_V2: Dictionary = {"world_5": "", "world_6": "world_5", "world_7": "world_6"}
 
 static var path: String = DEFAULT_PATH
 
@@ -152,20 +157,44 @@ static func load_file() -> void:
 			_levels[str(id)] = {"stars": clampi(int(entry["stars"]), 0, 3), "moves": int(entry["moves"])}
 	if typeof(parsed.get("in_progress")) == TYPE_DICTIONARY:
 		_resume = parsed["in_progress"]
-	if typeof(parsed.get("version")) in [TYPE_INT, TYPE_FLOAT] and int(parsed["version"]) >= 2:
-		return
+	var version: int = int(parsed["version"]) if typeof(parsed.get("version")) in [TYPE_INT, TYPE_FLOAT] else 1
+	if version < 2:
+		_move_ids(_v1_id)
+	if version < 3:
+		_move_ids(_v2_id)
+
+
+## Renames every saved level id (and the game in progress) by [param rename],
+## dropping those it renames to "".
+static func _move_ids(rename: Callable) -> void:
 	var moved: Dictionary = {}
 	for id: String in _levels:
-		moved[_v1_id(id)] = _levels[id]
+		var to: String = rename.call(id)
+		if not to.is_empty():
+			moved[to] = _levels[id]
 	_levels = moved
 	if _resume.has("level"):
-		_resume["level"] = _v1_id(str(_resume["level"]))
+		var to: String = rename.call(str(_resume["level"]))
+		if to.is_empty():
+			_resume.clear()
+		else:
+			_resume["level"] = to
 
 
 ## Where version 1's [param id] is now (see [constant WORLD_1_V1]).
 static func _v1_id(id: String) -> String:
 	var number: int = id.trim_prefix("world_1/level_").to_int() if id.begins_with("world_1/level_") else 0
 	return "world_1/level_%d" % WORLD_1_V1[number - 1] if number >= 1 and number <= WORLD_1_V1.size() else id
+
+
+## Where version 2's [param id] is now, or "" if it is gone (see
+## [constant WORLDS_V2]).
+static func _v2_id(id: String) -> String:
+	var folder: String = id.get_slice("/", 0)
+	if not WORLDS_V2.has(folder):
+		return id
+	var to: String = WORLDS_V2[folder]
+	return "" if to.is_empty() else to + id.trim_prefix(folder)
 
 
 static func _load_once() -> void:

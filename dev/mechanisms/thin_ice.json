@@ -1,0 +1,16 @@
+{
+	"name": "Thin ice test",
+	"world": 7,
+	"palette": "frost_peaks",
+	"blocks": [
+		[0, -1, 0, "slate"], [1, -1, 0, "slate"], [4, -1, 0, "glacier"], [5, -1, 0, "glacier"],
+		[0, -1, 1, "slate"], [1, -1, 1, "slate"], [4, -1, 1, "slate"], [5, -1, 1, "slate"],
+		[0, 0, 0, "snow"], [1, 0, 0, "snow"], [4, 0, 0, "snow"], [5, 0, 0, "snow"],
+		[0, 0, 1, "snow"], [1, 0, 1, "snow"], [4, 0, 1, "snow"], [5, 0, 1, "snow"],
+		[2, 0, 0, "thin_ice"], [3, 0, 0, "thin_ice"], [2, 0, 1, "thin_ice"]
+	],
+	"props": [[0, 1, 1, "snowman", 30, true], [5, 1, 0, "rock", 0, true]],
+	"start": [0, 1, 0],
+	"exit": [5, 1, 1],
+	"stars": [6, 8, 10]
+}

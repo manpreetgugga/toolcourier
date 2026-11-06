@@ -114,7 +114,7 @@ func enter(cell: Vector3i, ride: bool = false) -> Array[Dictionary]:
 	if completed:
 		return events
 	var left: Vector3i = courier - Vector3i.UP
-	if cell != courier and data.cells.get(left) == Grid.BOARDS and not fallen.has(left):
+	if cell != courier and Grid.is_fragile(data.cells.get(left, &"")) and not fallen.has(left):
 		fallen[left] = true
 		events.append({"event": Event.FELL, "cell": left, "color": &""})
 	courier = cell
@@ -300,7 +300,7 @@ func snapshot_from_json(json: Variant) -> Dictionary:
 	var boards: Dictionary = {}
 	for entry: Variant in _json_list(json, "fallen"):
 		var cell: Variant = _json_cell(entry)
-		if cell == null or data.cells.get(cell) != Grid.BOARDS:
+		if cell == null or not Grid.is_fragile(data.cells.get(cell, &"")):
 			return {}
 		boards[cell] = true
 	var mechanism_values: Dictionary = {}

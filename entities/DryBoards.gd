@@ -1,9 +1,11 @@
 class_name DryBoards
 extends Node3D
-## The level's dry boards (autumn): a plank deck on beams for each dry board
-## block, crossed the way its neighbours lead. Once the courier steps off
-## one it shakes, tips and drops away in a puff of dust. Level drives it
-## from LevelState's FELL events and shows the fallen set after undo.
+## The level's fragile ground: a plank deck on beams for each dry board
+## block (autumn), crossed the way its neighbours lead, and a cracked slab
+## for each thin ice block (Frost Peaks). Once the courier steps off one it
+## shakes and drops away, boards tipping in a puff of dust, ice breaking in a
+## spray of shards. Level drives it from LevelState's FELL events and shows
+## the fallen set after undo.
 
 const SHAKE_TIME: float = 0.2
 const FALL_TIME: float = 0.65
@@ -13,7 +15,7 @@ const UNDERSIDE: float = 0.75
 
 ## Block cell -> MeshInstance3D.
 var _boards: Dictionary = {}
-## Block cell -> its dust burst.
+## Block cell -> its dust or shard burst.
 var _dust: Dictionary = {}
 ## Block cell -> the fall in progress.
 var _falls: Dictionary = {}
@@ -21,18 +23,25 @@ var _falls: Dictionary = {}
 var _drops: Dictionary = {}
 
 
-## Boards for every dry board block in [param cells] (LevelData cells).
+## Block cell -> whether it is thin ice.
+var _ice: Dictionary = {}
+
+
+## Boards for every dry board and thin ice block in [param cells]
+## (LevelData cells).
 func _init(cells: Dictionary) -> void:
 	name = "DryBoards"
 	for cell: Vector3i in cells:
-		if cells[cell] != Grid.BOARDS:
+		if not Grid.is_fragile(cells[cell]):
 			continue
+		var ice: bool = cells[cell] == Grid.THIN_ICE
 		var board := MeshInstance3D.new()
-		board.name = "Board_%d_%d_%d" % [cell.x, cell.y, cell.z]
-		board.mesh = PropFactory.board(_crossing(cells, cell), cell)
+		board.name = "%s_%d_%d_%d" % ["Ice" if ice else "Board", cell.x, cell.y, cell.z]
+		board.mesh = PropFactory.thin_ice(cell) if ice else PropFactory.board(_crossing(cells, cell), cell)
 		add_child(board)
 		_boards[cell] = board
-		var dust: CPUParticles3D = Effects.dust(Vector3(1.0, 0.1, 1.0))
+		_ice[cell] = ice
+		var dust: CPUParticles3D = Effects.shards() if ice else Effects.dust(Vector3(1.0, 0.1, 1.0))
 		dust.position = _home(cell) + Vector3(0.0, 0.85, 0.0)
 		add_child(dust)
 		_dust[cell] = dust
@@ -53,15 +62,18 @@ func standing() -> Dictionary:
 	return result
 
 
-## Drops the board at [param cell] with a shake and a puff of dust.
+## Drops the board at [param cell] with a shake and a puff of dust (thin
+## ice: a quicker shiver, a spray of shards and less of a tip).
 func fall(cell: Vector3i) -> void:
 	var board: MeshInstance3D = _boards[cell]
 	_stop(cell)
 	var home: Vector3 = _home(cell)
-	var tip: float = 0.5 if (cell.x + cell.z) % 2 == 0 else -0.5
+	var ice: bool = _ice[cell]
+	var tip: float = (0.2 if ice else 0.5) * (1.0 if (cell.x + cell.z) % 2 == 0 else -1.0)
 	var tween: Tween = create_tween()
 	for i in 4:
-		var shake := Vector3(0.035 if i % 2 == 0 else -0.035, -0.015 * i, 0.0)
+		var wobble: float = 0.02 if ice else 0.035
+		var shake := Vector3(wobble if i % 2 == 0 else -wobble, -0.015 * i, wobble * 0.5 if ice and i % 2 == 1 else 0.0)
 		tween.tween_property(board, "position", home + shake, SHAKE_TIME / 4.0)
 	tween.tween_callback((_dust[cell] as CPUParticles3D).restart)
 	tween.set_parallel()

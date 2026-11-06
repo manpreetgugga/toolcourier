@@ -7,9 +7,13 @@ extends RefCounted
 const ROOT: String = "res://levels"
 ## What each world is called on the menus.
 const WORLD_NAMES: Dictionary = {
-	1: "Meadow", 2: "Harbour", 3: "Old Town", 4: "Orchard", 5: "Frost Peaks", 6: "Blossom Valley",
-	7: "Sunflower Fields",
+	1: "Meadow", 2: "Harbour", 3: "Old Town", 4: "Orchard", 5: "Blossom Valley", 6: "Sunflower Fields",
+	7: "Frost Peaks",
 }
+## Share of the stars in all the worlds before it that a world needs to
+## open (once the level before it is finished too), so the later worlds ask
+## for replays at fewer moves, where a Hint shows the way.
+const STAR_GATE: float = 0.75
 
 ## Each world's level paths in order, by world number (lowest first), listed
 ## from the folders once: on Android every file a listing passes is a call
@@ -40,26 +44,73 @@ static func number_of(path: String) -> int:
 ## never lock what they have reached.
 static func is_unlocked(path: String) -> bool:
 	var index: int = all().find(path)
-	return index <= 0 or index < open_count()
+	return index <= 0 or (index < open_count() and stars_open(world_of(path)))
 
 
 ## How many levels can be played, counted from the first in play order: all
-## of them up to one past the furthest finished.
+## of them up to one past the furthest finished (all of them while
+## [member Settings.explore] is on). (A world's levels also wait for its
+## stars, see [method stars_open].)
 static func open_count() -> int:
 	var order: Array[String] = all()
+	Settings.ensure_loaded()
+	if Settings.explore:
+		return order.size()
 	for i in range(order.size() - 1, -1, -1):
 		if not Progress.best(Progress.level_id(order[i])).is_empty():
 			return mini(i + 2, order.size())
 	return mini(1, order.size())
 
 
-## The level to play next: the first one not finished yet that is open, or
-## the last level once all are done.
+## Stars needed in all to open world [param world] (0 for the first): a
+## [constant STAR_GATE] share of every earlier world's stars, to the nearest 5.
+static func stars_needed(world: int) -> int:
+	var available: int = 0
+	for earlier: int in worlds():
+		if earlier < world:
+			available += levels(earlier).size() * 3
+	return roundi(available * STAR_GATE / 5.0) * 5
+
+
+## Whether world [param world] has its stars: enough in all, or a level of it
+## already finished (so a world reached before the gates stays open), or
+## while [member Settings.explore] is on.
+static func stars_open(world: int) -> bool:
+	Settings.ensure_loaded()
+	if Settings.explore or Progress.total_stars() >= stars_needed(world):
+		return true
+	for path: String in levels(world):
+		if not Progress.best(Progress.level_id(path)).is_empty():
+			return true
+	return false
+
+
+## The world the player has reached but cannot open for want of stars (its
+## first level is next in play order), or 0.
+static func waiting_world() -> int:
+	var order: Array[String] = all()
+	var reached: int = open_count() - 1
+	if reached <= 0 or reached >= order.size() or not Progress.best(Progress.level_id(order[reached])).is_empty():
+		return 0
+	var world: int = world_of(order[reached])
+	return world if levels(world)[0] == order[reached] and not stars_open(world) else 0
+
+
+## The level to play next: the first one not finished yet that is open; while
+## a world waits for stars, the first earlier level short of three; the last
+## level once all are done.
 static func next_to_play() -> String:
 	var order: Array[String] = all()
 	for path: String in order:
 		if Progress.best(Progress.level_id(path)).is_empty():
-			return path if is_unlocked(path) else order[0]
+			if is_unlocked(path):
+				return path
+			for earlier: String in order:
+				if earlier == path:
+					break
+				if int(Progress.best(Progress.level_id(earlier)).get("stars", 0)) < 3:
+					return earlier
+			return order[0]
 	return order[-1] if not order.is_empty() else ""
 
 

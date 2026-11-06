@@ -66,8 +66,24 @@ func _check_unlocking() -> void:
 	_check(not LevelCatalog.is_unlocked(world_2), "the next world stays shut until the level before it is finished")
 	_check(LevelCatalog.world_stars(1) == Vector2i(3, 300) and LevelCatalog.world_finished(1) == 1,
 		"a world counts its stars (%s) and finished levels" % LevelCatalog.world_stars(1))
-	_check(LevelCatalog.world_of(world_2) == 2 and LevelCatalog.world_name(6) == "Blossom Valley"
-		and LevelCatalog.world_name(7) == "Sunflower Fields", "levels know their world, and worlds their names")
+	_check(LevelCatalog.world_of(world_2) == 2 and LevelCatalog.world_name(5) == "Blossom Valley"
+		and LevelCatalog.world_name(7) == "Frost Peaks", "levels know their world, and worlds their names")
+	_check(LevelCatalog.stars_needed(1) == 0 and LevelCatalog.stars_needed(2) == 225
+		and LevelCatalog.stars_needed(7) > LevelCatalog.stars_needed(6),
+		"each world after the first needs three quarters of the stars before it (%d for world 2)" % LevelCatalog.stars_needed(2))
+	# World 1 all finished on one star each: world 2 waits for stars.
+	var world_1: Array[String] = LevelCatalog.levels(1)
+	for path: String in world_1:
+		Progress.record(Progress.level_id(path), 99, 1)
+	_check(not LevelCatalog.is_unlocked(world_2) and LevelCatalog.waiting_world() == 2
+		and LevelCatalog.next_to_play() == world_1[1],
+		"with world 1 finished but short of stars, world 2 stays shut and Play goes back to a level short of three")
+	for path: String in world_1:
+		Progress.record(Progress.level_id(path), 1, 3)
+	_check(LevelCatalog.is_unlocked(world_2) and LevelCatalog.waiting_world() == 0 and LevelCatalog.next_to_play() == world_2,
+		"with the stars, world 2 opens and is next")
+	Progress.use_file("user://test_ui_progress.json")
+	Progress.record(Progress.level_id(LEVEL_1), 11, 3)
 
 
 func _check_settings() -> void:
@@ -141,19 +157,42 @@ func _check_menu() -> void:
 	_check(AudioManager.current_music() == 1, "the main menu plays the next level's world music")
 	_capture("step9_menu.png")
 
+	# The diorama behind the menu turns by itself, and by hand.
+	var camera: OrbitCamera = menu.backdrop.camera
+	var yaw_before: float = camera._target_yaw
+	await _drag(menu.get_node("Ui/Root"), Vector2(160.0, 620.0), Vector2(560.0, 620.0))
+	_check(camera._target_yaw < yaw_before - 60.0 and menu.screen() == &"main",
+		"a drag across the main menu turns its diorama (%.0f degrees)" % (camera._target_yaw - yaw_before))
+	await _wait(1.6)
+	var settled_yaw: float = camera._target_yaw
+	await _wait(0.5)
+	_check(camera._target_yaw > settled_yaw + 1.0 and is_equal_approx(camera._target_zoom, 1.0),
+		"then it goes on turning by itself, never zoomed")
+
 	await _press(menu.get_node("Ui/Root/Safe/Main/Bottom/Levels"))
 	await _wait(0.8)
-	var world_1: TouchButton = menu.get_node("Ui/Root/Safe/Worlds/Cards/World_1")
-	var world_2: TouchButton = menu.get_node("Ui/Root/Safe/Worlds/Cards/World_2")
+	var world_1: TouchButton = menu.get_node("Ui/Root/Safe/Worlds/Cards/Grid/World_1")
+	var world_2: TouchButton = menu.get_node("Ui/Root/Safe/Worlds/Cards/Grid/World_2")
 	_check(menu.screen() == &"worlds" and not world_1.disabled and world_2.disabled,
 		"Levels opens the world select: world 1 open, world 2 locked")
 	_check((world_1.get_node("Preview") as TextureRect).texture is ViewportTexture,
 		"each world card shows a turning diorama")
-	var cards: Control = menu.get_node("Ui/Root/Safe/Worlds/Cards")
-	var last_card: Control = cards.get_child(cards.get_child_count() - 1)
-	_check(last_card.get_global_rect().end.y <= SIZE.y,
-		"all %d world cards fit on a 16:9 screen" % cards.get_child_count())
+	_check(is_equal_approx(world_1.get_global_rect().position.y, world_2.get_global_rect().position.y)
+		and world_1.size.x < 360.0, "the worlds stand two to a row")
 	_capture("step9_worlds.png")
+	var scroller: Control = menu.get_node("Ui/Root/Safe/Worlds/Cards")
+	var grid: Control = scroller.get_node("Grid")
+	var last_card: Control = grid.get_child(grid.get_child_count() - 1)
+	_check(last_card.get_global_rect().end.y > SIZE.y and last_card.size.x > 600.0,
+		"the last world spans the row, below the fold")
+	await _drag(scroller, Vector2(360.0, 900.0), Vector2(360.0, 100.0))
+	await _wait(0.6)
+	_check(last_card.get_global_rect().end.y <= SIZE.y and world_1.scale.is_equal_approx(Vector2.ONE),
+		"a drag scrolls the grid down to the last world without pressing a tile")
+	_check(menu.screen() == &"worlds", "and stays on the worlds")
+	_capture("worlds_scrolled.png")
+	await _drag(scroller, Vector2(360.0, 100.0), Vector2(360.0, 1000.0))
+	await _wait(0.6)
 	await _press(world_2)
 	await _wait(0.2)
 	_check(menu.screen() == &"worlds", "a locked world does not open")
@@ -246,6 +285,15 @@ func _check_menu() -> void:
 	for i in 5:
 		await _press(card.get_node("Card/Version"))
 	_check(not PerfOverlay.is_shown(), "and five more take it away")
+	var last_level: String = LevelCatalog.all()[-1]
+	var policy: Label = card.get_node("Card/Policy")
+	_check(not LevelCatalog.is_unlocked(last_level), "the last level starts locked")
+	await _hold(policy, SettingsCard.EXPLORE_HOLD + 0.2)
+	_check(Settings.explore and LevelCatalog.is_unlocked(last_level) and LevelCatalog.stars_open(7)
+		and LevelCatalog.waiting_world() == 0 and policy.text == "All levels open",
+		"holding the privacy policy link opens every world and level, and says so")
+	await _hold(policy, SettingsCard.EXPLORE_HOLD + 0.2)
+	_check(not Settings.explore and not LevelCatalog.is_unlocked(last_level), "holding it again locks them again")
 	var slider: Control = card.get_node("Card/Music")
 	await _drag(slider, Vector2(slider.size.x * 0.8, 30.0), Vector2(slider.size.x * 0.3, 30.0))
 	var saved: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(SETTINGS))
@@ -351,6 +399,18 @@ func _press(control: Control, at: Vector2 = Vector2(-1.0, -1.0)) -> void:
 		event.pressed = pressed
 		_viewport.push_input(event, true)
 		await process_frame
+
+
+## Touches the middle of [param control] and lets go after [param seconds].
+func _hold(control: Control, seconds: float) -> void:
+	for pressed: bool in [true, false]:
+		var event := InputEventScreenTouch.new()
+		event.position = control.get_global_rect().get_center()
+		event.pressed = pressed
+		_viewport.push_input(event, true)
+		if pressed:
+			await _wait(seconds)
+	await process_frame
 
 
 func _drag(control: Control, from: Vector2, to: Vector2) -> void:

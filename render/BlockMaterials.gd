@@ -52,8 +52,8 @@ static func _create(block_type: StringName) -> ShaderMaterial:
 			mat.set_shader_parameter(&"albedo", Palette.block_color(block_type))
 			mat.set_shader_parameter(&"side_color", Palette.block_color(CAPPED[block_type]))
 			mat.set_shader_parameter(&"pattern", Pattern.GRASS)
-		&"ice":
-			mat.set_shader_parameter(&"albedo", Palette.block_color(&"ice"))
+		&"ice", &"glacier":
+			mat.set_shader_parameter(&"albedo", Palette.block_color(block_type))
 			mat.set_shader_parameter(&"pattern", Pattern.ICE)
 			mat.set_shader_parameter(&"roughness", 0.22)
 			mat.set_shader_parameter(&"specular", 0.6)

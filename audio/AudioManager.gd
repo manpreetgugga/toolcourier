@@ -15,15 +15,17 @@ extends Node
 const CUES: Array[StringName] = [
 	&"step", &"tap", &"slide", &"rotate", &"snap", &"pickup", &"drop", &"pad_complete",
 	&"level_complete", &"ui_click", &"error", &"glide", &"creak", &"fall", &"whoosh", &"bounce",
+	&"crackle", &"shatter",
 ]
 ## Playback level of each cue (dB), so frequent ones sit back in the mix.
 const GAIN: Dictionary = {
 	&"step": -14.0, &"tap": -9.0, &"slide": -5.0, &"rotate": -6.0, &"snap": -4.0, &"pickup": -5.0,
 	&"drop": -6.0, &"pad_complete": -4.0, &"level_complete": -3.0, &"ui_click": -8.0, &"error": -8.0,
 	&"glide": -12.0, &"creak": -11.0, &"fall": -6.0, &"whoosh": -14.0, &"bounce": -7.0,
+	&"crackle": -12.0, &"shatter": -7.0,
 }
 ## Random pitch spread of each cue, so repeats don't sound mechanical.
-const JITTER: Dictionary = {&"step": 0.08, &"tap": 0.05, &"creak": 0.1, &"glide": 0.06, &"ui_click": 0.03, &"bounce": 0.06}
+const JITTER: Dictionary = {&"step": 0.08, &"tap": 0.05, &"creak": 0.1, &"glide": 0.06, &"ui_click": 0.03, &"bounce": 0.06, &"crackle": 0.12}
 const VOICES: int = 10
 ## The same cue again within this many milliseconds is dropped.
 const REPEAT_MSEC: int = 35

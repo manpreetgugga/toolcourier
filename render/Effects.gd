@@ -28,6 +28,26 @@ static func sparkles(tint: Color) -> CPUParticles3D:
 	return burst
 
 
+## Ice shards bursting up and out and tumbling down (thin ice breaking).
+static func shards() -> CPUParticles3D:
+	var burst := _burst(22, 0.85, 0.08, false, soft_dot())
+	burst.name = "Shards"
+	burst.emission_shape = CPUParticles3D.EMISSION_SHAPE_BOX
+	burst.emission_box_extents = Vector3(0.45, 0.05, 0.45)
+	burst.direction = Vector3.UP
+	burst.spread = 70.0
+	burst.initial_velocity_min = 0.9
+	burst.initial_velocity_max = 1.8
+	burst.gravity = Vector3(0.0, -6.0, 0.0)
+	burst.angle_min = -180.0
+	burst.angle_max = 180.0
+	var fade := Gradient.new()
+	fade.offsets = PackedFloat32Array([0.0, 0.6, 1.0])
+	fade.colors = PackedColorArray([Color(0.95, 1.0, 1.0, 0.95), Color(0.7, 0.9, 0.96, 0.8), Color(0.7, 0.9, 0.96, 0.0)])
+	burst.color_ramp = fade
+	return burst
+
+
 ## Soft dust puffing out sideways from a box of [param size] (mechanisms
 ## coming to rest): a few round puffs that swell and thin away.
 static func dust(size: Vector3) -> CPUParticles3D:

@@ -26,6 +26,7 @@ const TAIL: float = 6.0
 const CUES: Array[StringName] = [
 	&"step", &"tap", &"slide", &"rotate", &"snap", &"pickup", &"drop", &"pad_complete",
 	&"level_complete", &"ui_click", &"error", &"glide", &"creak", &"fall", &"whoosh", &"bounce",
+	&"crackle", &"shatter",
 ]
 
 var _rate: int = SFX_RATE
@@ -247,16 +248,51 @@ func _sfx_bounce() -> PackedFloat32Array:
 	return buf
 
 
+## Thin ice taking a step: a few glassy ticks and a soft groan under them.
+func _sfx_crackle() -> PackedFloat32Array:
+	var buf: PackedFloat32Array = _buffer(0.45)
+	_sweep(buf, 0.0, 900.0, 520.0, 0.08, 0.25, 0.07, 0.01)
+	var t: float = 0.02
+	for k in 7:
+		var bright: float = _rng.randf_range(2200.0, 4600.0)
+		_noise(buf, t, 0.004, 0.35, 0.0003, 0.004, 9000.0, 1800.0)
+		_partial(buf, t, bright, 0.3 * (1.0 - k * 0.1), 0.012, 0.0003)
+		_partial(buf, t, bright * 1.53, 0.12, 0.008, 0.0003)
+		t += _rng.randf_range(0.025, 0.05)
+	return buf
+
+
+## Thin ice breaking away: a sharp crack, a tinkle of shards and a soft
+## plop as the slab drops.
+func _sfx_shatter() -> PackedFloat32Array:
+	var buf: PackedFloat32Array = _buffer(0.9)
+	_noise(buf, 0.0, 0.01, 0.9, 0.0003, 0.02, 10000.0, 1500.0)
+	_sweep(buf, 0.0, 1400.0, 600.0, 0.03, 0.35, 0.05)
+	for k in 12:
+		var at: float = 0.02 + k * 0.035 + _rng.randf_range(-0.012, 0.012)
+		var freq: float = _rng.randf_range(2600.0, 6200.0)
+		_partial(buf, at, freq, 0.28 * (1.0 - k * 0.06), 0.05, 0.0005)
+		_partial(buf, at, freq * 1.41, 0.1, 0.03, 0.0005)
+	_sweep(buf, 0.38, 420.0, 140.0, 0.06, 0.35, 0.09, 0.004)
+	return buf
+
+
 # --- Music -------------------------------------------------------------------
+
+## The song (a _music_<n> function) each world plays.
+const SONGS: Dictionary = {1: 1, 2: 2, 3: 3, 4: 4, 5: 6, 6: 7, 7: 5}
 
 func _make_music() -> void:
 	_rate = MUSIC_RATE
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(OUT.path_join("music")))
 	for world in range(1, 8):
-		_rng.seed = 1000 + world
+		# Songs keep the numbers their worlds had when written: Frost Peaks
+		# (song 5) moved to the end, so worlds 5-7 play songs 6, 7 and 5.
+		var number: int = SONGS[world]
+		_rng.seed = 1000 + number
 		_notes.clear()
 		var started: int = Time.get_ticks_msec()
-		var song: Dictionary = call("_music_%d" % world)
+		var song: Dictionary = call("_music_%d" % number)
 		var buf: PackedFloat32Array = song["buffer"]
 		buf = _reverb(buf, song["reverb"], song.get("room", 0.84))
 		var length: int = int(song["length"] * _rate)

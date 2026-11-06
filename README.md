@@ -9,7 +9,7 @@ the orange mechanisms to open a path.
 > clay block meshing, orbit camera with tap picking, the courier with
 > pathfinding, playable levels from JSON with parcels, pads and an exit,
 > mechanisms (sliders, elevators, buttons, conveyors, rotators and gates),
-> undo, restart, hints, stars and saved progress, 520 solver-checked
+> undo, restart, hints, stars and saved progress, 460 solver-checked
 > levels in seven worlds (the last four seasonal), the menus, settings,
 > generated sound and music, haptics and the build-up animations, and the
 > graphics quality presets and the Android build, plus calm ads from world
@@ -39,10 +39,13 @@ ground of their own:
 - **Dry boards** (autumn): plank decks on beams that shake, tip and drop
   away once the courier steps off them, so each plank bridge can be crossed
   once. Plan the trips before setting out.
-- **Ice** (winter): a step onto ice slides the courier on in the same
-  direction until the next cell is not open ground at its level (a rock, a
-  snowman, an edge, a closed gate, stairs) or it slides off onto snow, where
-  it stops. A whole slide is one move, and a belt stops it.
+- **Thin ice** (winter): cracked ice slabs that hold the courier, crackle
+  underfoot and break away in a spray of shards once it steps off, like
+  the orchard's boards. Each ice bridge and catwalk can be crossed once.
+- **Ice** (winter, now and then): a step onto ice slides the courier on in
+  the same direction until the next cell is not open ground at its level (a
+  rock, a snowman, an edge, a closed gate, stairs) or it slides off onto
+  snow, where it stops. A whole slide is one move, and a belt stops it.
 - **Springs** (summer): a step onto a spring bounces the courier two cells
   on, over a wall or a gap, landing as much as a level higher or lower. It
   flies the way it stepped on, so the side it comes from picks where it
@@ -50,10 +53,23 @@ ground of their own:
   it just stands on the spring. The bounce is part of the step's one move,
   and landing on another spring bounces again.
 
-World 6, Blossom Valley, is spring: no new ground, but every mechanism so
-far together, under blossom trees and drifting petals. World 7, Sunflower
-Fields, is summer and the last world: springs across sunflower fields and
-farmyards, with dandelion seeds drifting by.
+World 5, Blossom Valley, is spring: no new ground, but every mechanism so
+far together, under blossom trees and drifting petals. World 6, Sunflower
+Fields, is summer: springs across sunflower fields and farmyards, with
+dandelion seeds drifting by. World 7, Frost Peaks, is winter and the last
+world: fifty levels of thin ice over cliffs, terraces, glacier canyons and
+twin peaks under an alpenglow sky, ending at Peak Delivery. (Before
+version 1.2 Frost Peaks was world 5, with 110 flat ice rinks; Blossom
+Valley's and Sunflower Fields' saves move with their worlds and the old
+rinks' are dropped, see `Progress.WORLDS_V2`.)
+
+From world 2 on, a world also needs stars to open: three quarters of all
+the stars in the worlds before it (225 for world 2, up to 925 for Frost
+Peaks; `LevelCatalog.stars_needed`). Until then the world's tile, the
+button at the top of the map before it and the finish card say how many
+stars are missing and that a Hint shows the three-star route, and Play on
+the main menu goes back to the first level short of three stars. A world
+the player has already started stays open.
 
 The rules live in `core/LevelState.gd`, with no visuals, so the solver and
 undo can reuse them; `game/Level.gd` builds the scene and animates them:
@@ -329,12 +345,13 @@ one small level per mechanism from `dev/mechanisms/` through the real touch
 path: dragging a slider into a gap, riding an elevator up, calling it down
 with a button, a one-way belt whose ridden cells cost nothing, turning a
 bridge with a crank, a gate that needs both of its buttons, a slide over ice
-that stops at a rock, dry boards that drop away once crossed, and a spring
+that stops at a rock, dry boards that drop away once crossed, thin ice that
+crackles, shatters behind the courier and is mended by undo, and a spring
 that only takes a step onto it from the side but throws the courier on over
 a wall onto a ledge when stepped on head-on (squashing as it goes, the arc
 clearing the wall, and undo putting the courier back on it). It saves a
 `step6_*.png` screenshot of each mechanism and `seasons_ice.png`,
-`seasons_boards.png` and `seasons_spring.png`:
+`seasons_boards.png`, `seasons_thin_ice.png` and `seasons_spring.png`:
 
 ```bash
 godot --path . --resolution 405x720 -s res://tools/test_mechanisms.gd -- --out=docs/screenshots
@@ -354,7 +371,7 @@ It saves `step7_*.png` screenshots:
 godot --path . --resolution 405x720 -s res://tools/test_progress.gd -- --out=docs/screenshots
 ```
 
-`tools/test_levels.gd` plays the whole catalogue: for each of the 520 levels
+`tools/test_levels.gd` plays the whole catalogue: for each of the 460 levels
 it checks that the solver's fewest moves is the three-star limit, that a
 hint from the start stays within the search budget and that the plan
 finishes the level by the rules; then it opens the level and follows the
@@ -453,8 +470,11 @@ lip), `dirt`, `wood` (plank lines), `brick`, `water`, `accent` for interactive p
 (pulsing orange), and `stairs`, which has its own clay mesh and a facing (the
 direction it climbs). The seasons add `autumn_grass` (an amber lip), `snow`
 (a snow cap over slate), `slate`, `ice` (a pale glaze with frost streaks),
+`glacier` (solid turquoise ice with the same glaze, walked like stone),
 `boards`, dry boards drawn by `entities/DryBoards.gd` as a plank deck on
-beams that drops onto whatever is below when it falls, and `spring`, drawn
+beams that drops onto whatever is below when it falls, `thin_ice`, drawn
+by the same node as a cracked turquoise slab with icicles under its edge
+that shivers and drops in a spray of shards, and `spring`, drawn
 by `entities/Springs.gd` as a blue box with a coil and a round red pad on
 top that squashes under a step and wobbles back. Colours live in `render/Palette.gd`, materials in
 `render/BlockMaterials.gd`, the clay surface in `shaders/block.gdshader` with
@@ -487,8 +507,8 @@ block it stands on.
 | --- | --- |
 | `name`, `world` | Title, and the world (1–7) it belongs to. |
 | `palette` | Sky and light theme: `meadow`, `harbor`, `old_town`, `orchard` (autumn), `frost_peaks` (winter), `blossom_valley` (spring) or `sunflower_fields` (summer). A seasonal palette recolours trees and bushes (amber leaves, snowy boughs, pink blossom) and adds falling leaves, snow, petals or drifting dandelion seeds (`render/Weather.gd`). |
-| `blocks` | `[x, y, z, type]`. Types: `stone`, `dark_stone`, `sand`, `grass`, `dirt`, `wood`, `brick`, `water`, `accent`, `autumn_grass`, `snow`, `slate`, `ice`, `boards`, `spring`. Stairs are `[x, y, z, "stairs", facing]`, climbing towards `facing` (`+x`, `-x`, `+z`, `-z`); `stairs_stone`, `stairs_wood` and `stairs_brick` change the material. Parcels, pads, the exit and buttons may not stand on ice, boards or springs (the start may be on ice or a spring). |
-| `props` | Decor, `[x, y, z, type, rotation?, solid?]`: `tree_small`, `tree_tall`, `bush`, `lamp_post`, `flag`, `crate`, `fence`, `rock`, `pumpkin`, `leaf_pile`, `snowman`, `sunflower`, `hay_bale`. Rotation is in degrees about up; fences run along the cell's −z edge before rotation. Props are walk-through unless `solid` is `true`. |
+| `blocks` | `[x, y, z, type]`. Types: `stone`, `dark_stone`, `sand`, `grass`, `dirt`, `wood`, `brick`, `water`, `accent`, `autumn_grass`, `snow`, `slate`, `ice`, `glacier`, `boards`, `thin_ice`, `spring`. Stairs are `[x, y, z, "stairs", facing]`, climbing towards `facing` (`+x`, `-x`, `+z`, `-z`); `stairs_stone`, `stairs_wood` and `stairs_brick` change the material. Parcels, pads, the exit and buttons may not stand on ice, boards, thin ice or springs (the start may be on ice or a spring). |
+| `props` | Decor, `[x, y, z, type, rotation?, solid?]`: `tree_small`, `tree_tall`, `bush`, `lamp_post`, `flag`, `crate`, `fence`, `rock`, `pumpkin`, `leaf_pile`, `snowman`, `sunflower`, `hay_bale`, `igloo`, `ice_crystal`, `sled`, `ice_lantern`, `signpost`, `gondola`, `bunting`. Rotation is in degrees about up; fences run along the cell's −z edge before rotation. Props are walk-through unless `solid` is `true`. |
 | `mechanisms` | Optional moving parts; see [Mechanisms](#mechanisms). |
 | `packages`, `pads` | `{ "pos": [x, y, z], "color": ... }` with colours `red`, `green`, `blue`, `yellow`. Each parcel needs exactly one pad of its colour. |
 | `start`, `exit` | Where the courier begins and where it finishes. |
@@ -506,7 +526,7 @@ up on its world's map on its own (and a new `world_<n>` folder as a new
 world; give it a name in `core/LevelCatalog.gd`'s `WORLD_NAMES`). Check it
 and set its stars with `tools/check_levels.gd --fix-stars`.
 
-### The 520 levels
+### The 460 levels
 
 `core/LevelCatalog.gd` finds the levels by their file names, worlds by
 number and then levels by number (gaps are allowed, other files are
@@ -519,9 +539,9 @@ finish card follows this order. Each world brings in something new:
 | 2 | `harbor` | 1 | Elevators, a button that calls a lift, gates opened by one button or two, belts, belts switched on and off, and all of them together; levels 11–70 are larger dockside maps of quays, lifts, rafts, gated piers and belts, one parcel at a time. |
 | 3 | `old_town` | 2 | Two parcels at once, turntables (one carrying a parcel across, one shaped like a cross, two that get in each other's way), a button that turns a bridge, a two-button gate, then turntables, lifts, rafts and belts together; levels 11–70 are larger canal-town maps mixing every mechanism so far. |
 | 4 | `orchard` | 2 | Dry boards: planks that hold for one crossing, a hay loft on stilts, then boards with a raft, a two-button gate, a lattice barn floor, a belt, a windmill turntable and lifts, ending in two trips through the loft; levels 11–70 are larger farms and orchards, easy to hard, with hay lofts, up to four parcels and every mechanism so far, where each plank crossed counts. |
-| 5 | `frost_peaks` | 2 | Ice rinks: rocks and snowmen to stop on, snow patches, two frozen terraces, then a stone slider to slide against, a two-button gate, a lift, belts across the rink, a turning floe and a summit that needs both the stone and the lift; levels 11–110 are larger rinks, easy to hard, with snow paths, terraces, up to four parcels and every mechanism so far. |
-| 6 | `blossom_valley` | 2 | Spring gardens on islands split by streams, fifty levels from easy to hard: rafts, turntables, lifts, gated footbridges and belts, one at a time in the first six, then two and three together, and all five in the last. |
-| 7 | `sunflower_fields` | 2 | Springs. Levels 1–4 teach them: a stream only a spring crosses, a ledge with no stairs, a wall a spring vaults only when stepped on head-on, and two springs that throw the courier out and back. Levels 5–50 grow from easy to hard over fields, ponds and hay lofts, bringing in rafts and sliding bridges to land on, gates in a spring's flight, belts that feed springs, lifts and turntables, chains of up to three springs and up to four parcels, ending at the Grand Summer Fair. |
+| 5 | `blossom_valley` | 2 | Spring gardens on islands split by streams, fifty levels from easy to hard: rafts, turntables, lifts, gated footbridges and belts, one at a time in the first six, then two and three together, and all five in the last. |
+| 6 | `sunflower_fields` | 2 | Springs. Levels 1–4 teach them: a stream only a spring crosses, a ledge with no stairs, a wall a spring vaults only when stepped on head-on, and two springs that throw the courier out and back. Levels 5–50 grow from easy to hard over fields, ponds and hay lofts, bringing in rafts and sliding bridges to land on, gates in a spring's flight, belts that feed springs, lifts and turntables, chains of up to three springs and up to four parcels, ending at the Grand Summer Fair. |
+| 7 | `frost_peaks` | 2 | Thin ice that breaks behind the courier, on mountains instead of flat rinks: a first bridge, a bridge that won't carry you back, two bridges to an island, a loop round a pond, a skating puddle, catwalks between three tiers and floes on a lake, then a lift, a ford raised by a slider and a gated hut (levels 1–12). Levels 13–50 grow from easy to hard over seracs, crevasses, cirques, glacier tongues, frozen waterfalls, ice arches, spirals, igloo villages and cable-car stations, with every mechanism, up to four parcels and now and then a short slide over ice, ending at Peak Delivery. Igloos, ice crystals, sleds, ice lanterns, signposts, gondolas and bunting dress them under an alpenglow sky. |
 
 Every diorama is a floating crag: its rock base erodes from the corners
 down to a hanging point, and behind the play area stands scenery the
@@ -529,11 +549,11 @@ courier cannot reach, always higher than the ground next to it: grassy
 knolls with trees in the meadow, stone sheds and a lighthouse at the
 harbour, brick arches and flag towers in the old town (3-4 has towers in
 its empty corners instead), the orchard's high banks and lofts, the
-frost peaks' slate ridge, grassy banks under blossom trees in the
+frost peaks' slate ridges and glacier spires with cable-car pylons, grassy banks under blossom trees in the
 blossom valley, and sunflowers and hay bales along the banks of the
 sunflower fields.
 
-<img src="docs/screenshots/step8_levels.png" width="640" alt="All 520 levels as they start">
+<img src="docs/screenshots/step8_levels.png" width="640" alt="All 460 levels as they start">
 
 <img src="docs/screenshots/seasons_boards.png" width="320" alt="Dry boards in the orchard"> <img src="docs/screenshots/seasons_ice.png" width="320" alt="Sliding over ice in the frost peaks"> <img src="docs/screenshots/seasons_spring.png" width="320" alt="Bouncing off a spring in the sunflower fields">
 
@@ -651,11 +671,13 @@ corners) by `Ui.fit_to_safe_area`:
 
 - **Splash**: the title on cream, once per launch, fading into
 - **Main menu**: the title over a live diorama of the next level to play,
-  slowly turning and building itself up, with the stars earned so far,
+  turning by itself and building itself up (a drag turns it by hand, and a
+  tap on the courier gets a wave), with the stars earned so far,
   **Play** (the next level, named underneath), **Levels** and **Settings**;
-- **World select**: a card per world with its own small turning diorama, its
-  stars and how many of its levels are delivered; a world opens with its
-  first level;
+- **World select**: a scrolling grid, two worlds to a row, each tile a big
+  turning diorama of the world with its stars and how many of its levels are
+  delivered (the last world, Frost Peaks, spans the whole row); a world
+  opens with its first level, once it has its stars (see above);
 - **Level map** (`ui/LevelMap.gd`): the world's levels as round badges on
   a trail winding up through floating islands joined by rope bridges, five
   levels to an island, to a flag at the top, with the stars earned under
@@ -698,7 +720,10 @@ player a say over ads (the EEA, the UK and Switzerland, for instance), an
 The foot of the card has the version number and a link to the
 [privacy policy](PRIVACY.md). The version number has a hidden use: tap it
 five times quickly to bring up the performance readout (see below), and
-five more to put it away.
+five more to put it away. The privacy policy link has one too: hold it
+for three seconds and every world and level opens, stars or not, so
+the whole game can be explored (the link says "All levels open"); hold it
+again to lock them as before (`Settings.explore`).
 
 <img src="docs/screenshots/step9_settings.png" width="240" alt="The settings card">
 
@@ -837,7 +862,7 @@ Firebase: Google Analytics for how it is played, Crashlytics for crashes.
 `core/Analytics.gd` reports:
 
 - `level_start` and `level_end` for each go at a level, with `level_name`
-  (`world_1/level_1`), `world`, `level` and `level_index` (1 to 520):
+  (`world_1/level_1`), `world`, `level` and `level_index` (1 to 460):
   `resumed` and `replay` at the start; `success`, `moves`, `stars`,
   `seconds`, `hints`, `undos` and `restarts` at the end (`success` is
   false when the player leaves);
@@ -961,7 +986,8 @@ world changes and ducking the music under the finish jingle. Anything calls
 | `tap`, `error` | a tap walks somewhere, or there is no way there |
 | `pickup`, `drop`, `pad_complete` | a parcel is taken, set down, its pad lights |
 | `slide`, `rotate`, `snap` | a slider or elevator moves, a rotator turns, a part locks in place |
-| `fall` | dry boards drop away |
+| `crackle` | the courier steps onto thin ice |
+| `fall`, `shatter` | dry boards drop away, thin ice breaks |
 | `level_complete` | the level is finished |
 | `ui_click` | a button is pressed |
 | `whoosh` | the diorama builds up or comes apart |
@@ -1004,7 +1030,7 @@ camera/     orbit camera
 ui/         menus, scene changes, HUD, pause, settings and finish cards, buttons
 audio/      the sound player, generated sound effects and world loops
 fonts/      Nunito and its licence
-levels/     the 520 levels, levels/world_<n>/level_<n>.json
+levels/     the 460 levels, levels/world_<n>/level_<n>.json
 icons/      the app icon and its adaptive layers, rendered by tools/make_icon.gd
 tools/      capture, benchmark, icon and sound generation, tests and
             validation scripts

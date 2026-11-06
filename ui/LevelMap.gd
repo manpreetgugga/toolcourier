@@ -55,6 +55,8 @@ const TOP_SKY: float = 160.0
 ## Sky and ground under the first level.
 const BOTTOM_ROOM: float = 330.0
 const GOAL_BUTTON := Vector2(340.0, 84.0)
+## Room over the button for the note saying the next world wants more stars.
+const GATE_NOTE := Vector2(560.0, 80.0)
 const SCROLL_SLOP_PX: float = 16.0
 const WHEEL_SCROLL: float = 90.0
 ## How quickly a fling slows (per second), and the speeds (px/s) it stops
@@ -98,6 +100,9 @@ var _height: float = 0.0
 ## 1 when the trail first sways right, -1 left (it changes with the world).
 var _sway: float = 1.0
 var _next_world: int = 0
+## The next world wants more stars than the player has (see
+## LevelCatalog.stars_open).
+var _gated: bool = false
 var _goal_room: float = GOAL_ROOM
 ## The finger on the map (-1 for none), where it pressed, where and when it
 ## was last, and whether it has moved far enough to scroll.
@@ -159,7 +164,8 @@ func show_world(world: int) -> void:
 	var worlds: Array[int] = LevelCatalog.worlds()
 	var place: int = worlds.find(world)
 	_next_world = worlds[place + 1] if place >= 0 and place + 1 < worlds.size() else 0
-	_goal_room = GOAL_ROOM + (GOAL_BUTTON_ROOM if _next_world > 0 else 0.0)
+	_gated = _next_world > 0 and not LevelCatalog.stars_open(_next_world)
+	_goal_room = GOAL_ROOM + (GOAL_BUTTON_ROOM if _next_world > 0 else 0.0) + (GATE_NOTE.y if _gated else 0.0)
 	var count: int = _paths.size()
 	_height = _goal_rise() + _goal_room + TOP_SKY
 	_content.size = Vector2(WIDTH, _height)
@@ -362,6 +368,13 @@ func _goal_rect() -> Rect2:
 	return Rect2(middle - GOAL_BUTTON * 0.5, GOAL_BUTTON)
 
 
+## Where the note over the button goes while the next world wants stars.
+func _gate_note_rect() -> Rect2:
+	var button: Rect2 = _goal_rect()
+	var x: float = clampf(button.get_center().x - GATE_NOTE.x * 0.5, 8.0, WIDTH - GATE_NOTE.x - 8.0)
+	return Rect2(Vector2(x, button.position.y - GATE_NOTE.y - 6.0), GATE_NOTE)
+
+
 func _add_badge(index: int, open: bool, next: bool) -> void:
 	var path: String = _paths[index]
 	var best: Dictionary = Progress.best(Progress.level_id(path))
@@ -393,6 +406,21 @@ func _add_goal_button() -> void:
 	var button := TouchButton.new(GOAL_BUTTON)
 	button.name = "Goal"
 	button.text = "On to %s" % LevelCatalog.world_name(_next_world)
+	if _gated:
+		button.text = "%d / %d stars" % [Progress.total_stars(), LevelCatalog.stars_needed(_next_world)]
+		var note := Label.new()
+		note.name = "GateNote"
+		note.text = "Collect stars to open %s.\nA Hint shows the three-star route." % LevelCatalog.world_name(_next_world)
+		note.label_settings = Ui.label_settings(24, Ui.INK)
+		note.label_settings.outline_size = 12
+		note.label_settings.outline_color = Ui.CREAM
+		note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		note.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		note.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var rect: Rect2 = _gate_note_rect()
+		note.position = rect.position
+		note.size = rect.size
+		_badges.add_child(note)
 	button.font_size = 28
 	button.color = Ui.ACCENT if open else Ui.CREAM
 	button.ink = Color.WHITE if open else Ui.INK
@@ -458,6 +486,9 @@ func _make_island(chapter: int, look: Dictionary, walked: float) -> _Island:
 		if _next_world > 0:
 			var button: Rect2 = _goal_rect()
 			blockers.append(Rect2(button.position - island.position, button.size).grow(16.0))
+			if _gated:
+				var note: Rect2 = _gate_note_rect()
+				blockers.append(Rect2(note.position - island.position, note.size).grow(8.0))
 	var dressing: Dictionary = _dress(chapter, island.size, head, span, look, blockers)
 	island.outline = dressing["outline"]
 	island.underside = dressing["underside"]

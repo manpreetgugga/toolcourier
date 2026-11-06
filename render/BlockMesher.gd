@@ -308,10 +308,10 @@ func _occludes(cell: Vector3i, water: bool) -> bool:
 
 
 ## Whether the block at [param cell] casts ambient occlusion (water, cranks
-## and dry boards do not).
+## dry boards and thin ice do not).
 func _shades(cell: Vector3i) -> bool:
 	var block_type: StringName = _cells.get(cell, &"")
-	return block_type != &"" and block_type != WATER and block_type != &"crank" and block_type != Grid.BOARDS
+	return block_type != &"" and block_type != WATER and block_type != &"crank" and not Grid.is_fragile(block_type)
 
 
 ## Deterministic value in [-1, 1] per cell.

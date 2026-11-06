@@ -35,6 +35,9 @@ static var reminders: bool = true
 ## player must be asked first, nothing is sent until they say yes.
 static var statistics: bool = true
 static var statistics_asked: bool = false
+## Every world and level open, stars or not: a hidden switch for exploring
+## the whole game (a long press on Settings' privacy policy link).
+static var explore: bool = false
 
 static var _loaded: bool = false
 
@@ -64,7 +67,7 @@ static func ensure_loaded() -> void:
 
 
 ## Changes one setting ("music", "sfx", "tilt_shift", "haptics", "quality",
-## "reminders" or "statistics", which also counts as the player's answer),
+## "reminders", "explore" or "statistics", which also counts as the player's answer),
 ## saves (unless [param persist] is false, as while a slider is still being
 ## dragged) and tells everyone.
 static func set_value(key: StringName, value: Variant, persist: bool = true) -> void:
@@ -85,6 +88,8 @@ static func set_value(key: StringName, value: Variant, persist: bool = true) -> 
 		&"statistics":
 			statistics = bool(value)
 			statistics_asked = true
+		&"explore":
+			explore = bool(value)
 		_:
 			push_warning("Settings: no setting %s" % key)
 			return
@@ -114,6 +119,8 @@ static func get_value(key: StringName) -> Variant:
 			return statistics
 		&"statistics_asked":
 			return statistics_asked
+		&"explore":
+			return explore
 	return null
 
 
@@ -177,7 +184,7 @@ static func save() -> void:
 	var text: String = JSON.stringify({
 		"music": music, "sfx": sfx, "tilt_shift": tilt_shift, "haptics": haptics,
 		"quality": QUALITY_NAMES[quality].to_lower(), "reminders": reminders,
-		"statistics": statistics, "statistics_asked": statistics_asked,
+		"statistics": statistics, "statistics_asked": statistics_asked, "explore": explore,
 	}, "\t")
 	var temporary: String = path + ".tmp"
 	var file := FileAccess.open(temporary, FileAccess.WRITE)
@@ -218,6 +225,8 @@ static func load_file() -> void:
 		statistics = parsed["statistics"]
 	if typeof(parsed.get("statistics_asked")) == TYPE_BOOL:
 		statistics_asked = parsed["statistics_asked"]
+	if typeof(parsed.get("explore")) == TYPE_BOOL:
+		explore = parsed["explore"]
 
 
 static func _defaults() -> void:
@@ -228,5 +237,6 @@ static func _defaults() -> void:
 	reminders = true
 	statistics = true
 	statistics_asked = false
+	explore = false
 	# Phones start on Medium, which a mid-range one runs at 60 fps.
 	quality = Quality.MEDIUM if OS.has_feature("mobile") else Quality.HIGH

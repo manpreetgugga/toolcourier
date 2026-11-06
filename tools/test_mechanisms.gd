@@ -3,7 +3,7 @@ extends SceneTree
 ## dev/mechanisms/: a slider dragged into place, an elevator ridden up, a
 ## button calling an elevator down, a belt carrying the courier one way, a
 ## crank turning a bridge, a gate opened by two buttons, a slide over ice,
-## dry boards dropping away and a bounce off a spring. Input goes through
+## dry boards dropping away, thin ice breaking and a bounce off a spring. Input goes through
 ## the real touch path. Prints PASS/FAIL per check, saves a screenshot per
 ## mechanism, and exits with status 1 on any failure. Needs a renderer.
 ##
@@ -39,7 +39,7 @@ func _initialize() -> void:
 
 
 func _check_loader() -> void:
-	for name: String in ["slider", "elevator", "button", "conveyor", "rotator", "gate", "ice", "boards", "spring"]:
+	for name: String in ["slider", "elevator", "button", "conveyor", "rotator", "gate", "ice", "boards", "thin_ice", "spring"]:
 		var level: LevelData = LevelLoader.load_file("res://dev/mechanisms/%s.json" % name)
 		_check(level.is_valid(), "the %s test level loads %s" % [name, level.errors])
 	var broken: LevelData = LevelLoader.parse(JSON.stringify({
@@ -62,6 +62,13 @@ func _check_loader() -> void:
 	_check(report.contains("exit: (0, 1, 0) is on ice") and report.contains("is on boards"),
 		"an exit on ice and a parcel on dry boards are reported %s" % [slippery.errors])
 	_check(not report.contains("start:"), "the courier may start on ice")
+	var cracked: LevelData = LevelLoader.parse(JSON.stringify({
+		"name": "Cracked", "blocks": [[0, 0, 0, "stone"], [1, 0, 0, "thin_ice"], [2, 0, 0, "stone"]],
+		"packages": [{"pos": [1, 1, 0], "color": "red"}], "pads": [{"pos": [2, 1, 0], "color": "red"}],
+		"start": [0, 1, 0], "exit": [0, 1, 0], "stars": [1, 2, 3],
+	}))
+	_check("
+".join(cracked.errors).contains("is on thin_ice"), "a parcel on thin ice is reported %s" % [cracked.errors])
 	var bouncy: LevelData = LevelLoader.parse(JSON.stringify({
 		"name": "Bouncy", "blocks": [[0, 0, 0, "spring"], [1, 0, 0, "spring"], [2, 0, 0, "stone"]],
 		"packages": [{"pos": [2, 1, 0], "color": "red"}], "pads": [{"pos": [1, 1, 0], "color": "red"}],
@@ -81,6 +88,7 @@ func _run() -> void:
 	await _gate()
 	await _ice()
 	await _boards()
+	await _thin_ice()
 	await _spring()
 	print("%d check(s) failed" % _failures if _failures > 0 else "All checks passed")
 	quit(1 if _failures > 0 else 0)
@@ -243,6 +251,33 @@ func _boards() -> void:
 	await _settle()
 	await _walk_to_exit(Vector3i(4, 0, 1))
 	_check(_level.state.completed and _level.state.moves == 5, "over the boards to the exit in 5 moves (%d)" % _level.state.moves)
+
+
+func _thin_ice() -> void:
+	await _open("thin_ice")
+	var first := Vector3i(2, 0, 0)
+	_tap_top(Vector3i(3, 0, 0))
+	var shot: bool = false
+	var started: int = Time.get_ticks_msec()
+	while not shot and Time.get_ticks_msec() - started < 4000:
+		await process_frame
+		for node: Node3D in _level.get_node("DryBoards").get_children():
+			if node is MeshInstance3D and node.visible and node.position.y < -0.3:
+				shot = true
+		if shot:
+			_capture("seasons_thin_ice.png")
+	await _settle()
+	_check(_level.state.fallen.has(first) and not _level.pathfinder.is_walkable(first + Vector3i.UP),
+		"thin ice breaks away once the courier steps off it")
+	_check(AudioManager.played(&"crackle") and AudioManager.played(&"shatter"), "thin ice crackles underfoot and shatters")
+	_check(_level.pathfinder.is_walkable(Vector3i(2, 1, 1)), "the thin ice not yet crossed still holds")
+	_level.undo()
+	await _settle()
+	_check(_level.state.fallen.is_empty() and _level.pathfinder.is_walkable(first + Vector3i.UP), "undo mends the thin ice")
+	var solver := Solver.new(_level.data)
+	var plan: Array[Dictionary] = solver.solve(_level.state.snapshot())
+	_check(not plan.is_empty() and plan[-1]["moves"] == 6, "the solver crosses the thin ice in 6 moves (best %d)"
+		% (plan[-1]["moves"] if not plan.is_empty() else -1))
 
 
 func _spring() -> void:

@@ -18,8 +18,8 @@ const SCENES: Array[Array] = [
 	["menu", ""],
 	["worlds", ""],
 	["level 1-1", "res://levels/world_1/level_1.json"],
-	["level 6-49", "res://levels/world_6/level_49.json"],
-	["level 5-104", "res://levels/world_5/level_104.json"],
+	["level 5-49", "res://levels/world_5/level_49.json"],
+	["level 7-50", "res://levels/world_7/level_50.json"],
 ]
 const WARM_UP: int = 90
 const SAMPLES: int = 120

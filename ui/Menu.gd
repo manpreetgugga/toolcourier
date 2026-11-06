@@ -3,12 +3,14 @@ extends Node
 ## The game's front end. A splash with the title (once per launch), then the
 ## main menu over a live, slowly turning diorama of the next level to play,
 ## which builds itself up as the splash fades: Play, Levels and Settings.
-## Levels opens the world select, each world a little turning diorama on a
-## card, and each world opens its map: a trail winding up through floating
+## Levels opens the world select, a grid of worlds that scrolls, each a
+## big turning diorama on a tile (a last world on its own across the whole
+## row), and each world opens its map: a trail winding up through floating
 ## islands, with a badge for each level and the stars earned (see LevelMap).
 ## A badge opens the level's card, with a diorama of it and Play (see
 ## LevelPeek). A level opens once the one before it is finished, a world
-## with its first level. Each screen plays its world's music. Sizes are in
+## with its first level once the player has its stars too (see
+## LevelCatalog.stars_needed). Each screen plays its world's music. Sizes are in
 ## the 720 x 1280 base viewport, kept to the screen's safe area. Where the
 ## law asks for it, the main menu first asks once whether the game may send
 ## statistics and crash reports (see StatisticsCard and Analytics).
@@ -21,9 +23,16 @@ const PREVIEW_ORBIT: float = 16.0
 const MARGIN: float = 36.0
 const SPLASH_SECONDS: float = 1.3
 const SPLASH_FADE: float = 0.5
-const WORLD_CARD := Vector2(648.0, 196.0)
+## A world's tile in the grid, two to a row; a last world on its own spans
+## the row (WORLD_WIDE).
+const WORLD_TILE := Vector2(316.0, 452.0)
+const WORLD_WIDE := Vector2(648.0, 452.0)
 const WORLD_GAP: float = 16.0
-const PREVIEW: float = 168.0
+## The diorama on a tile, and on the wide tile.
+const PREVIEW: float = 288.0
+const PREVIEW_WIDE: float = 392.0
+## How much of its picture a world's diorama fills.
+const PREVIEW_FILL: float = 0.92
 
 ## The diorama behind the main screen.
 var backdrop: Level
@@ -57,6 +66,8 @@ func _ready() -> void:
 	backdrop.level_path = next
 	backdrop.show_hud = false
 	backdrop.interactive = false
+	# It turns by itself, and a drag turns it by hand for a while.
+	backdrop.orbit_only = true
 	backdrop.intro = true
 	backdrop.idle_orbit_speed = BACKDROP_ORBIT
 	# Smaller, to leave room for the title and the buttons.
@@ -315,60 +326,77 @@ func _build_main(parent: Control, next: String) -> Control:
 func _build_worlds(parent: Control) -> Control:
 	var screen_root := _screen_root(parent, "Worlds")
 	_header(screen_root, "Worlds", show_screen.bind(&"main"))
-	var list := Control.new()
-	list.name = "Cards"
-	list.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	list.set_anchors_preset(Control.PRESET_CENTER_TOP)
-	list.offset_top = 150.0
-	screen_root.add_child(list)
+	var scroller := _Scroller.new()
+	scroller.name = "Cards"
+	scroller.set_anchors_preset(Control.PRESET_FULL_RECT)
+	scroller.offset_top = 132.0
+	screen_root.add_child(scroller)
 	var worlds: Array[int] = LevelCatalog.worlds()
+	var y: float = 18.0
 	for i in worlds.size():
 		var number: int = worlds[i]
-		var card := TouchButton.new(WORLD_CARD)
+		var column: int = i % 2
+		# A last world on its own gets the whole row.
+		var wide: bool = column == 0 and i == worlds.size() - 1
+		var tile: Vector2 = WORLD_WIDE if wide else WORLD_TILE
+		var card := TouchButton.new(tile)
 		card.name = "World_%d" % number
 		card.radius = 40
-		card.position = Vector2(-WORLD_CARD.x * 0.5, i * (WORLD_CARD.y + WORLD_GAP))
+		card.position = Vector2(column * (WORLD_TILE.x + WORLD_GAP), y)
 		card.pressed.connect(open_world.bind(number))
-		list.add_child(card)
+		scroller.content.add_child(card)
+		if column == 1 or i == worlds.size() - 1:
+			y += tile.y + WORLD_GAP
+		var side: float = PREVIEW_WIDE if wide else PREVIEW
 		var picture := TextureRect.new()
 		picture.name = "Preview"
 		picture.position = Vector2(14.0, 14.0)
-		picture.size = Vector2(PREVIEW, PREVIEW)
+		picture.size = Vector2(side, side)
 		picture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		picture.stretch_mode = TextureRect.STRETCH_SCALE
 		picture.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		picture.material = Ui.picture_material()
 		card.add_child(picture)
-		var x: float = PREVIEW + 40.0
-		var width: float = WORLD_CARD.x - x - 24.0
-		var subtitle := _label("World %d" % number, 22, Ui.MUTED, HORIZONTAL_ALIGNMENT_LEFT)
-		subtitle.position = Vector2(x, 22.0)
-		subtitle.size = Vector2(width, 30.0)
+		# The words under the picture, or beside it on the wide tile.
+		var x: float = side + 36.0 if wide else 22.0
+		var top: float = 110.0 if wide else side + 22.0
+		var width: float = tile.x - x - 18.0
+		var subtitle := _label("Final world" if wide and i > 0 else "World %d" % number, 22, Ui.MUTED,
+			HORIZONTAL_ALIGNMENT_LEFT)
+		subtitle.position = Vector2(x, top)
+		subtitle.size = Vector2(width, 28.0)
 		card.add_child(subtitle)
-		var title := _label(LevelCatalog.world_name(number), 42, Ui.INK, HORIZONTAL_ALIGNMENT_LEFT)
-		title.position = Vector2(x, 48.0)
-		title.size = Vector2(width, 56.0)
+		# A shut world's lock, in front of "World 3" (which then moves along).
+		var lock := _Glyph.new(&"lock", Ui.MUTED)
+		lock.name = "Lock"
+		lock.position = Vector2(x - 2.0, top + 1.0)
+		lock.size = Vector2(26.0, 26.0)
+		card.add_child(lock)
+		var title := _label(LevelCatalog.world_name(number), 34 if wide else 30, Ui.INK, HORIZONTAL_ALIGNMENT_LEFT)
+		title.position = Vector2(x, top + 26.0)
+		title.size = Vector2(width, 96.0 if wide else 44.0)
+		if wide:
+			title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		card.add_child(title)
+		var row: float = top + (128.0 if wide else 76.0)
 		var glyph := _Glyph.new(&"star", Ui.STAR)
-		glyph.position = Vector2(x, 114.0)
-		glyph.size = Vector2(34.0, 34.0)
+		glyph.position = Vector2(x, row)
+		glyph.size = Vector2(30.0, 30.0)
 		card.add_child(glyph)
-		var stars := _label("", 28, Ui.INK, HORIZONTAL_ALIGNMENT_LEFT)
-		stars.position = Vector2(x + 44.0, 110.0)
-		stars.size = Vector2(width - 44.0, 42.0)
+		var stars := _label("", 26, Ui.INK, HORIZONTAL_ALIGNMENT_LEFT)
+		stars.position = Vector2(x + 40.0, row - 4.0)
+		stars.size = Vector2(width - 40.0, 38.0)
 		card.add_child(stars)
-		var note := _label("", 22, Ui.MUTED, HORIZONTAL_ALIGNMENT_LEFT)
-		note.position = Vector2(x, 150.0)
-		note.size = Vector2(width, 32.0)
+		var note := _label("", 20, Ui.MUTED, HORIZONTAL_ALIGNMENT_LEFT)
+		note.position = Vector2(x, row + 38.0)
+		note.size = Vector2(width, 84.0 if wide else 30.0)
+		if wide:
+			note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			note.vertical_alignment = VERTICAL_ALIGNMENT_TOP
 		card.add_child(note)
-		_world_cards[number] = {"card": card, "picture": picture, "glyph": glyph, "stars": stars, "note": note}
-	# The cards shrink together when they stand taller than the screen, as
-	# seven do on a 16:9 phone.
-	var height: float = worlds.size() * (WORLD_CARD.y + WORLD_GAP) - WORLD_GAP
-	var fit := func() -> void:
-		list.scale = Vector2.ONE * clampf((screen_root.size.y - list.offset_top - WORLD_GAP) / height, 0.5, 1.0)
-	screen_root.resized.connect(fit)
-	fit.call()
+		_world_cards[number] = {"card": card, "picture": picture, "glyph": glyph, "stars": stars, "note": note,
+			"subtitle": subtitle, "lock": lock, "x": x, "row": row}
+	scroller.content.size = Vector2(WORLD_WIDE.x, y + 24.0)
 	return screen_root
 
 
@@ -417,14 +445,34 @@ func _refresh_worlds() -> void:
 		var open: bool = LevelCatalog.is_unlocked(paths[0])
 		var card: TouchButton = parts["card"]
 		card.disabled = not open
-		var stars: Vector2i = LevelCatalog.world_stars(number)
-		(parts["stars"] as Label).text = "%d / %d" % [stars.x, stars.y] if open else "Locked"
-		(parts["glyph"] as _Glyph).icon = &"star" if open else &"lock"
-		(parts["glyph"] as _Glyph).color = Ui.STAR if open else Ui.MUTED
-		(parts["glyph"] as _Glyph).queue_redraw()
-		var finished: int = LevelCatalog.world_finished(number)
-		(parts["note"] as Label).text = ("%d of %d delivered" % [finished, paths.size()]) if open \
-			else "Finish %s to open" % LevelCatalog.world_name(number - 1)
+		# A shut world waits for the one before it to be finished, or, once
+		# it is, for stars.
+		var waiting: bool = not open and LevelCatalog.waiting_world() == number
+		var needed: int = LevelCatalog.stars_needed(number)
+		var stars_label: Label = parts["stars"]
+		var note: Label = parts["note"]
+		if open:
+			var stars: Vector2i = LevelCatalog.world_stars(number)
+			stars_label.text = "%d / %d" % [stars.x, stars.y]
+			note.text = "%d of %d delivered" % [LevelCatalog.world_finished(number), paths.size()]
+		elif waiting:
+			stars_label.text = "%d / %d" % [Progress.total_stars(), needed]
+			note.text = "Need %d more. Try Hints!" % (needed - Progress.total_stars())
+		else:
+			stars_label.text = ""
+			note.text = "Finish World %d first" % (number - 1)
+		# Shut, the lock goes in front of "World 3"; with no stars to count,
+		# the note moves up into the stars' row.
+		var lock: _Glyph = parts["lock"]
+		lock.visible = not open
+		lock.color = Ui.STAR if waiting else Ui.MUTED
+		lock.queue_redraw()
+		var x: float = parts["x"]
+		(parts["subtitle"] as Label).position.x = x if open else x + 32.0
+		var counted: bool = open or waiting
+		(parts["glyph"] as _Glyph).visible = counted
+		stars_label.visible = counted
+		note.position.y = float(parts["row"]) + (38.0 if counted else 0.0)
 		var picture: TextureRect = parts["picture"]
 		(picture.material as ShaderMaterial).set_shader_parameter(&"grey", 0.0 if open else 0.85)
 		if make_previews:
@@ -436,7 +484,7 @@ func _make_preview(picture: TextureRect, path: String) -> Texture2D:
 	var viewport := SubViewport.new()
 	viewport.name = "View"
 	viewport.own_world_3d = true
-	viewport.size = Vector2i.ONE * roundi(PREVIEW * Ui.pixel_scale(get_viewport()))
+	viewport.size = Vector2i.ONE * roundi(picture.size.x * Ui.pixel_scale(get_viewport()))
 	viewport.msaa_3d = get_viewport().msaa_3d
 	viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	picture.add_child(viewport)
@@ -445,6 +493,8 @@ func _make_preview(picture: TextureRect, path: String) -> Texture2D:
 	level.show_hud = false
 	level.interactive = false
 	level.idle_orbit_speed = PREVIEW_ORBIT
+	# Filling the tile, so its turning shows.
+	level.view_fill = PREVIEW_FILL
 	viewport.add_child(level)
 	_previews.append(viewport)
 	return viewport.get_texture()
@@ -556,6 +606,106 @@ class _Sky:
 		for puff: Vector3 in [Vector3(0.12, 0.93, 0.2), Vector3(0.38, 0.97, 0.26), Vector3(0.7, 0.94, 0.22),
 				Vector3(0.95, 0.98, 0.25), Vector3(0.55, 1.02, 0.3)]:
 			draw_circle(Vector2(puff.x * size.x, puff.y * size.y), puff.z * size.x, cloud, true, -1.0, true)
+
+
+## The world tiles, scrolled by a drag or a fling (or the mouse wheel) like
+## the level map: a drag that starts on a tile scrolls instead of pressing it.
+class _Scroller:
+	extends Control
+
+	const SLOP_PX: float = 16.0
+	const WHEEL: float = 90.0
+	## How quickly a fling slows (per second), and the speeds (px/s) it stops
+	## at and starts at most.
+	const FLING_DECAY: float = 3.0
+	const FLING_MIN: float = 30.0
+	const FLING_MAX: float = 5000.0
+
+	## What scrolls; its size sets how far.
+	var content: Control
+
+	var _finger: int = -1
+	var _press := Vector2.ZERO
+	var _last := Vector2.ZERO
+	var _last_usec: int = 0
+	var _dragging: bool = false
+	var _velocity: float = 0.0
+	var _flinging: bool = false
+
+	func _init() -> void:
+		clip_contents = true
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		content = Control.new()
+		content.name = "Grid"
+		content.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		add_child(content)
+		content.resized.connect(_fit)
+
+	func _notification(what: int) -> void:
+		if what == NOTIFICATION_RESIZED:
+			_fit()
+
+	## Centres the tiles across and keeps the scroll within them.
+	func _fit() -> void:
+		content.position.x = roundf((size.x - content.size.x) * 0.5)
+		scroll_by(0.0)
+
+	## Moves the tiles [param amount] pixels down, kept within the list.
+	func scroll_by(amount: float) -> void:
+		content.position.y = clampf(content.position.y + amount, minf(size.y - content.size.y, 0.0), 0.0)
+
+	func _input(event: InputEvent) -> void:
+		if not is_visible_in_tree():
+			_finger = -1
+			return
+		if event is InputEventScreenTouch:
+			var touch := event as InputEventScreenTouch
+			if touch.pressed and _finger < 0 and get_global_rect().has_point(touch.position):
+				_finger = touch.index
+				_press = touch.position
+				_last = touch.position
+				_last_usec = Time.get_ticks_usec()
+				_dragging = false
+				_flinging = false
+				_velocity = 0.0
+			elif not touch.pressed and touch.index == _finger:
+				_finger = -1
+				if _dragging:
+					_dragging = false
+					# A finger that stopped before it lifted does not fling.
+					_flinging = absf(_velocity) > FLING_MIN and Time.get_ticks_usec() - _last_usec < 100000
+					get_viewport().set_input_as_handled()
+		elif event is InputEventScreenDrag and (event as InputEventScreenDrag).index == _finger:
+			var drag := event as InputEventScreenDrag
+			if not _dragging and _press.distance_to(drag.position) >= SLOP_PX:
+				_dragging = true
+				for child: Node in content.get_children():
+					if child is TouchButton:
+						(child as TouchButton).cancel()
+			if _dragging:
+				var moved: float = (drag.position.y - _last.y) / get_global_transform_with_canvas().get_scale().y
+				var now: int = Time.get_ticks_usec()
+				_velocity = clampf(lerpf(_velocity, moved / maxf((now - _last_usec) / 1000000.0, 0.001), 0.6),
+					-FLING_MAX, FLING_MAX)
+				_last = drag.position
+				_last_usec = now
+				scroll_by(moved)
+				get_viewport().set_input_as_handled()
+		elif event is InputEventMouseButton and event.pressed \
+				and get_global_rect().has_point((event as InputEventMouseButton).position):
+			var wheel: MouseButton = (event as InputEventMouseButton).button_index
+			if wheel in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:
+				_flinging = false
+				scroll_by(WHEEL if wheel == MOUSE_BUTTON_WHEEL_UP else -WHEEL)
+
+	func _process(delta: float) -> void:
+		if not _flinging:
+			return
+		var before: float = content.position.y
+		scroll_by(_velocity * delta)
+		_velocity *= exp(-FLING_DECAY * delta)
+		if absf(_velocity) < FLING_MIN or is_equal_approx(content.position.y, before):
+			_flinging = false
 
 
 ## A star, a lock or a parcel drawn in code.

@@ -16,13 +16,15 @@ const BLOCK: Dictionary = {
 	&"wood": Color("#DDA066"),
 	&"brick": Color("#E8845E"),
 	&"water": Color("#6EC6EA"),
-	# The seasons: autumn grass, winter snow, slate and ice, autumn's dry
-	# boards and summer's springs.
+	# The seasons: autumn grass, winter snow, slate, ice and glacier walls,
+	# autumn's dry boards, Frost Peaks' thin ice and summer's springs.
 	&"autumn_grass": Color("#DDA24A"),
-	&"snow": Color("#F1F4F9"),
-	&"slate": Color("#8E98B0"),
-	&"ice": Color("#B9E1F0"),
+	&"snow": Color("#F7F4FA"),
+	&"slate": Color("#7479A6"),
+	&"ice": Color("#A9DDF0"),
+	&"glacier": Color("#52B9D2"),
 	&"boards": Color("#A9764E"),
+	&"thin_ice": Color("#A6E3EC"),
 	&"spring": Color("#EE6C4D"),
 }
 
@@ -96,14 +98,16 @@ const THEMES: Dictionary = {
 	},
 	&"frost_peaks": {
 		"season": &"winter",
-		"sky_top": Color("#A7B0E0"),
-		"sky_horizon": Color("#EEF2F9"),
-		"sky_ground": Color("#CDD5E6"),
-		"clouds": 0.65,
-		"cloud_color": Color("#FFFFFF"),
-		"sun_color": Color("#FFF2E6"),
-		"sun_energy": 1.4,
-		"ambient_color": Color("#A9B8E6"),
+		# Alpenglow: a deep periwinkle sky going rose at the horizon, pink
+		# clouds and a low warm sun on the snow.
+		"sky_top": Color("#6474BE"),
+		"sky_horizon": Color("#F6C8C4"),
+		"sky_ground": Color("#C7B5D3"),
+		"clouds": 0.6,
+		"cloud_color": Color("#FBE6EE"),
+		"sun_color": Color("#FFDCC4"),
+		"sun_energy": 1.5,
+		"ambient_color": Color("#93A5E2"),
 		"ambient_energy": 0.5,
 		"shadow_blur": 3.0,
 	},
