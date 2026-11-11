@@ -246,6 +246,14 @@ static func _update_properties() -> void:
 	if _sent.get("crash_quality") != quality:
 		_sent["crash_quality"] = quality
 		_provider.call(&"set_crash_key", "quality", quality)
+	# Which renderer this launch is on, and whether that is OpenGL on Android
+	# (safe mode, or a phone without Vulkan; see core/SafeBoot.gd).
+	if not _sent.has("crash_renderer"):
+		var renderer: String = RenderingServer.get_current_rendering_method()
+		_sent["crash_renderer"] = renderer
+		_provider.call(&"set_crash_key", "renderer", renderer)
+		_provider.call(&"set_crash_key", "safe_mode",
+			str(OS.get_name() == "Android" and renderer == "gl_compatibility"))
 
 
 ## How far the player has got: the levels finished, and the world of the

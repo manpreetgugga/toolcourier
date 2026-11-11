@@ -22,6 +22,7 @@ config/icon="res://icons/icon.png"
 
 [autoload]
 
+SafeBoot="*res://core/SafeBoot.gd"
 Audio="*res://audio/AudioManager.gd"
 
 [debug]

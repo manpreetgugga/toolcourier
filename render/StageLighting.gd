@@ -22,6 +22,8 @@ var camera_attributes: CameraAttributesPractical
 
 var _world_environment: WorldEnvironment
 var _sky_material: ShaderMaterial
+## The screen's top and bottom elevations last sent to the sky (OpenGL only).
+var _view_span := Vector2(INF, INF)
 
 
 func _ready() -> void:
@@ -29,6 +31,29 @@ func _ready() -> void:
 	apply_theme(theme_name)
 	_apply_quality()
 	Settings.events.changed.connect(_on_setting_changed)
+	# On OpenGL the sky's screen gradient follows the camera from here (see
+	# shaders/sky_gradient.gdshader).
+	var on_gl: bool = RenderingServer.get_current_rendering_method() == "gl_compatibility"
+	_sky_material.set_shader_parameter(&"view_gradient", on_gl)
+	set_process(on_gl)
+
+
+func _process(_delta: float) -> void:
+	var camera: Camera3D = get_viewport().get_camera_3d()
+	if camera == null:
+		return
+	var size: Vector2 = get_viewport().get_visible_rect().size
+	var half: float = deg_to_rad(camera.fov) * 0.5
+	if camera.keep_aspect == Camera3D.KEEP_WIDTH and size.x > 0.0:
+		half = atan(tan(half) * size.y / size.x)
+	var pitch: float = asin(clampf(-camera.global_basis.z.y, -1.0, 1.0))
+	var span := Vector2(pitch - half, pitch + half)
+	# A new value re-renders the sky's light, so only on a visible change.
+	if span.distance_to(_view_span) < 0.004:
+		return
+	_view_span = span
+	_sky_material.set_shader_parameter(&"view_bottom", span.x)
+	_sky_material.set_shader_parameter(&"view_top", span.y)
 
 
 func apply_theme(new_theme: StringName) -> void:

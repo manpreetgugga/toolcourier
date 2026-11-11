@@ -218,9 +218,12 @@ Godot finds the key through the environment rather than the preset, so
 nothing secret is committed. The password is read without echoing it, so it
 stays out of the shell's history. Run from a terminal, Gradle's background
 daemon can keep Godot from exiting once the export is done, so the commands
-turn it off. In PowerShell:
+turn it off. Before each export, `tools/prepare_android_build.ps1` patches
+the Gradle build template's activity for safe mode (see [Safe mode](#safe-mode)).
+In PowerShell:
 
 ```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File tools\prepare_android_build.ps1
 $env:GODOT_ANDROID_KEYSTORE_RELEASE_PATH = "$HOME\keys\tinycourier.jks"
 $env:GODOT_ANDROID_KEYSTORE_RELEASE_USER = "tinycourier"
 $env:GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD = [Net.NetworkCredential]::new("", (Read-Host -AsSecureString "Keystore password")).Password
@@ -296,7 +299,7 @@ godot --headless --path . -s res://tools/make_audio.gd
 | Restart button (R) | Start the level again |
 | Hint button (H) | Show the next step of the shortest way to finish |
 | Pause button (Esc or P) | Pause: resume, restart, settings, the level map or the main menu |
-| Android back button (Esc) | Close the open card, then back one screen; in a level it pauses |
+| Android back button (Esc) | Close the open card, then back one screen; in a level it pauses; on the main screen the game goes to the background (on a computer, Esc there quits) |
 
 A drag that starts on a slider moves the slider instead of the camera, and
 input waits while mechanisms move. A level pauses itself when the app goes
@@ -855,6 +858,21 @@ cd android-reminders && ./gradlew copyToAddon
 ```
 
 <img src="docs/screenshots/reminders_settings.png" width="240" alt="Settings with the Reminders switch">
+
+## Safe mode
+
+Some phones' Vulkan drivers crash the engine (Crashlytics, 1.2.0: a SIGTRAP
+in `libgodot_android.so` at start-up on Samsung phones with an Adreno 618,
+the same crash Boomlets had). `tools/prepare_android_build.ps1` patches the
+Gradle build's `GodotApp.java` so that Qualcomm phones with a Vulkan driver
+older than 1.3 start on OpenGL (the Compatibility renderer), and
+`core/SafeBoot.gd` leaves a marker file while the game is on screen on
+Vulkan: a start that finds one left behind by a run that died switches that
+phone to OpenGL for good. The patch also ends the process when Android
+destroys the activity, before the engine's own shutdown, and Back on the
+main screen sends the game to the background rather than quitting. Crash
+reports carry the keys `renderer` and `safe_mode`. Ported from Boomlets
+0.5.16 and not yet proven in the field.
 
 ## Statistics
 

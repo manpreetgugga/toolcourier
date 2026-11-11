@@ -201,7 +201,7 @@ func play(path: String) -> void:
 
 ## The back button (or Escape): answers the statistics question with a no,
 ## closes the settings or a level's card, goes up a screen, and from the
-## main screen closes the game.
+## main screen leaves the game (see [method _leave]).
 func go_back() -> void:
 	if _leaving:
 		return
@@ -215,6 +215,24 @@ func go_back() -> void:
 		show_screen(&"worlds")
 	elif _screen == &"worlds":
 		show_screen(&"main")
+	else:
+		_leave()
+
+
+## Back on the main screen. On Android the game goes to the background, like
+## the home button, and is not shut down: shutting the engine down from a
+## running game crashed for some Boomlets players (Crashlytics:
+## "pthread_mutex_lock called on a destroyed mutex" in the engine's clean-up).
+## Progress and settings are saved as they change, so nothing is lost.
+func _leave() -> void:
+	if OS.get_name() != "Android":
+		get_tree().quit()
+		return
+	var activity: Variant = null
+	if Engine.has_singleton("AndroidRuntime"):
+		activity = Engine.get_singleton("AndroidRuntime").getActivity()
+	if activity != null:
+		activity.moveTaskToBack(true)
 	else:
 		get_tree().quit()
 

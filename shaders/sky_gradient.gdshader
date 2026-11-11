@@ -27,6 +27,14 @@ uniform float energy : hint_range(0.0, 2.0) = 1.0;
 uniform float cloud_amount : hint_range(0.0, 1.0) = 0.0;
 uniform vec3 cloud_color : source_color = vec3(1.0);
 uniform float cloud_scale = 3.0;
+// OpenGL (the Compatibility renderer: phones without Vulkan, and safe mode,
+// see core/SafeBoot.gd): SCREEN_UV is not usable in the sky pass there, so
+// the screen gradient is rebuilt from the view direction's elevation, in
+// radians, from view_bottom (bottom edge of the screen) to view_top (top
+// edge). StageLighting keeps both in step with the camera.
+uniform bool view_gradient = false;
+uniform float view_bottom = -1.2;
+uniform float view_top = -0.3;
 
 float hash(vec2 p) {
 	p = fract(p * vec2(234.34, 435.345));
@@ -92,6 +100,11 @@ vec3 cloud_sea(vec3 dir, vec3 col) {
 void sky() {
 	if (AT_CUBEMAP_PASS) {
 		COLOR = direction_gradient(EYEDIR) * energy;
+	} else if (view_gradient) {
+		float e = asin(clamp(EYEDIR.y, -1.0, 1.0));
+		float t = pow(clamp((e - view_bottom) / (view_top - view_bottom), 0.0, 1.0), gradient_curve);
+		vec3 col = mix(horizon_color, top_color, t);
+		COLOR = cloud_sea(EYEDIR, col) * energy;
 	} else {
 		// SCREEN_UV.y is 0 at the top of the screen.
 		float t = pow(clamp(1.0 - SCREEN_UV.y, 0.0, 1.0), gradient_curve);
