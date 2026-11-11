@@ -1,6 +1,6 @@
 # Privacy policy
 
-_Tiny Courier (Android app `com.manpreetgugga.tinycourier`). Last updated 5 November 2026._
+_Tiny Courier (Android app `com.manpreetgugga.tinycourier`). Last updated 11 November 2026._
 
 Tiny Courier has no accounts, and the developer never collects your name, email address, contacts or anything else that says who you are. The game is entirely inside the app and plays offline. It uses the internet for two things, both run by Google and described below: **ads** from Google AdMob, from the 21st level on, and **statistics and crash reports** through Google's Firebase, which you can turn off. The first 20 levels have no ads at all, and the ads aren't even started until you reach the 21st.
 
@@ -65,10 +65,29 @@ On Android, the game can show a short reminder notification in the morning, the 
 
 The game is not directed at children under 13, and the developer does not knowingly collect information from anyone under 13.
 
+## Who is responsible, and why the data is used
+
+The game is published by Gugga Manpreet Singh Karamveer, an individual trading as **Kpstn Studios**, Pune, India, who is responsible (the "controller") for the information described here. Contact details are under Contact below.
+
+In the European Economic Area, the UK and Switzerland, the legal bases for using this information are:
+
+- **Ads**, and whether they are personalised: your consent, given on Google's consent form.
+- **Statistics and crash reports**: your consent. Nothing is sent unless you tap Share.
+- **Reminders** are set up and shown on your phone; no personal information reaches us for them.
+
+Google may process this information on servers outside your country, including in the United States, using approved safeguards such as the European Commission's Standard Contractual Clauses.
+
+## Your rights
+
+Depending on where you live (for example under the GDPR, the UK GDPR or California law), you can ask to access, correct or delete information about you, to get a copy of it, or to object to or restrict its use, and you can withdraw your consent at any time in the game's settings without affecting what was done before. Because the developer doesn't know who you are, the quickest steps are the game's settings described above, resetting your advertising ID, or uninstalling the game. For anything else, contact us and we will reply within 30 days. In the EEA or the UK you can also complain to your local data protection authority.
+
+- **India (Digital Personal Data Protection Act, 2023):** for questions or grievances about your personal data, our grievance contact is Gugga Manpreet Singh Karamveer, at the developer email shown on the game's Google Play page. We respond within 30 days.
+- **United States:** we do not sell your personal information. Personalised ads from Google AdMob can count as "sharing" under some state laws; you can stop them by deleting your advertising ID in your phone's settings.
+
 ## Changes
 
 If this policy changes, the new version will be posted here with a new date.
 
 ## Contact
 
-Questions about this policy: open an issue at <https://github.com/manpreetgugga/toolcourier/issues>.
+Questions about this policy: open an issue at <https://github.com/manpreetgugga/toolcourier/issues>, or, for a private request, use the developer email shown on the game's Google Play page.
