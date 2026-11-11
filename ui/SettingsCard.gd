@@ -4,8 +4,9 @@ extends Control
 ## haptics, the tilt-shift blur and the graphics quality, then the daily
 ## reminders and the statistics on phones that have them (see Reminders and
 ## Analytics) and Google's ad privacy options where the law gives the
-## player a say (see Ads), with the version number and a link to the
-## privacy policy at the foot. Each change goes to Settings at once (a
+## player a say (see Ads), with a link to the privacy policy and the studio
+## credit (the Kpstn Studios mark, "Made by Kpstn Studios" and the version)
+## at the foot. Each change goes to Settings at once (a
 ## volume slider saves when let go), so the sound and picture follow while
 ## the card is up. Sizes are in the 720 x 1280 base viewport.
 
@@ -13,7 +14,12 @@ signal closed
 
 ## Without the reminders, statistics and ad privacy rows, each of which adds
 ## a row's height.
-const SIZE := Vector2(600.0, 860.0)
+const SIZE := Vector2(600.0, 920.0)
+## The Kpstn Studios mark, on its night tile, imported at 0.6 scale with
+## mipmaps so it stays crisp drawn small.
+const STUDIO_MARK: Texture2D = preload("res://ui/brand/kpstn-studios-mark.svg")
+## The mark's side in the credit line; the brand's smallest is 20.
+const MARK_SIZE: float = 24.0
 const ROW_TOP: float = 150.0
 const ROW_HEIGHT: float = 108.0
 ## Where the reminders, statistics and ad privacy rows go, one under the
@@ -94,20 +100,36 @@ func _ready() -> void:
 	_done.pressed.connect(close)
 	_card.add_child(_done)
 
-	var version: Label = _label("Version %s" % ProjectSettings.get_setting("application/config/version"), 20,
-		HORIZONTAL_ALIGNMENT_LEFT, Rect2(56.0, 0.0, 240.0, 28.0))
+	var credit := HBoxContainer.new()
+	credit.name = "Credit"
+	credit.alignment = BoxContainer.ALIGNMENT_CENTER
+	credit.add_theme_constant_override(&"separation", 12)
+	credit.size = Vector2(SIZE.x, 28.0)
+	credit.mouse_filter = Control.MOUSE_FILTER_STOP
+	credit.gui_input.connect(_on_version_input)
+	var mark := TextureRect.new()
+	mark.name = "Mark"
+	mark.texture = STUDIO_MARK
+	mark.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	mark.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	mark.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+	mark.custom_minimum_size = Vector2(MARK_SIZE, MARK_SIZE)
+	mark.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	mark.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	credit.add_child(mark)
+	var version: Label = _label("Made by Kpstn Studios · v%s" % ProjectSettings.get_setting("application/config/version"),
+		20, HORIZONTAL_ALIGNMENT_LEFT, Rect2())
 	version.name = "Version"
 	version.label_settings.font_color = Ui.MUTED
-	version.mouse_filter = Control.MOUSE_FILTER_STOP
-	version.gui_input.connect(_on_version_input)
-	_card.add_child(version)
-	var policy: Label = _label("Privacy policy", 20, HORIZONTAL_ALIGNMENT_RIGHT, Rect2(SIZE.x - 56.0 - 240.0, 0.0, 240.0, 28.0))
+	credit.add_child(version)
+	_card.add_child(credit)
+	var policy: Label = _label("Privacy policy", 20, HORIZONTAL_ALIGNMENT_CENTER, Rect2(0.0, 0.0, SIZE.x, 28.0))
 	policy.name = "Policy"
 	policy.label_settings.font_color = Ui.ACCENT.darkened(0.2)
 	policy.mouse_filter = Control.MOUSE_FILTER_STOP
 	policy.gui_input.connect(_on_policy_input)
 	_card.add_child(policy)
-	_foot.assign([version, policy])
+	_foot.assign([policy, credit])
 	_layout()
 	Ads.events.changed.connect(_layout)
 	Reminders.events.changed.connect(_show_reminders)
@@ -220,9 +242,10 @@ func _layout() -> void:
 	_card.offset_top = -height * 0.5
 	_card.offset_bottom = height * 0.5
 	_card.pivot_offset = Vector2(SIZE.x, height) * 0.5
-	_done.position = Vector2((SIZE.x - 260.0) * 0.5, height - 150.0)
-	for control: Control in _foot:
-		control.position.y = height - 44.0
+	_done.position = Vector2((SIZE.x - 260.0) * 0.5, height - 216.0)
+	# The privacy policy link, then the studio credit on the last line.
+	for i in _foot.size():
+		_foot[i].position.y = height - 92.0 + 42.0 * i
 
 
 ## A tap opens the privacy policy; holding it for [constant EXPLORE_HOLD]
@@ -256,7 +279,7 @@ func _on_policy_input(event: InputEvent) -> void:
 	OS.shell_open(Ads.PRIVACY_URL)
 
 
-## Five quick taps on the version number turn the performance readout on or
+## Five quick taps on the studio credit (with the version number) turn the performance readout on or
 ## off (see PerfOverlay).
 func _on_version_input(event: InputEvent) -> void:
 	if not (event is InputEventScreenTouch and event.is_pressed()):

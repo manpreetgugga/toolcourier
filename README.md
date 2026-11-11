@@ -717,9 +717,10 @@ switch turns the statistics and crash reports off and on (see
 player a say over ads (the EEA, the UK and Switzerland, for instance), an
 **Ad privacy** row opens Google's privacy options; elsewhere it isn't there.
 
-The foot of the card has the version number and a link to the
-[privacy policy](PRIVACY.md). The version number has a hidden use: tap it
-five times quickly to bring up the performance readout (see below), and
+The foot of the card has a link to the [privacy policy](PRIVACY.md) and,
+on the last line, the studio credit: the Kpstn Studios mark
+(`ui/brand/kpstn-studios-mark.svg`), "Made by Kpstn Studios" and the
+version number. The credit has a hidden use: tap it five times quickly to bring up the performance readout (see below), and
 five more to put it away. The privacy policy link has one too: hold it
 for three seconds and every world and level opens, stars or not, so
 the whole game can be explored (the link says "All levels open"); hold it
@@ -954,7 +955,7 @@ at Low, Medium and High side by side:
 
 <img src="docs/screenshots/step10_quality.png" width="720" alt="Level 1-1 at Low, Medium and High quality">
 
-**On a phone**, five taps on the version number in Settings bring up a
+**On a phone**, five taps on the studio credit (with the version number) in Settings bring up a
 readout under the pause button: frames per second, the CPU and GPU time of
 a frame, draw calls, the 3D size and quality, and memory (what the engine
 has allocated, plus video memory). It stays up across screens until put

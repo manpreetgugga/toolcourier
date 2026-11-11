@@ -279,11 +279,18 @@ func _check_menu() -> void:
 	await _press(quality, Vector2(quality.size.x * 0.1, quality.size.y * 0.5))
 	_check(Settings.quality == Settings.Quality.LOW, "the quality picker sets low quality")
 	await _press(quality, Vector2(quality.size.x * 0.9, quality.size.y * 0.5))
+	var credit: Control = card.get_node("Card/Credit")
+	var mark: TextureRect = credit.get_node("Mark")
+	var credit_label: Label = credit.get_node("Version")
+	_check(mark.texture != null and mark.size.x >= 20.0
+		and credit_label.text == "Made by Kpstn Studios · v%s" % ProjectSettings.get_setting("application/config/version")
+		and Rect2(Vector2.ZERO, card.get_node("Card").size).encloses(Rect2(credit.position, credit.size)),
+		"the settings card ends with the Kpstn Studios mark, credit and version")
 	for i in 5:
-		await _press(card.get_node("Card/Version"))
-	_check(PerfOverlay.is_shown(), "five taps on the version number bring up the performance readout")
+		await _press(credit)
+	_check(PerfOverlay.is_shown(), "five taps on the credit bring up the performance readout")
 	for i in 5:
-		await _press(card.get_node("Card/Version"))
+		await _press(credit)
 	_check(not PerfOverlay.is_shown(), "and five more take it away")
 	var last_level: String = LevelCatalog.all()[-1]
 	var policy: Label = card.get_node("Card/Policy")

@@ -38,6 +38,11 @@ icons) is built procedurally in code under `render/`, `shaders/`,
 The app icons in `icons/` are rendered from the game itself by
 `tools/make_icon.gd`.
 
+The one drawn image is the studio's own mark, `ui/brand/kpstn-studios-mark.svg`
+(Kpstn Studios, all rights reserved), shown at the foot of Settings with
+"Made by Kpstn Studios". It is copied unchanged from the studio's brand files;
+don't recolour, outline or stretch it.
+
 ## Engine
 
 Built with [Godot Engine](https://godotengine.org) 4.7, MIT licence,
