@@ -8,8 +8,7 @@ language's tags; paste each block as it is.
 Bump `version/code` to 4 and `version/name` to "1.2.1" in both presets of
 `export_presets.cfg` (and `config/version` in `project.godot`) before
 building it. Changes since 1.2.0: Settings ends with the studio credit, the
-Kpstn Studios mark and "Made by Kpstn Studios" with the version (the studio
-was called MSG Studios until 2026-11-11).
+Kpstn Studios mark and "Made by Kpstn Studios" with the version.
 
 ```
 <en-US>

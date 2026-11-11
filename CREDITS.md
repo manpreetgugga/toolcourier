@@ -34,7 +34,8 @@ third-party sounds are used.
 Every model, texture, shader, particle and animation (the clay blocks, the
 courier, the props, the sky and clouds, the weather and the user interface
 icons) is built procedurally in code under `render/`, `shaders/`,
-`entities/` and `ui/`. There are no external model, image or texture files.
+`entities/` and `ui/`. Apart from the studio mark below, there are no
+external model, image or texture files.
 The app icons in `icons/` are rendered from the game itself by
 `tools/make_icon.gd`.
 
