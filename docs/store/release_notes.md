@@ -3,7 +3,26 @@
 Play Console takes up to 500 characters per language, between the
 language's tags; paste each block as it is.
 
-## 1.2.2 (version code 5): not uploaded yet
+## 1.2.2 (version code 5): production, the first public release
+
+Upload the bundle to the library (App bundle explorer → Upload new version),
+then pick it with "Add from library" in the production release. It still
+uses Google's test ad ids. The production notes are written for players
+who are new to the game, so they introduce it rather than list changes:
+
+```
+<en-US>
+Welcome to Tiny Courier, a calm clay puzzle game.
+• 460 levels across seven worlds, from the Meadow to the Frost Peaks
+• Slide bridges, ride lifts, open gates and bounce on springs to deliver every parcel
+• A step-by-step walkthrough on the first level
+• Every parcel and its pad share a symbol, for colour-blind players
+• No timers and no lives: undo, restart, and a hint when you're stuck
+</en-US>
+```
+
+The block after the change list is for a closed-testing release of 1.2.2,
+if one is made.
 
 Bump `version/code` to 5 and `version/name` to "1.2.2" in both presets of
 `export_presets.cfg` (and `config/version` in `project.godot`) before
