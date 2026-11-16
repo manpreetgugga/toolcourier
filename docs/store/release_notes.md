@@ -10,11 +10,14 @@ Bump `version/code` to 4 and `version/name` to "1.2.1" in both presets of
 building it, and run `tools/prepare_android_build.ps1` before the export.
 Changes since 1.2.0:
 
-- A fix for a crash at start-up on some Samsung phones with older Qualcomm
-  graphics (Adreno 618): Qualcomm phones whose Vulkan driver is older than
-  1.3 start on OpenGL, and any phone where the game died on screen uses
-  OpenGL from the next start (`core/SafeBoot.gd`). Ported from Boomlets
-  0.5.16; best-effort, not yet proven by Crashlytics.
+- Fixes for the two engine crashes in 1.2.0's Crashlytics, both in the
+  Vulkan renderer (symbolized against Godot 4.7.1's debug symbols; see
+  README, Safe mode): the SIGTRAP "Vulkan device was lost" on the Samsung
+  SM-A715F, and the SIGSEGV at start-up when Vulkan could not be brought up
+  (vivo V2253, a Samsung, Android 15). Those phones, and Qualcomm phones
+  whose Vulkan driver is older than 1.3, start on OpenGL; any other phone
+  where the game died while starting or on screen uses OpenGL from the next
+  start (`core/SafeBoot.gd`).
 - Back on the main menu now sends the game to the background, like the home
   button, instead of closing it, and the process ends without the engine's
   shutdown when Android closes the game.
@@ -24,7 +27,7 @@ Changes since 1.2.0:
 
 ```
 <en-US>
-Fixes a crash at start-up on some Samsung phones.
+Fixes crashes on some Samsung and vivo phones.
 Back on the main menu now puts the game in the background instead of closing it.
 Settings now shows who makes the game: Kpstn Studios.
 This build shows test ads from level 21 on.

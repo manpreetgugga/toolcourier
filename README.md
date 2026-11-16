@@ -861,18 +861,34 @@ cd android-reminders && ./gradlew copyToAddon
 
 ## Safe mode
 
-Some phones' Vulkan drivers crash the engine (Crashlytics, 1.2.0: a SIGTRAP
-in `libgodot_android.so` at start-up on Samsung phones with an Adreno 618,
-the same crash Boomlets had). `tools/prepare_android_build.ps1` patches the
-Gradle build's `GodotApp.java` so that Qualcomm phones with a Vulkan driver
-older than 1.3 start on OpenGL (the Compatibility renderer), and
-`core/SafeBoot.gd` leaves a marker file while the game is on screen on
-Vulkan: a start that finds one left behind by a run that died switches that
-phone to OpenGL for good. The patch also ends the process when Android
-destroys the activity, before the engine's own shutdown, and Back on the
-main screen sends the game to the background rather than quitting. Crash
-reports carry the keys `renderer` and `safe_mode`. Ported from Boomlets
-0.5.16 and not yet proven in the field.
+Some phones' Vulkan drivers crash the engine. Crashlytics for 1.2.0 had two
+such crashes in `libgodot_android.so`, symbolized against the
+`Godot_native_debug_symbols.4.7.1.stable.template_release.android.zip`
+release asset (its build ID, `5a324c51…`, matches the reports):
+
+- SIGTRAP: `CRASH_NOW` "Vulkan device was lost" in
+  `RenderingDeviceDriverVulkan::command_queue_execute_and_present`, mid-game
+  (Samsung SM-A715F, Adreno 618, Android 13; the same crash Boomlets had).
+- SIGSEGV at `0x200`: `OS_Android::main_loop_focusin` on a null display
+  server. Vulkan passed the engine's early check, but the window or the
+  device could not be created; the engine ran on without a display server
+  and crashed on the next focus event, before any game script ran (vivo
+  V2253 and a Samsung, Android 15).
+
+`tools/prepare_android_build.ps1` patches the Gradle build's `GodotApp.java`
+so that the phones that crashed (`OPENGL_MODELS` there, by the start of
+`Build.MODEL`) and Qualcomm phones with a Vulkan driver older than 1.3 start
+on OpenGL (the Compatibility renderer). Any other phone starting on Vulkan
+gets a marker file in `user://` when the process starts, before the engine
+does; `core/SafeBoot.gd` takes it away whenever the game goes to the
+background and leaves it again when the game comes back. A start that finds
+one left behind by a run that died switches that phone to OpenGL for good, so
+a phone hit by either crash crashes at most once. The patch also ends the
+process when Android destroys the activity, before the engine's own shutdown,
+and Back on the main screen sends the game to the background rather than
+quitting. Crash reports carry the keys `renderer` and `safe_mode`. To list
+another phone, add the start of its model (as Crashlytics shows it) to
+`OPENGL_MODELS`.
 
 ## Statistics
 
