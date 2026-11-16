@@ -3,12 +3,13 @@
 Play Console takes up to 500 characters per language, between the
 language's tags; paste each block as it is.
 
-## 1.2.1 (version code 4): not uploaded yet
+## 1.2.2 (version code 5): not uploaded yet
 
-Bump `version/code` to 4 and `version/name` to "1.2.1" in both presets of
+Bump `version/code` to 5 and `version/name` to "1.2.2" in both presets of
 `export_presets.cfg` (and `config/version` in `project.godot`) before
 building it, and run `tools/prepare_android_build.ps1` before the export.
-Changes since 1.2.0:
+This release replaces 1.2.1 (version code 4), which it includes. Changes
+since 1.2.0:
 
 - Fixes for the two engine crashes in 1.2.0's Crashlytics, both in the
   Vulkan renderer (symbolized against Godot 4.7.1's debug symbols; see
