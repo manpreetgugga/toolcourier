@@ -38,6 +38,13 @@ static var statistics_asked: bool = false
 ## Every world and level open, stars or not: a hidden switch for exploring
 ## the whole game (a long press on Settings' privacy policy link).
 static var explore: bool = false
+## Whether the player has gone to rate the game on Google Play, and how many
+## times the game has asked (see Rating).
+static var rated: bool = false
+static var rate_asks: int = 0
+## Whether the first level's walkthrough has been finished or skipped (see
+## Walkthrough).
+static var walkthrough_done: bool = false
 
 static var _loaded: bool = false
 
@@ -67,7 +74,8 @@ static func ensure_loaded() -> void:
 
 
 ## Changes one setting ("music", "sfx", "tilt_shift", "haptics", "quality",
-## "reminders", "explore" or "statistics", which also counts as the player's answer),
+## "reminders", "explore", "rated", "rate_asks", "walkthrough_done" or
+## "statistics", which also counts as the player's answer),
 ## saves (unless [param persist] is false, as while a slider is still being
 ## dragged) and tells everyone.
 static func set_value(key: StringName, value: Variant, persist: bool = true) -> void:
@@ -90,6 +98,12 @@ static func set_value(key: StringName, value: Variant, persist: bool = true) -> 
 			statistics_asked = true
 		&"explore":
 			explore = bool(value)
+		&"rated":
+			rated = bool(value)
+		&"rate_asks":
+			rate_asks = maxi(int(value), 0)
+		&"walkthrough_done":
+			walkthrough_done = bool(value)
 		_:
 			push_warning("Settings: no setting %s" % key)
 			return
@@ -121,6 +135,12 @@ static func get_value(key: StringName) -> Variant:
 			return statistics_asked
 		&"explore":
 			return explore
+		&"rated":
+			return rated
+		&"rate_asks":
+			return rate_asks
+		&"walkthrough_done":
+			return walkthrough_done
 	return null
 
 
@@ -185,6 +205,7 @@ static func save() -> void:
 		"music": music, "sfx": sfx, "tilt_shift": tilt_shift, "haptics": haptics,
 		"quality": QUALITY_NAMES[quality].to_lower(), "reminders": reminders,
 		"statistics": statistics, "statistics_asked": statistics_asked, "explore": explore,
+		"rated": rated, "rate_asks": rate_asks, "walkthrough_done": walkthrough_done,
 	}, "\t")
 	var temporary: String = path + ".tmp"
 	var file := FileAccess.open(temporary, FileAccess.WRITE)
@@ -227,6 +248,12 @@ static func load_file() -> void:
 		statistics_asked = parsed["statistics_asked"]
 	if typeof(parsed.get("explore")) == TYPE_BOOL:
 		explore = parsed["explore"]
+	if typeof(parsed.get("rated")) == TYPE_BOOL:
+		rated = parsed["rated"]
+	if typeof(parsed.get("rate_asks")) in [TYPE_INT, TYPE_FLOAT]:
+		rate_asks = maxi(int(parsed["rate_asks"]), 0)
+	if typeof(parsed.get("walkthrough_done")) == TYPE_BOOL:
+		walkthrough_done = parsed["walkthrough_done"]
 
 
 static func _defaults() -> void:
@@ -238,5 +265,8 @@ static func _defaults() -> void:
 	statistics = true
 	statistics_asked = false
 	explore = false
+	rated = false
+	rate_asks = 0
+	walkthrough_done = false
 	# Phones start on Medium, which a mid-range one runs at 60 fps.
 	quality = Quality.MEDIUM if OS.has_feature("mobile") else Quality.HIGH

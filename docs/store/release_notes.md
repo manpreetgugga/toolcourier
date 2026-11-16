@@ -25,14 +25,25 @@ since 1.2.0:
 - Crash reports carry the renderer and whether safe mode is on.
 - Settings ends with the studio credit, the Kpstn Studios mark and "Made by
   Kpstn Studios" with the version.
+- From the testers' report on 1.2.0:
+  - The first level has a walkthrough, step by step, with the hint arrow
+    showing where to tap and a Skip (`ui/Walkthrough.gd`).
+  - Every parcel colour has a symbol on the parcel and its pad, for
+    colour-blind players (`render/ParcelSymbol.gd`).
+  - Settings has Rate us, and finishing a world for the first time asks for
+    a rating on Google Play, twice at most (`core/Rating.gd`).
+  - A fuller store description and captioned screenshots
+    (`docs/store/listing.md`).
 
 ```
 <en-US>
+New: a walkthrough on the first level, with a Skip.
+New: every parcel and its pad share a symbol, so colour-blind players can match them.
+New: Rate us in Settings.
 Fixes crashes on some Samsung and vivo phones.
 Back on the main menu now puts the game in the background instead of closing it.
 Settings now shows who makes the game: Kpstn Studios.
 This build shows test ads from level 21 on.
-Please send private feedback on the Play page if a level feels stuck or looks wrong.
 </en-US>
 ```
 

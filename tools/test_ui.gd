@@ -29,6 +29,8 @@ func _initialize() -> void:
 	Settings.use_file(SETTINGS)
 	# No ads: Hint gives hints straight away, and no level break plays.
 	Ads.enabled = false
+	# Rate buttons record the store page instead of opening it.
+	Rating.dry_run = true
 	for arg: String in OS.get_cmdline_user_args():
 		if arg.begins_with("--out="):
 			_out_dir = arg.trim_prefix("--out=")
@@ -48,6 +50,8 @@ func _run() -> void:
 	await _check_settings()
 	await _check_menu()
 	await _check_level()
+	await _check_walkthrough()
+	await _check_rating()
 	await _check_flow()
 	if _failures == 0:
 		print("all checks passed")
@@ -338,6 +342,7 @@ func _check_level() -> void:
 	_check(is_equal_approx(safe.offset_top, 90.0) and is_equal_approx(safe.offset_bottom, -60.0),
 		"the HUD keeps clear of a notch and the gesture bar")
 
+
 	var ticks: int = Haptics.history.size()
 	_tap(level, PARCEL)
 	await _until_still(level.courier)
@@ -376,12 +381,136 @@ func _check_level() -> void:
 	await _frames(2)
 
 
+## The first level's walkthrough on a fresh save: played through, step by
+## step, and skipped.
+func _check_walkthrough() -> void:
+	Progress.use_file("user://test_ui_walkthrough_progress.json")
+	Settings.set_value(&"walkthrough_done", false)
+	var level: Level = (load(Game.LEVEL) as PackedScene).instantiate()
+	level.level_path = LEVEL_1
+	_viewport.add_child(level)
+	await _wait(0.5)
+	var walk: Walkthrough = level.hud.walkthrough()
+	_check(walk != null and walk.step == Walkthrough.Step.TURN and not level.has_hint(),
+		"a first level never finished starts the walkthrough, asking for a drag to turn the island")
+	if walk == null:
+		level.queue_free()
+		Progress.use_file("user://test_ui_progress.json", false)
+		return
+	_capture("walkthrough_turn.png")
+	await _drag(level.hud.get_node("Root"), Vector2(180.0, 980.0), Vector2(540.0, 980.0))
+	await _until(func() -> bool: return level.has_hint(), 3.0)
+	_check(walk.step == Walkthrough.Step.PICK_UP and level.has_hint(),
+		"turning the island moves it on, and the hint arrow points at where to walk")
+	_capture("walkthrough_pickup.png")
+	_tap(level, PARCEL)
+	await _until_still(level.courier)
+	await _until(func() -> bool: return level.has_hint(), 3.0)
+	_check(walk.step == Walkthrough.Step.DELIVER and level.has_hint(),
+		"with the parcel on board, it points at the pad")
+	_tap(level, PAD)
+	await _until_still(level.courier)
+	await _until(func() -> bool: return level.has_hint(), 3.0)
+	_check(walk.step == Walkthrough.Step.EXIT and level.has_hint(), "delivered, it points at the flag")
+	_tap(level, EXIT)
+	await _until_still(level.courier)
+	await _wait(0.4)
+	_check(level.state.completed and level.hud.walkthrough() == null and Settings.walkthrough_done and level._hints == 0,
+		"finishing the level ends it for good, and its arrows don't count as hints")
+	level.queue_free()
+	await _frames(2)
+
+	Progress.use_file("user://test_ui_walkthrough_progress.json")
+	Settings.set_value(&"walkthrough_done", false)
+	level = (load(Game.LEVEL) as PackedScene).instantiate()
+	level.level_path = LEVEL_1
+	_viewport.add_child(level)
+	await _wait(0.5)
+	walk = level.hud.walkthrough()
+	var had_walkthrough: bool = walk != null
+	if walk:
+		await _press(walk.get_node("Panel/Skip"))
+		await _wait(0.4)
+	_check(had_walkthrough and level.hud.walkthrough() == null and Settings.walkthrough_done, "Skip ends it at once, for good")
+	level.queue_free()
+	await _frames(2)
+	level = (load(Game.LEVEL) as PackedScene).instantiate()
+	level.level_path = LEVEL_1
+	_viewport.add_child(level)
+	await _frames(3)
+	_check(level.hud.walkthrough() == null, "and the first level doesn't show it again")
+	level.queue_free()
+	await _frames(2)
+	Progress.use_file("user://test_ui_progress.json", false)
+
+
+## The question about rating the game, and Settings' Rate button.
+func _check_rating() -> void:
+	Settings.set_value(&"rated", false)
+	Settings.set_value(&"rate_asks", 0)
+	Rating.opened.clear()
+	var world_1: Array[String] = LevelCatalog.levels(1)
+	Progress.use_file("user://test_ui_rating_progress.json")
+	_check(Rating.may_ask() and not Rating.finishes_world(world_1[-1], true),
+		"the game may ask for a rating, but a world's last level alone doesn't finish the world")
+	for path: String in world_1:
+		Progress.record(Progress.level_id(path), 10, 3)
+	_check(Rating.finishes_world(world_1[-1], true) and not Rating.finishes_world(world_1[-1], false),
+		"a first finish that completes a world counts; a replay doesn't")
+	Progress.use_file("user://test_ui_progress.json", false)
+
+	var level: Level = (load(Game.LEVEL) as PackedScene).instantiate()
+	level.level_path = LEVEL_2
+	_viewport.add_child(level)
+	await _wait(0.5)
+	level.hud.ask_rating(1)
+	await _wait(0.5)
+	var card: Control = level.hud.get_node("Root/RateQuestion")
+	_check(level.hud.is_rate_showing() and card.visible and Settings.rate_asks == 1,
+		"finishing a world asks for a rating, and counts the ask")
+	_capture("rate_question.png")
+	await _press(card.get_node("Card/NotNow"))
+	await _wait(0.3)
+	_check(not level.hud.is_rate_showing() and not card.visible and not Settings.rated and Rating.opened.is_empty(),
+		"Not now just closes it")
+	level.hud.ask_rating(2)
+	await _wait(0.4)
+	level.go_back()
+	await _wait(0.3)
+	_check(not level.hud.is_rate_showing() and not Rating.may_ask(),
+		"back answers Not now too, and after two asks the game stops asking")
+	Settings.set_value(&"rate_asks", 0)
+	level.hud.ask_rating(1)
+	await _wait(0.4)
+	await _press(card.get_node("Card/Rate"))
+	await _wait(0.3)
+	_check(Settings.rated and Rating.opened.size() == 1 and Rating.opened[0] == Rating.STORE_URL and not Rating.may_ask(),
+		"Rate it opens the game's Google Play page and stops the asking")
+
+	Settings.set_value(&"rated", false)
+	Rating.opened.clear()
+	level.hud.pause()
+	await _wait(0.3)
+	var settings: SettingsCard = level.hud.get_node("Root/Settings")
+	settings.open()
+	await _wait(0.5)
+	await _press(settings.get_node("Card/Rate"))
+	_check(Settings.rated and Rating.opened.size() == 1, "Settings' Rate us opens the store page too")
+	settings.close()
+	level.hud.resume()
+	level.queue_free()
+	await _frames(2)
+	Settings.set_value(&"rated", false)
+	Settings.set_value(&"rate_asks", 0)
+
+
 func _check_flow() -> void:
 	Game.open_level(LEVEL_1)
 	await _until(func() -> bool: return current_scene is Level and not Game.is_swapping(), 5.0)
 	var level := current_scene as Level
 	_check(level != null and level.level_path == LEVEL_1 and level.intro and level.get_parent() == root,
 		"opening a level fades it in as the scene, building itself up")
+	_check(level.hud.walkthrough() == null, "a first level already finished has no walkthrough")
 	await _until(func() -> bool: return not level.is_assembling(), 5.0)
 	level.go_home(&"levels")
 	await _until(func() -> bool: return current_scene is Menu and not Game.is_swapping(), 6.0)

@@ -31,6 +31,8 @@ var _pictures: Array[Image] = []
 
 func _initialize() -> void:
 	Settings.use_file("user://test_settings.json")
+	# No first-level walkthrough (see test_ui).
+	Settings.set_value(&"walkthrough_done", true)
 	Progress.use_file("user://test_progress.json")
 	Game.splash_done = true
 	for arg: String in OS.get_cmdline_user_args():

@@ -284,7 +284,8 @@ static func gate_bars(cells: Array[Vector3i], delays: Dictionary = {}) -> ArrayM
 	return batch.commit()
 
 
-## A taped parcel of a package colour, resting on y = 0.
+## A taped parcel of a package colour, resting on y = 0, with its colour's
+## symbol printed on top (see ParcelSymbol).
 static func parcel(color: StringName) -> ArrayMesh:
 	if not _parcels.has(color):
 		var batch := _Batch.new()
@@ -292,6 +293,8 @@ static func parcel(color: StringName) -> ArrayMesh:
 		batch.add(ClayShapes.rounded_box(Vector3(0.34, 0.28, 0.34), 0.05), lift, Palette.PACKAGE[color])
 		batch.add(ClayShapes.rounded_box(Vector3(0.355, 0.29, 0.07), 0.02), lift, TAPE)
 		batch.add(ClayShapes.rounded_box(Vector3(0.07, 0.29, 0.355), 0.02), lift, TAPE)
+		# On the tape's top (y 0.285), sunk a little into it.
+		batch.add(ParcelSymbol.mesh(color, 0.22, 0.012), _at(0.0, 0.281, 0.0), ParcelSymbol.INK)
 		_parcels[color] = batch.commit()
 	return _parcels[color]
 

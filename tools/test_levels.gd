@@ -36,6 +36,8 @@ var _thumbs: Array[Array] = []
 func _initialize() -> void:
 	# Default settings, whatever the player has chosen.
 	Settings.use_file("user://test_settings.json")
+	# No first-level walkthrough (see test_ui).
+	Settings.set_value(&"walkthrough_done", true)
 	var paths: Array[String] = []
 	for arg: String in OS.get_cmdline_user_args():
 		if arg.begins_with("--out="):

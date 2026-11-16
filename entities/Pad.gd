@@ -15,6 +15,9 @@ const TOP: float = 0.06
 ## how big it is there.
 const PARCEL_SPOT := Vector3(0.24, TOP, -0.24)
 const PARCEL_SIZE: float = 0.75
+## Where the colour's symbol sits on the tile, and how big it is.
+const SYMBOL_SPOT := Vector3(-0.05, TOP - 0.004, 0.05)
+const SYMBOL_SIZE: float = 0.3
 
 var color: StringName
 var filled: bool = false
@@ -46,6 +49,15 @@ func _ready() -> void:
 	tile.material_override = _tile_material
 	tile.position.y = 0.03
 	add_child(tile)
+
+	# The colour's symbol (see ParcelSymbol), towards the front corner, clear
+	# of where a delivered parcel rests.
+	var symbol := MeshInstance3D.new()
+	symbol.name = "Symbol"
+	symbol.mesh = ParcelSymbol.mesh(color, SYMBOL_SIZE, 0.01)
+	symbol.material_override = ClayShapes.material(ParcelSymbol.INK)
+	symbol.position = SYMBOL_SPOT
+	add_child(symbol)
 
 	_sparkles = Effects.sparkles(Palette.PACKAGE[color])
 	_sparkles.position.y = 0.15

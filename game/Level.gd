@@ -59,6 +59,8 @@ var courier: Courier
 var hud: Hud
 ## Whether the last finish beat the saved best.
 var finished_best: bool = false
+## Whether the last finish was this level's first ever.
+var first_finish: bool = false
 
 var _stage: StageLighting
 ## Parcels on the floor by their current cell; carried ones in pickup order;
@@ -299,8 +301,10 @@ func can_hint() -> bool:
 
 ## Shows the first step of the shortest way to finish from here: where to
 ## walk, which slider to drag where, or which crank to turn. Returns what
-## to tell the player, or "" if no hint can be shown now.
-func show_hint() -> String:
+## to tell the player, or "" if no hint can be shown now. Unless
+## [param counted] is false (the first level's walkthrough), it counts as a
+## hint in the level's statistics.
+func show_hint(counted: bool = true) -> String:
 	if not can_hint():
 		return ""
 	_clear_hint()
@@ -308,7 +312,8 @@ func show_hint() -> String:
 	if plan.is_empty():
 		courier.puzzled()
 		return "Too tricky to work out from here." if _solver.gave_up else "No way forward from here: undo or restart."
-	_hints += 1
+	if counted:
+		_hints += 1
 	var first: Dictionary = plan[0]
 	_hinted = {"action": first["action"], "id": first.get("id", ""), "to": first.get("to", 0)}
 	match first["action"]:
@@ -603,6 +608,7 @@ func _play(events: Array[Dictionary]) -> void:
 				courier.celebrate()
 				_celebrate()
 				var stars: int = data.stars_for(state.moves)
+				first_finish = Progress.best(_id()).is_empty()
 				finished_best = Progress.record(_id(), state.moves, stars)
 				_end_go(true, stars)
 				Ads.level_finished(level_path, stars > 0 and not _restarted)

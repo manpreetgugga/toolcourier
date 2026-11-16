@@ -4,7 +4,8 @@ extends Control
 ## haptics, the tilt-shift blur and the graphics quality, then the daily
 ## reminders and the statistics on phones that have them (see Reminders and
 ## Analytics) and Google's ad privacy options where the law gives the
-## player a say (see Ads), with a link to the privacy policy and the studio
+## player a say (see Ads), Rate (the game's Google Play page, see Rating)
+## beside Done, with a link to the privacy policy and the studio
 ## credit (the Kpstn Studios mark, "Made by Kpstn Studios" and the version)
 ## at the foot. Each change goes to Settings at once (a
 ## volume slider saves when let go), so the sound and picture follow while
@@ -27,12 +28,15 @@ const ROW_HEIGHT: float = 108.0
 const EXTRA_ROW: int = 5
 ## Seconds the privacy policy link is held to open every level.
 const EXPLORE_HOLD: float = 3.0
+## Width of Rate and Done, side by side at the foot.
+const FOOT_BUTTON: float = 236.0
 
 var _card: Control
 var _reminder_row: Array[Control] = []
 var _statistics_row: Array[Control] = []
 var _ad_row: Array[Control] = []
 var _done: TouchButton
+var _rate: TouchButton
 var _foot: Array[Control] = []
 var _sliders: Dictionary = {}
 var _toggles: Dictionary = {}
@@ -92,7 +96,14 @@ func _ready() -> void:
 	_card.add_child(ad_options)
 	_ad_row.assign([ad_label, ad_options])
 
-	_done = TouchButton.new(Vector2(260.0, 96.0))
+	_rate = TouchButton.new(Vector2(FOOT_BUTTON, 96.0))
+	_rate.name = "Rate"
+	_rate.text = "Rate us"
+	_rate.font_size = 34
+	_rate.color = Ui.CREAM.darkened(0.06)
+	_rate.pressed.connect(Rating.open_store)
+	_card.add_child(_rate)
+	_done = TouchButton.new(Vector2(FOOT_BUTTON, 96.0))
 	_done.name = "Done"
 	_done.text = "Done"
 	_done.font_size = 36
@@ -242,7 +253,8 @@ func _layout() -> void:
 	_card.offset_top = -height * 0.5
 	_card.offset_bottom = height * 0.5
 	_card.pivot_offset = Vector2(SIZE.x, height) * 0.5
-	_done.position = Vector2((SIZE.x - 260.0) * 0.5, height - 216.0)
+	_rate.position = Vector2(48.0, height - 216.0)
+	_done.position = Vector2(SIZE.x - 48.0 - FOOT_BUTTON, height - 216.0)
 	# The privacy policy link, then the studio credit on the last line.
 	for i in _foot.size():
 		_foot[i].position.y = height - 92.0 + 42.0 * i

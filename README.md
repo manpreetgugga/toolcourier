@@ -28,6 +28,20 @@ every pad is filled the exit's pennant runs up its post; walking onto the
 exit finishes the level. Every cell walked is a move, and each level sets
 three move limits for three, two and one star.
 
+Matching never rests on colour alone: each parcel colour has a symbol,
+printed in ink on the parcel's top and on its pad's tile (red a heart, green
+a triangle, blue a circle, yellow a star; `render/ParcelSymbol.gd`), so
+colour-blind players can match them too. Red and green, the pair most often
+confused, get the two least alike shapes.
+
+The first level has a walkthrough (`ui/Walkthrough.gd`) for a player who
+has never finished it: a panel under the level's name says what to do,
+turn the island (with a swaying swipe cue), pick up the parcel, take it to
+its pad, walk to the flag, while the hint arrow points at where to tap. Its
+steps follow the level, so undo, restart or a walk elsewhere bring the right
+one back; Skip ends it, and once finished or skipped it never shows again
+(`Settings.walkthrough_done`). Its arrows don't count as hints.
+
 The orange parts move (see [Mechanisms](#mechanisms)): drag a slider, tap a
 crank to turn a bridge, step on an elevator to ride it or on a button to
 switch something. Dragging a slider or turning a crank costs one move;
@@ -402,7 +416,12 @@ gives a phone, and the performance readout). It plays a level through the
 same path: the build-up, the sounds and haptics of a walk and a delivery,
 pausing and resuming, the confetti, the
 tear-down and back to the level map, with a simulated notch to check the
-safe area. It saves `step9_*.png` and `levels_*.png` screenshots:
+safe area. On a fresh save it plays the first level's walkthrough step by
+step (a drag, then the arrow to the parcel, the pad and the flag) and checks
+that Skip ends it for good; it asks for a rating over a level and answers
+Not now, back and Rate it, checks the two-ask limit and Settings' Rate us
+(opening nothing: `Rating.dry_run`). It saves `step9_*.png`, `levels_*.png`,
+`walkthrough_*.png` and `rate_question.png` screenshots:
 
 ```bash
 godot --audio-driver Dummy --path . --resolution 405x720 -s res://tools/test_ui.gd -- --out=docs/screenshots
@@ -452,6 +471,18 @@ godot --path . --resolution 720x1280 -s res://tools/capture.gd -- --scene=res://
 Add `--size=720x1280` to render offscreen at an exact size (useful when the
 desktop is smaller than the capture), and `--crop=X,Y,W,H` to save only a
 region for close-ups. The tool also prints draw calls and triangle counts.
+
+`tools/store_screenshots.gd` makes the Play Store's phone screenshots in
+`docs/store/screenshots/`: each a scene of the game (a level, the first
+level's walkthrough, a hint, the finish card, the world select) under a
+caption in Nunito, on the cream and orange of the game's cards, 1080 x 1920.
+The captions are in the script; keep them in step with
+`docs/store/listing.md`. It needs a 1080 x 1920 window, and the Mobile
+renderer, as on phones (`--only=<name>` makes one):
+
+```bash
+godot --path . --rendering-method mobile --resolution 1080x1920 -s res://tools/store_screenshots.gd
+```
 
 ## Blocks
 
@@ -719,6 +750,15 @@ switch turns the statistics and crash reports off and on (see
 [Statistics](#statistics)). Where the law gives the
 player a say over ads (the EEA, the UK and Switzerland, for instance), an
 **Ad privacy** row opens Google's privacy options; elsewhere it isn't there.
+
+**Rate us**, beside **Done**, opens the game's page on Google Play (the
+Play Store app on Android, the web page elsewhere; `core/Rating.gd`). The
+game also asks once, when a world is finished for the first time: over the
+finish card, a little card with five stars, "Enjoying it?", the world just
+finished, **Rate it** and **Not now** (`ui/RateCard.gd`). After Not now (or
+the back button) it asks again after a later world, two asks at most, and
+never once the player has gone to rate (`Settings.rated`,
+`Settings.rate_asks`).
 
 The foot of the card has a link to the [privacy policy](PRIVACY.md) and,
 on the last line, the studio credit: the Kpstn Studios mark
@@ -1055,14 +1095,16 @@ dust motes drifting in the light (`render/Weather.gd`).
 ```
 core/       grid, pathfinding, level loading and rules, solver, saved progress,
             the level catalogue, settings, haptics, the ads' rules, the
-            reminders with their 200 messages, and the statistics
+            reminders with their 200 messages, the statistics, and the
+            asking for a rating
 game/       the level scene that plays a level
 render/     palette, stage lighting, weather, effects, the build-up,
-            procedural meshes and props
+            procedural meshes and props, the parcels' symbols
 shaders/    block, clay, water, cloth, sky and effect shaders
 entities/   courier, parcels, pads, exit, mechanisms, dry boards, springs
 camera/     orbit camera
-ui/         menus, scene changes, HUD, pause, settings and finish cards, buttons
+ui/         menus, scene changes, HUD, pause, settings, finish and rating
+            cards, the first level's walkthrough, buttons
 audio/      the sound player, generated sound effects and world loops
 fonts/      Nunito and its licence
 levels/     the 460 levels, levels/world_<n>/level_<n>.json

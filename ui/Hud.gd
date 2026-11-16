@@ -4,8 +4,10 @@ extends CanvasLayer
 ## meter at the top; Restart, Undo and Hint at the bottom; a toast saying
 ## what a hint means; the pause card (Resume, Restart, Settings, Levels,
 ## Home); and the card shown on finishing, with the stars earned, the best so
-## far and Replay / Next / Levels. Everything but the shade of the cards
-## keeps to the screen's safe area. Sizes are in the 720 x 1280 base
+## far and Replay / Next / Levels; over it, once a world is finished for the
+## first time, the question about rating the game (see Rating); and on the
+## first level, the walkthrough (see Walkthrough). Everything but the shade
+## of the cards keeps to the screen's safe area. Sizes are in the 720 x 1280 base
 ## viewport. It keeps running while the game is paused.
 ##
 ## The ads (see Ads) show in two places only. From world 1's level 21 on,
@@ -31,6 +33,8 @@ const PAUSE_SIZE := Vector2(600.0, 540.0)
 const OFFER_SIZE := Vector2(600.0, 520.0)
 ## Seconds between checks of whether a hint needs a video.
 const BADGE_CHECK: float = 0.5
+## Seconds the finish card shows, stars and all, before the rating question.
+const RATE_DELAY: float = 1.6
 
 var level: Level
 
@@ -69,6 +73,8 @@ var _offer_card: Control
 var _badge_left: float = 0.0
 ## Leaving the finish card (a level break may be playing).
 var _moving_on: bool = false
+var _rate: RateCard
+var _walkthrough: Walkthrough
 
 
 func _ready() -> void:
@@ -91,8 +97,14 @@ func _ready() -> void:
 	_build_finish(_root)
 	_build_pause(_root)
 	_build_offer(_root)
+	if Walkthrough.applies_to(level):
+		_walkthrough = Walkthrough.new()
+		_walkthrough.level = level
+		_safe.add_child(_walkthrough)
 	_settings = SettingsCard.new()
 	_root.add_child(_settings)
+	_rate = RateCard.new()
+	_root.add_child(_rate)
 	level.moves_changed.connect(_on_moves_changed)
 	level.level_completed.connect(_on_completed)
 	_on_moves_changed(level.state.moves, false)
@@ -148,6 +160,23 @@ func is_offer_showing() -> bool:
 	return _offer.visible
 
 
+## Whether the question about rating the game is up.
+func is_rate_showing() -> bool:
+	return _rate.is_asking()
+
+
+## The first level's walkthrough (null when it isn't running).
+func walkthrough() -> Walkthrough:
+	return _walkthrough if is_instance_valid(_walkthrough) else null
+
+
+## Asks the player to rate the game, world [param world] just finished (see
+## Rating).
+func ask_rating(world: int) -> void:
+	if not _rate.is_asking():
+		_rate.open(world)
+
+
 ## Pauses the game under the pause card (not while the level is building
 ## up, finished or being left).
 func pause() -> void:
@@ -174,13 +203,15 @@ func resume() -> void:
 	tween.tween_callback(_pause.hide)
 
 
-## The back button (or Escape): closes the settings, resumes from the pause
-## card, turns down the video offer, leaves the finish card for the level
-## grid, and otherwise pauses.
+## The back button (or Escape): answers the rating question with Not now,
+## closes the settings, resumes from the pause card, turns down the video
+## offer, leaves the finish card for the level grid, and otherwise pauses.
 func go_back() -> void:
 	if _faded:
 		return
-	if _settings.visible:
+	if _rate.is_asking():
+		_rate.answer(false)
+	elif _settings.visible:
 		_settings.close()
 	elif _pause.visible:
 		resume()
@@ -332,6 +363,12 @@ func _on_completed(moves: int, stars: int) -> void:
 	tween.tween_property(_finish, "modulate:a", 1.0, 0.25)
 	tween.tween_property(_finish_card, "scale", Vector2.ONE, 0.4).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	tween.chain().tween_callback(_finish_stars.set_lit.bind(stars, true, 0.22))
+	# A world finished for the first time: once the stars are in, ask for a
+	# rating (see Rating).
+	if Rating.may_ask() and Rating.finishes_world(level.level_path, level.first_finish):
+		await get_tree().create_timer(RATE_DELAY).timeout
+		if _finish.visible and not _moving_on and not _faded:
+			ask_rating(LevelCatalog.world_of(level.level_path))
 
 
 func _hide_finish() -> void:

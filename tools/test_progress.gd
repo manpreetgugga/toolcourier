@@ -32,6 +32,9 @@ var _failures: int = 0
 func _initialize() -> void:
 	# Default settings, whatever the player has chosen.
 	Settings.use_file("user://test_settings.json")
+	# The Hint button on its own: no walkthrough on the first level (see
+	# test_ui for that).
+	Settings.set_value(&"walkthrough_done", true)
 	# No ads: Hint gives hints straight away, and no level break plays.
 	Ads.enabled = false
 	for arg: String in OS.get_cmdline_user_args():
