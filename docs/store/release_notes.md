@@ -3,7 +3,11 @@
 Play Console takes up to 500 characters per language, between the
 language's tags; paste each block as it is.
 
-## 1.2.2 (version code 5): production, the first public release
+## 1.2.2 (version code 6): production, the first public release
+
+Version code 5 is taken, and Play never frees a used code. It went to a
+rebuild of 1.2.1 that was uploaded to the library on 2026-11-16 and is in
+no release.
 
 Upload the bundle to the library (App bundle explorer → Upload new version),
 then pick it with "Add from library" in the production release. It still
@@ -24,7 +28,7 @@ Welcome to Tiny Courier, a calm clay puzzle game.
 The block after the change list is for a closed-testing release of 1.2.2,
 if one is made.
 
-Bump `version/code` to 5 and `version/name` to "1.2.2" in both presets of
+Bump `version/code` to 6 and `version/name` to "1.2.2" in both presets of
 `export_presets.cfg` (and `config/version` in `project.godot`) before
 building it, and run `tools/prepare_android_build.ps1` before the export.
 This release replaces 1.2.1 (version code 4), which it includes. Changes
