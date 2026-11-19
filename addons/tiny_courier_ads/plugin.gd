@@ -83,5 +83,12 @@ class AdsExport:
 			_meta(META + ".TEST_DEVICES", devices.xml_escape(true)),
 		])
 
+	## The portrait lock (window/handheld/orientation) makes Google Play treat
+	## a portrait screen as a required feature and hide the game from devices
+	## that don't report one, which blocks the release. Declaring it optional
+	## keeps the lock and lifts the filter.
+	func _get_android_manifest_element_contents(_platform: EditorExportPlatform, _debug: bool) -> String:
+		return '<uses-feature android:name="android.hardware.screen.portrait" android:required="false" />'
+
 	static func _meta(name: String, value: String) -> String:
 		return '<meta-data android:name="%s" android:value="%s" />' % [name, value]
