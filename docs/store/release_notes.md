@@ -3,6 +3,22 @@
 Play Console takes up to 500 characters per language, between the
 language's tags; paste each block as it is.
 
+## 1.2.3 (version code 8): production, the game's own ads
+
+The same game as 1.2.2 (code 7), exported with `TINY_COURIER_LIVE_ADS=1`,
+so it carries the AdMob app `ca-app-pub-6111568882988372~2256360108` and
+its units "Hint video" and "Level break" in place of Google's test ids.
+Players in the EEA, UK and Switzerland get AdMob's "Tiny Courier consent"
+form, and players in US states with privacy laws can opt out under
+Settings → Ad privacy ("Tiny Courier US states" message).
+
+```
+<en-US>
+• Small fixes and improvements behind the scenes
+• Ad privacy choices for players in Europe and the US, under Settings
+</en-US>
+```
+
 ## 1.2.2 (version code 7): production, the first public release
 
 Version codes 5 and 6 are taken, and Play never frees a used code. Code 5
